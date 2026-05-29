@@ -28,6 +28,20 @@
       "path": "packs/adversaries.db",
       "type": "Actor",
       "system": "starwars-ffg-scratch"
+    },
+    {
+      "name": "skills",
+      "label": "Skills (SRD)",
+      "path": "packs/skills.db",
+      "type": "Item",
+      "system": "starwars-ffg-scratch"
+    },
+    {
+      "name": "critical-injuries",
+      "label": "Critical Injuries Table",
+      "path": "packs/critical-injuries.db",
+      "type": "RollTable",
+      "system": "starwars-ffg-scratch"
     }
   ],
   "relationships": {
