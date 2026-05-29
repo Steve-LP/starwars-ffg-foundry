@@ -42,6 +42,13 @@
       "path": "packs/critical-injuries.db",
       "type": "RollTable",
       "system": "starwars-ffg-scratch"
+    },
+    {
+      "name": "critical-injuries-vehicles",
+      "label": "Vehicle Critical Hits Table",
+      "path": "packs/critical-injuries-vehicles.db",
+      "type": "RollTable",
+      "system": "starwars-ffg-scratch"
     }
   ],
   "relationships": {

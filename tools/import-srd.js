@@ -196,9 +196,95 @@ async function importCriticalTable() {
   }
 }
 
+// Scrape Vehicle Critical Hits Table
+async function importVehicleCriticalTable() {
+  console.log("Fetching Vehicle Critical Hits Table...");
+  try {
+    const res = await fetch("https://sw-eote-srd.vercel.app/vehicles/vehicle-status");
+    let results = [];
+
+    if (res.ok) {
+      const html = await res.text();
+      // Scrape rows if match
+      const rowRegex = /<tr>\s*<td>(\d+)\s*[-–]\s*(\d+)<\/td>\s*<td>([^<]+)<\/td>\s*<td>([^<]+)<\/td>\s*<td>([\s\S]*?)<\/td>\s*<\/tr>/gi;
+      let match;
+      while ((match = rowRegex.exec(html)) !== null) {
+        const min = parseInt(match[1]);
+        const max = parseInt(match[2]);
+        const severity = match[3].trim();
+        const name = match[4].trim();
+        const effect = match[5].replace(/<[^>]*>/g, '').trim();
+
+        results.push({
+          _id: generateId(),
+          type: 0,
+          text: `[${severity}] ${name}: ${effect}`,
+          img: "icons/svg/explosion.svg",
+          weight: 1,
+          range: [min, max],
+          drawn: false
+        });
+      }
+    }
+
+    // Fallback standard table
+    if (results.length === 0) {
+      console.log("Vehicle Table layout mismatch. Injecting standard Vehicle Critical Hit table...");
+      const standardTable = [
+        { r: [1, 10], s: "Easy", n: "Mechanical Stress", e: "The vehicle suffers 1 system strain." },
+        { r: [11, 20], s: "Easy", n: "System Frustration", e: "Upgrade difficulty of next action by one." },
+        { r: [21, 30], s: "Easy", n: "Component Hit", e: "One weapon or system is unusable until repaired." },
+        { r: [31, 40], s: "Easy", n: "Structural Damage", e: "Add setback die to all Agility/Piloting checks." },
+        { r: [41, 50], s: "Average", n: "Shield Fluctuation", e: "Shields drop by 1 in a random zone." },
+        { r: [51, 60], s: "Average", n: "Engine Glitch", e: "Reduce speed by 1 (minimum 1)." },
+        { r: [61, 70], s: "Average", n: "Sensor Ghost", e: "Add setback die to all checks." },
+        { r: [71, 80], s: "Average", n: "Fire!", e: "Suffers 1 system strain per turn until extinguished." },
+        { r: [81, 90], s: "Hard", n: "System Disrupt", e: "Vehicle is immobilized for 1 turn." },
+        { r: [91, 100], s: "Hard", n: "Hull Breach", e: "Decompression or structural issues." },
+        { r: [101, 110], s: "Hard", n: "Major System Failure", e: "One major component (engine/weapons) offline." },
+        { r: [111, 120], s: "Hard", n: "Destabilized", e: "Double damage from subsequent hits." },
+        { r: [121, 130], s: "Hard", n: "Firepower Threat", e: "Weapons array explodes or is disabled." },
+        { r: [131, 140], s: "Deadly", n: "Breaking Up", e: "Vehicle is falling apart. Explodes in 1d10 turns." },
+        { r: [141, 150], s: "Deadly", n: "Vaporized", e: "Vehicle is completely destroyed." }
+      ];
+
+      for (const item of standardTable) {
+        results.push({
+          _id: generateId(),
+          type: 0,
+          text: `[${item.s}] ${item.n}: ${item.e}`,
+          img: "icons/svg/explosion.svg",
+          weight: 1,
+          range: item.r,
+          drawn: false
+        });
+      }
+    }
+
+    const tableDoc = {
+      _id: generateId(),
+      name: "Vehicle Critical Hits",
+      img: "icons/svg/explosion.svg",
+      description: "Critical Hit Roll Table (1d100) for Star Wars FFG vehicles and starships.",
+      results: results,
+      formula: "1d100",
+      replacement: true,
+      displayRoll: true,
+      flags: {}
+    };
+
+    const dest = path.join(destDir, 'critical-injuries-vehicles.db');
+    fs.writeFileSync(dest, JSON.stringify(tableDoc) + '\n', 'utf-8');
+    console.log(`Successfully compiled Vehicle Critical Hits RollTable into ${dest}`);
+  } catch (err) {
+    console.error("Error importing vehicle critical table:", err.message);
+  }
+}
+
 async function run() {
   await importSkills();
   await importCriticalTable();
+  await importVehicleCriticalTable();
   console.log("All SRD elements compiled successfully!");
 }
 
