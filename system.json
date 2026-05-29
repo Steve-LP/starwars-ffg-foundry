@@ -21,7 +21,15 @@
     "css/starwars-ffg.css"
   ],
   "initiative": "0",
-  "packs": [],
+  "packs": [
+    {
+      "name": "adversaries",
+      "label": "Adversaries (SWA)",
+      "path": "packs/adversaries.db",
+      "type": "Actor",
+      "system": "starwars-ffg-scratch"
+    }
+  ],
   "relationships": {
     "systems": []
   }
