@@ -1,0 +1,85 @@
+<div class="swffg-roll-card">
+  <div class="card-header">
+    <h3>{{title}}</h3>
+  </div>
+
+  <!-- Rolled Pool Summary -->
+  <div class="rolled-pool-summary">
+    {{#if pool.ability}}<span class="die-summary-tag color-ability">{{pool.ability}} Ability</span>{{/if}}
+    {{#if pool.proficiency}}<span class="die-summary-tag color-proficiency">{{pool.proficiency}} Proficiency</span>{{/if}}
+    {{#if pool.boost}}<span class="die-summary-tag color-boost">{{pool.boost}} Boost</span>{{/if}}
+    {{#if pool.difficulty}}<span class="die-summary-tag color-difficulty">{{pool.difficulty}} Difficulty</span>{{/if}}
+    {{#if pool.challenge}}<span class="die-summary-tag color-challenge">{{pool.challenge}} Challenge</span>{{/if}}
+    {{#if pool.setback}}<span class="die-summary-tag color-setback">{{pool.setback}} Setback</span>{{/if}}
+    {{#if pool.force}}<span class="die-summary-tag color-force">{{pool.force}} Force</span>{{/if}}
+  </div>
+
+  <hr />
+
+  <!-- Final Net Outcomes -->
+  <div class="roll-outcomes">
+    {{#if results.triumph}}
+    <div class="outcome-row triumph-highlight">
+      <span class="outcome-icon">✪</span>
+      <span class="outcome-label">Triumph ({{results.triumph}})</span>
+    </div>
+    {{/if}}
+
+    {{#if results.despair}}
+    <div class="outcome-row despair-highlight">
+      <span class="outcome-icon">💀</span>
+      <span class="outcome-label">Despair ({{results.despair}})</span>
+    </div>
+    {{/if}}
+
+    <div class="outcome-results-grid">
+      {{#if (isPositive results.success)}}
+      <div class="outcome-cell success-highlight">
+        <span class="outcome-symbol">✔</span>
+        <span class="outcome-label">{{results.success}} Success</span>
+      </div>
+      {{/if}}
+
+      {{#if (isPositive results.failure)}}
+      <div class="outcome-cell failure-highlight">
+        <span class="outcome-symbol">✘</span>
+        <span class="outcome-label">{{results.failure}} Failure</span>
+      </div>
+      {{/if}}
+
+      {{#if (isPositive results.advantage)}}
+      <div class="outcome-cell advantage-highlight">
+        <span class="outcome-symbol">▲</span>
+        <span class="outcome-label">{{results.advantage}} Advantage</span>
+      </div>
+      {{/if}}
+
+      {{#if (isPositive results.threat)}}
+      <div class="outcome-cell threat-highlight">
+        <span class="outcome-symbol">▼</span>
+        <span class="outcome-label">{{results.threat}} Threat</span>
+      </div>
+      {{/if}}
+
+      {{#if (isPositive results.light)}}
+      <div class="outcome-cell light-highlight">
+        <span class="outcome-symbol">☼</span>
+        <span class="outcome-label">{{results.light}} Light Side</span>
+      </div>
+      {{/if}}
+
+      {{#if (isPositive results.dark)}}
+      <div class="outcome-cell dark-highlight">
+        <span class="outcome-symbol">☾</span>
+        <span class="outcome-label">{{results.dark}} Dark Side</span>
+      </div>
+      {{/if}}
+      
+      {{#if (and (eq results.success 0) (eq results.failure 0) (eq results.advantage 0) (eq results.threat 0) (eq results.light 0) (eq results.dark 0))}}
+      <div class="outcome-cell wash-highlight">
+        <span class="outcome-label">Wash (No Net Results)</span>
+      </div>
+      {{/if}}
+    </div>
+  </div>
+</div>

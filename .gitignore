@@ -1,0 +1,13 @@
+# OS cache files
+.DS_Store
+Thumbs.db
+
+# Developer environment files
+.idea/
+.vscode/
+*.log
+
+# Node dependencies (if you install packaging/building tooling later)
+node_modules/
+dist/
+package-lock.json

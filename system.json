@@ -1,0 +1,28 @@
+{
+  "id": "starwars-ffg-scratch",
+  "title": "Star Wars FFG Scratch Ruleset",
+  "description": "A custom ruleset for Star Wars FFG (Edge of the Empire, Age of Rebellion, Force and Destiny) built from scratch.",
+  "version": "0.1.0",
+  "library": false,
+  "compatibility": {
+    "minimum": "13",
+    "verified": "14"
+  },
+  "authors": [
+    {
+      "name": "Antigravity AI",
+      "discord": "antigravity"
+    }
+  ],
+  "esmodules": [
+    "module/starwars-ffg.js"
+  ],
+  "styles": [
+    "css/starwars-ffg.css"
+  ],
+  "initiative": "0",
+  "packs": [],
+  "relationships": {
+    "systems": []
+  }
+}

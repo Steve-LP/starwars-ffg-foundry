@@ -1,0 +1,81 @@
+<form class="{{cssClass}} item-sheet-container" autocomplete="off">
+  <header class="sheet-header">
+    <img class="profile-img" src="{{item.img}}" data-edit="img" title="{{item.name}}" />
+    <div class="header-details">
+      <h1><input name="name" type="text" value="{{item.name}}" placeholder="Item Name" /></h1>
+      <div class="item-type-tag">{{capitalize item.type}}</div>
+    </div>
+  </header>
+
+  <hr />
+
+  <section class="sheet-body">
+    <!-- Weapon Settings -->
+    {{#if (eq item.type "weapon")}}
+    <div class="form-group">
+      <label>Damage</label>
+      <input type="number" name="system.damage" value="{{system.damage}}" data-dtype="Number" />
+    </div>
+    <div class="form-group">
+      <label>Critical Rating</label>
+      <input type="number" name="system.critical" value="{{system.critical}}" data-dtype="Number" />
+    </div>
+    <div class="form-group">
+      <label>Range Band</label>
+      <select name="system.range">
+        {{selectOptions (arr "Engaged" "Short" "Medium" "Long" "Extreme") selected=system.range}}
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Associated Skill</label>
+      <input type="text" name="system.skill" value="{{system.skill}}" />
+    </div>
+    <div class="form-group">
+      <label>Qualities</label>
+      <input type="text" name="system.qualities" value="{{system.qualities}}" placeholder="Accurate 1, Pierce 2..." />
+    </div>
+    {{/if}}
+
+    <!-- Armor Settings -->
+    {{#if (eq item.type "armor")}}
+    <div class="form-group">
+      <label>Soak Value</label>
+      <input type="number" name="system.soak" value="{{system.soak}}" data-dtype="Number" />
+    </div>
+    <div class="form-group">
+      <label>Defense Rating</label>
+      <input type="number" name="system.defence" value="{{system.defence}}" data-dtype="Number" />
+    </div>
+    {{/if}}
+
+    <!-- Talent Settings -->
+    {{#if (eq item.type "talent")}}
+    <div class="form-group">
+      <label>Activation</label>
+      <select name="system.activation">
+        {{selectOptions (arr "Passive" "Active (Action)" "Active (Incidental)" "Active (Out of Turn)") selected=system.activation}}
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Tier</label>
+      <input type="number" name="system.tier" value="{{system.tier}}" data-dtype="Number" />
+    </div>
+    <div class="form-group">
+      <label>Ranked</label>
+      <input type="checkbox" name="system.ranked" {{checked system.ranked}} />
+    </div>
+    {{/if}}
+
+    <!-- Universal Physical Attributes -->
+    <div class="form-group">
+      <label>Encumbrance</label>
+      <input type="number" name="system.encumbrance" value="{{system.encumbrance}}" data-dtype="Number" />
+    </div>
+
+    <!-- Item Description -->
+    <div class="form-group description-block">
+      <label>Description</label>
+      {{editor system.description target="system.description" button=true owner=owner editable=editable}}
+    </div>
+  </section>
+</form>

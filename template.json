@@ -1,0 +1,8 @@
+{
+  "Actor": {
+    "types": ["character", "npc", "minion"]
+  },
+  "Item": {
+    "types": ["weapon", "armor", "gear", "talent", "forcePower", "specialization", "skill"]
+  }
+}
