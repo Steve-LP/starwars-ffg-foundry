@@ -1,0 +1,78 @@
+<div class="dice-roller-container">
+  <div class="dice-selector-row">
+    <!-- Ability -->
+    <div class="dice-control-item color-ability">
+      <span class="dice-icon">⬡</span>
+      <span class="dice-name">Ability</span>
+      <div class="dice-controls">
+        <a class="dice-pool-control" data-die="ability" data-action="sub">-</a>
+        <span class="dice-count">{{dicePool.ability}}</span>
+        <a class="dice-pool-control" data-die="ability" data-action="add">+</a>
+      </div>
+    </div>
+    <!-- Proficiency -->
+    <div class="dice-control-item color-proficiency">
+      <span class="dice-icon">⬢</span>
+      <span class="dice-name">Proficiency</span>
+      <div class="dice-controls">
+        <a class="dice-pool-control" data-die="proficiency" data-action="sub">-</a>
+        <span class="dice-count">{{dicePool.proficiency}}</span>
+        <a class="dice-pool-control" data-die="proficiency" data-action="add">+</a>
+      </div>
+    </div>
+    <!-- Boost -->
+    <div class="dice-control-item color-boost">
+      <span class="dice-icon">⬠</span>
+      <span class="dice-name">Boost</span>
+      <div class="dice-controls">
+        <a class="dice-pool-control" data-die="boost" data-action="sub">-</a>
+        <span class="dice-count">{{dicePool.boost}}</span>
+        <a class="dice-pool-control" data-die="boost" data-action="add">+</a>
+      </div>
+    </div>
+    <!-- Difficulty -->
+    <div class="dice-control-item color-difficulty">
+      <span class="dice-icon">⬡</span>
+      <span class="dice-name">Difficulty</span>
+      <div class="dice-controls">
+        <a class="dice-pool-control" data-die="difficulty" data-action="sub">-</a>
+        <span class="dice-count">{{dicePool.difficulty}}</span>
+        <a class="dice-pool-control" data-die="difficulty" data-action="add">+</a>
+      </div>
+    </div>
+    <!-- Challenge -->
+    <div class="dice-control-item color-challenge">
+      <span class="dice-icon">⬢</span>
+      <span class="dice-name">Challenge</span>
+      <div class="dice-controls">
+        <a class="dice-pool-control" data-die="challenge" data-action="sub">-</a>
+        <span class="dice-count">{{dicePool.challenge}}</span>
+        <a class="dice-pool-control" data-die="challenge" data-action="add">+</a>
+      </div>
+    </div>
+    <!-- Setback -->
+    <div class="dice-control-item color-setback">
+      <span class="dice-icon">⬠</span>
+      <span class="dice-name">Setback</span>
+      <div class="dice-controls">
+        <a class="dice-pool-control" data-die="setback" data-action="sub">-</a>
+        <span class="dice-count">{{dicePool.setback}}</span>
+        <a class="dice-pool-control" data-die="setback" data-action="add">+</a>
+      </div>
+    </div>
+    <!-- Force -->
+    <div class="dice-control-item color-force">
+      <span class="dice-icon">⬢</span>
+      <span class="dice-name">Force</span>
+      <div class="dice-controls">
+        <a class="dice-pool-control" data-die="force" data-action="sub">-</a>
+        <span class="dice-count">{{dicePool.force}}</span>
+        <a class="dice-pool-control" data-die="force" data-action="add">+</a>
+      </div>
+    </div>
+  </div>
+  <div class="hud-actions">
+    <button type="button" class="roll-pool-button">Roll Selected Pool</button>
+    <button type="button" class="clear-pool-button">Clear Pool</button>
+  </div>
+</div>

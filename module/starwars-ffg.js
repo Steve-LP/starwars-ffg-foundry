@@ -3,7 +3,8 @@ import { SWFFGItem } from "./item.js";
 import { SWFFGActorSheet } from "./actor-sheet.js";
 import { SWFFGItemSheet } from "./item-sheet.js";
 import { oggdudeParser } from "./oggdude-importer.js";
-import { CharacterData, NPCData, MinionData, WeaponData, ArmorData, TalentData, ForcePowerData, SpecializationData, SkillData } from "./data-models.js";
+import { CharacterData, NPCData, MinionData, WeaponData, ArmorData, TalentData, ForcePowerData, SpecializationData, SkillData, SpeciesData, CareerData } from "./data-models.js";
+import { SWFFGDiceRoller } from "./dice-roller.js";
 
 Hooks.once("init", async function () {
   console.log("Star Wars FFG Scratch | Initializing Star Wars FFG System (V13/V14)");
@@ -20,7 +21,9 @@ Hooks.once("init", async function () {
     talent: TalentData,
     forcePower: ForcePowerData,
     specialization: SpecializationData,
-    skill: SkillData
+    skill: SkillData,
+    species: SpeciesData,
+    career: CareerData
   };
 
   // Define custom document classes
@@ -28,14 +31,14 @@ Hooks.once("init", async function () {
   CONFIG.Item.documentClass = SWFFGItem;
 
   // Register sheet classes
-  Actors.unregisterSheet("core", ActorSheet);
-  Actors.registerSheet("starwars-ffg", SWFFGActorSheet, {
+  foundry.documents.collections.Actors.unregisterSheet("core", foundry.appv1.sheets.ActorSheet);
+  foundry.documents.collections.Actors.registerSheet("starwars-ffg", SWFFGActorSheet, {
     types: ["character", "npc", "minion"],
     makeDefault: true
   });
 
-  Items.unregisterSheet("core", ItemSheet);
-  Items.registerSheet("starwars-ffg", SWFFGItemSheet, {
+  foundry.documents.collections.Items.unregisterSheet("core", foundry.appv1.sheets.ItemSheet);
+  foundry.documents.collections.Items.registerSheet("starwars-ffg", SWFFGItemSheet, {
     makeDefault: true
   });
 
@@ -50,8 +53,31 @@ Hooks.once("init", async function () {
     return val > 0;
   });
 
-  // Expose parser globally for developer testing
+  // Expose system namespace globally
   game.starwarsFFG = {
-    importOggdudeXml: oggdudeParser
+    importOggdudeXml: oggdudeParser,
+    diceRoller: new SWFFGDiceRoller()
   };
+});
+
+// Add floating dice roller control button
+Hooks.on("getSceneControlButtons", (controls) => {
+  let tokenControl;
+  if (Array.isArray(controls)) {
+    tokenControl = controls.find(c => c.name === "token");
+  } else if (controls) {
+    tokenControl = controls.token;
+  }
+
+  if (tokenControl) {
+    tokenControl.tools.push({
+      name: "swffg-dice-roller",
+      title: "Star Wars Dice Roller",
+      icon: "fas fa-dice",
+      button: true,
+      onClick: () => {
+        game.starwarsFFG.diceRoller.render(true);
+      }
+    });
+  }
 });

@@ -37,6 +37,34 @@
       "system": "starwars-ffg-scratch"
     },
     {
+      "name": "species",
+      "label": "Species (SRD)",
+      "path": "packs/species.db",
+      "type": "Item",
+      "system": "starwars-ffg-scratch"
+    },
+    {
+      "name": "careers",
+      "label": "Careers (SRD)",
+      "path": "packs/careers.db",
+      "type": "Item",
+      "system": "starwars-ffg-scratch"
+    },
+    {
+      "name": "specializations",
+      "label": "Specializations (SRD)",
+      "path": "packs/specializations.db",
+      "type": "Item",
+      "system": "starwars-ffg-scratch"
+    },
+    {
+      "name": "talents",
+      "label": "Talents (Oggdude)",
+      "path": "packs/talents.db",
+      "type": "Item",
+      "system": "starwars-ffg-scratch"
+    },
+    {
       "name": "critical-injuries",
       "label": "Critical Injuries Table",
       "path": "packs/critical-injuries.db",

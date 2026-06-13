@@ -30,6 +30,16 @@
   border-radius: 12px;
   border: 1px solid rgba(0, 180, 216, 0.2);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.sheet-body {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  padding-right: 5px;
 }
 
 /* Header styling */
@@ -459,3 +469,340 @@
 
 .triumph-highlight { background: rgba(251, 192, 45, 0.15); border: 1px solid var(--color-proficiency); color: #FFF176; }
 .despair-highlight { background: rgba(198, 40, 40, 0.15); border: 1px solid var(--color-challenge); color: #FF8A80; }
+
+/* Drag and Drop Zone styling */
+.drop-zone {
+  border: 1px dashed rgba(0, 180, 216, 0.4);
+  background: rgba(0, 180, 216, 0.03);
+  border-radius: 6px;
+  padding: 6px 12px;
+  min-height: 48px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+.drop-zone:hover {
+  border-color: var(--sw-border-glow);
+  background: rgba(0, 180, 216, 0.08);
+  box-shadow: 0 0 8px rgba(0, 180, 216, 0.2);
+}
+.bio-placeholder {
+  font-size: 10px;
+  color: var(--sw-text-muted);
+  font-style: italic;
+}
+.bio-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  text-shadow: 0 0 5px var(--sw-border-glow);
+}
+
+/* Skills career styling and input QoL */
+.col-career {
+  flex: 0 0 50px;
+  text-align: center;
+}
+.skill-row {
+  color: var(--sw-text-main) !important;
+}
+.skill-row .col-name {
+  color: #ffffff !important;
+  font-weight: 600;
+}
+.skill-row .col-char {
+  color: var(--sw-text-muted) !important;
+}
+.skill-row.career-skill {
+  background: rgba(0, 180, 216, 0.05);
+  border-left: 3px solid var(--sw-border-glow);
+}
+.career-toggle {
+  cursor: pointer;
+}
+.skill-val-input {
+  width: 50px !important;
+  text-align: center;
+  background: rgba(0, 0, 0, 0.4) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 4px;
+  color: #fff;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 14px;
+}
+.roll-btn {
+  background: rgba(255, 159, 28, 0.15);
+  border: 1px solid var(--sw-accent-orange);
+  border-radius: 4px;
+  padding: 2px 8px;
+  color: var(--sw-accent-orange) !important;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  display: inline-block;
+}
+.roll-btn:hover {
+  background: var(--sw-accent-orange);
+  color: #000 !important;
+  box-shadow: 0 0 8px rgba(255, 159, 28, 0.4);
+}
+
+.skill-dice-preview {
+  display: inline-flex;
+  gap: 3px;
+  margin-right: 10px;
+  vertical-align: middle;
+}
+
+.die-preview {
+  display: inline-block;
+  font-size: 14px;
+  font-weight: normal;
+  line-height: 1;
+}
+
+.die-preview.yellow {
+  color: var(--color-proficiency);
+  text-shadow: 0 0 6px rgba(251, 192, 45, 0.8);
+}
+
+.die-preview.green {
+  color: var(--color-ability);
+  text-shadow: 0 0 6px rgba(46, 125, 50, 0.8);
+}
+
+/* Floating Dice Roller App override styles */
+.dice-roller-app {
+  background: radial-gradient(circle at top, #1E293B 0%, var(--sw-bg-main) 100%) !important;
+  border: 1px solid rgba(0, 180, 216, 0.3) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5) !important;
+  border-radius: 12px !important;
+}
+.dice-roller-app .window-header {
+  background: rgba(0, 0, 0, 0.4) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: var(--sw-border-glow) !important;
+  text-shadow: 0 0 6px rgba(0, 180, 216, 0.4);
+}
+.dice-roller-container {
+  padding: 15px;
+}
+.dice-roller-container .dice-selector-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 15px;
+}
+.dice-roller-container .dice-control-item {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+.dice-roller-container .dice-controls {
+  margin-top: 0;
+}
+
+.xp-box {
+  flex: 0 0 110px;
+}
+.xp-values {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.xp-values input {
+  width: 40px !important;
+  text-align: center;
+  background: rgba(0, 0, 0, 0.4) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 4px;
+  color: #fff;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 14px;
+}
+
+/* Specialization Talent Tree Grid & Connectors */
+.specialization-tree-container {
+  margin-top: 30px;
+  border-top: 2px solid rgba(255, 255, 255, 0.05);
+  padding-top: 20px;
+}
+
+.specialization-tree-container .tree-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(90deg, rgba(0, 180, 216, 0.1) 0%, rgba(0, 0, 0, 0) 100%);
+  border-left: 3px solid var(--sw-border-glow);
+  padding: 8px 15px;
+  border-radius: 4px;
+}
+
+.talent-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-gap: 25px 20px;
+  position: relative;
+  padding: 25px;
+  background: rgba(15, 23, 42, 0.4);
+  border-radius: 12px;
+  border: 1px solid rgba(0, 180, 216, 0.1);
+  margin-top: 15px;
+  margin-bottom: 25px;
+}
+
+.talent-node-cell {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 90px;
+}
+
+/* Connectors */
+.connector {
+  position: absolute;
+  background-color: rgba(255, 255, 255, 0.15);
+  z-index: 1;
+}
+
+/* Active connector lines glow when purchased */
+.talent-card.purchased ~ .connector {
+  background-color: var(--sw-border-glow);
+  box-shadow: 0 0 8px var(--sw-border-glow);
+}
+
+.connector-up {
+  top: 0;
+  left: 50%;
+  width: 2px;
+  height: 50%;
+  transform: translateX(-50%);
+}
+
+.connector-down {
+  bottom: 0;
+  left: 50%;
+  width: 2px;
+  height: 50%;
+  transform: translateX(-50%);
+}
+
+.connector-left {
+  left: 0;
+  top: 50%;
+  height: 2px;
+  width: 50%;
+  transform: translateY(-50%);
+}
+
+.connector-right {
+  right: 0;
+  top: 50%;
+  height: 2px;
+  width: 50%;
+  transform: translateY(-50%);
+}
+
+/* Talent Card styling */
+.talent-card {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  background: rgba(30, 41, 59, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s ease;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.talent-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(0, 180, 216, 0.4);
+  box-shadow: 0 6px 15px rgba(0, 180, 216, 0.15);
+  background: rgba(30, 41, 59, 0.95);
+}
+
+.talent-card.purchased {
+  border: 1px dashed var(--sw-border-glow);
+  box-shadow: 0 0 10px rgba(0, 180, 216, 0.2);
+  background: radial-gradient(circle at center, rgba(0, 180, 216, 0.1) 0%, rgba(30, 41, 59, 0.85) 100%);
+}
+
+.talent-name {
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.2;
+  text-align: center;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
+.talent-activation-badge {
+  font-size: 8px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 4px;
+  border-radius: 3px;
+  text-align: center;
+  align-self: center;
+  width: fit-content;
+}
+
+.talent-activation-badge.Passive {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--sw-text-muted);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.talent-activation-badge.Active {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.talent-cost {
+  font-size: 9px;
+  font-family: 'Share Tech Mono', monospace;
+  color: #10b981;
+  text-align: right;
+  margin-top: 4px;
+}
+
+.remove-bio {
+  color: #ef4444;
+  margin-left: 8px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: color 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+}
+
+.remove-bio:hover {
+  color: #f87171;
+  text-shadow: 0 0 5px rgba(239, 68, 68, 0.5);
+}
+

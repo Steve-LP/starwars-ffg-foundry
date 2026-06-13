@@ -163,13 +163,13 @@ export async function sendRollToChat(actor, rollResult, title = "Skill Check") {
     results: rollResult.results
   };
 
-  const html = await renderTemplate(templatePath, templateData);
+  const html = await foundry.applications.handlebars.renderTemplate(templatePath, templateData);
 
   const chatData = {
     user: game.user.id,
     speaker: ChatMessage.getSpeaker({ actor }),
     content: html,
-    type: CONST.CHAT_MESSAGE_TYPES.OTHER
+    style: CONST.CHAT_MESSAGE_STYLES.OTHER
   };
 
   return ChatMessage.create(chatData);

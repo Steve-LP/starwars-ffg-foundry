@@ -7,17 +7,43 @@
         <h1 class="charname"><input name="name" type="text" value="{{actor.name}}" placeholder="Name" /></h1>
       </div>
       <div class="row bio-row">
-        <div class="bio-item">
+        <div class="bio-item drop-zone" data-drop-type="species">
           <label>Species</label>
-          <input type="text" name="system.biography.species" value="{{actor.system.biography.species}}" />
+          {{#if actor.system.biography.species}}
+          <span class="bio-value">
+            {{actor.system.biography.species}}
+            <a class="remove-bio" data-type="species" title="Remove Species"><i class="fas fa-times-circle"></i></a>
+          </span>
+          {{else}}
+          <span class="bio-placeholder">Drop Species here</span>
+          {{/if}}
         </div>
-        <div class="bio-item">
+        <div class="bio-item drop-zone" data-drop-type="career">
           <label>Career</label>
-          <input type="text" name="system.biography.career" value="{{actor.system.biography.career}}" />
+          {{#if actor.system.biography.career}}
+          <span class="bio-value">
+            {{actor.system.biography.career}}
+            <a class="remove-bio" data-type="career" title="Remove Career"><i class="fas fa-times-circle"></i></a>
+          </span>
+          {{else}}
+          <span class="bio-placeholder">Drop Career here</span>
+          {{/if}}
         </div>
-        <div class="bio-item">
+        <div class="bio-item drop-zone" data-drop-type="specialization">
           <label>Specialization</label>
-          <input type="text" name="system.biography.specialization" value="{{actor.system.biography.specialization}}" />
+          {{#if actor.system.biography.specialization}}
+          <span class="bio-value">{{actor.system.biography.specialization}}</span>
+          {{else}}
+          <span class="bio-placeholder">Drop Spec here</span>
+          {{/if}}
+        </div>
+        <div class="bio-item xp-box">
+          <label>XP (Avail / Total)</label>
+          <div class="xp-values">
+            <input type="number" name="system.xp.available" value="{{actor.system.xp.available}}" data-dtype="Number" />
+            <span>/</span>
+            <input type="number" name="system.xp.total" value="{{actor.system.xp.total}}" data-dtype="Number" />
+          </div>
         </div>
       </div>
     </div>
@@ -66,120 +92,47 @@
     </div>
   </section>
 
-  <!-- Dice Pool Builder HUD -->
-  <section class="dice-pool-hud">
-    <div class="hud-title">Active Dice Pool Builder</div>
-    <div class="dice-selector-row">
-      <!-- Ability -->
-      <div class="dice-control-item color-ability">
-        <span class="dice-icon">⬡</span>
-        <span class="dice-name">Ability</span>
-        <div class="dice-controls">
-          <a class="dice-pool-control" data-die="ability" data-action="sub">-</a>
-          <span class="dice-count">{{dicePool.ability}}</span>
-          <a class="dice-pool-control" data-die="ability" data-action="add">+</a>
-        </div>
-      </div>
-      <!-- Proficiency -->
-      <div class="dice-control-item color-proficiency">
-        <span class="dice-icon">⬢</span>
-        <span class="dice-name">Proficiency</span>
-        <div class="dice-controls">
-          <a class="dice-pool-control" data-die="proficiency" data-action="sub">-</a>
-          <span class="dice-count">{{dicePool.proficiency}}</span>
-          <a class="dice-pool-control" data-die="proficiency" data-action="add">+</a>
-        </div>
-      </div>
-      <!-- Boost -->
-      <div class="dice-control-item color-boost">
-        <span class="dice-icon">⬠</span>
-        <span class="dice-name">Boost</span>
-        <div class="dice-controls">
-          <a class="dice-pool-control" data-die="boost" data-action="sub">-</a>
-          <span class="dice-count">{{dicePool.boost}}</span>
-          <a class="dice-pool-control" data-die="boost" data-action="add">+</a>
-        </div>
-      </div>
-      <!-- Difficulty -->
-      <div class="dice-control-item color-difficulty">
-        <span class="dice-icon">⬡</span>
-        <span class="dice-name">Difficulty</span>
-        <div class="dice-controls">
-          <a class="dice-pool-control" data-die="difficulty" data-action="sub">-</a>
-          <span class="dice-count">{{dicePool.difficulty}}</span>
-          <a class="dice-pool-control" data-die="difficulty" data-action="add">+</a>
-        </div>
-      </div>
-      <!-- Challenge -->
-      <div class="dice-control-item color-challenge">
-        <span class="dice-icon">⬢</span>
-        <span class="dice-name">Challenge</span>
-        <div class="dice-controls">
-          <a class="dice-pool-control" data-die="challenge" data-action="sub">-</a>
-          <span class="dice-count">{{dicePool.challenge}}</span>
-          <a class="dice-pool-control" data-die="challenge" data-action="add">+</a>
-        </div>
-      </div>
-      <!-- Setback -->
-      <div class="dice-control-item color-setback">
-        <span class="dice-icon">⬠</span>
-        <span class="dice-name">Setback</span>
-        <div class="dice-controls">
-          <a class="dice-pool-control" data-die="setback" data-action="sub">-</a>
-          <span class="dice-count">{{dicePool.setback}}</span>
-          <a class="dice-pool-control" data-die="setback" data-action="add">+</a>
-        </div>
-      </div>
-      <!-- Force -->
-      <div class="dice-control-item color-force">
-        <span class="dice-icon">⬢</span>
-        <span class="dice-name">Force</span>
-        <div class="dice-controls">
-          <a class="dice-pool-control" data-die="force" data-action="sub">-</a>
-          <span class="dice-count">{{dicePool.force}}</span>
-          <a class="dice-pool-control" data-die="force" data-action="add">+</a>
-        </div>
-      </div>
-    </div>
-    <div class="hud-actions">
-      <button type="button" class="roll-pool-button">Roll Selected Pool</button>
-      <button type="button" class="clear-pool-button">Clear Pool</button>
-    </div>
-  </section>
-
   <!-- Sheet Navigation -->
   <nav class="sheet-tabs tabs" data-group="primary">
-    <a class="item" data-tab="skills">Skills</a>
-    <a class="item" data-tab="talents">Talents & Force</a>
-    <a class="item" data-tab="inventory">Inventory</a>
-    <a class="item" data-tab="biography">Biography</a>
+    <a class="item {{tabs.skills.cssClass}}" data-action="tab" data-group="primary" data-tab="skills">Skills</a>
+    <a class="item {{tabs.talents.cssClass}}" data-action="tab" data-group="primary" data-tab="talents">Talents & Force</a>
+    <a class="item {{tabs.inventory.cssClass}}" data-action="tab" data-group="primary" data-tab="inventory">Inventory</a>
+    <a class="item {{tabs.biography.cssClass}}" data-action="tab" data-group="primary" data-tab="biography">Biography</a>
   </nav>
 
   <!-- Sheet Body -->
   <section class="sheet-body">
     <!-- Skills Tab -->
-    <div class="tab skills" data-group="primary" data-tab="skills">
+    <div class="tab skills {{tabs.skills.cssClass}}" data-group="primary" data-tab="skills">
       <div class="skills-list">
         <div class="skills-header row">
+          <span class="col-career">Career</span>
           <span class="col-name">Skill</span>
           <span class="col-char">Characteristic</span>
           <span class="col-rank">Rank</span>
           <span class="col-roll">Action</span>
         </div>
         {{#each skills as |skill id|}}
-        <div class="skill-row row item" data-item-id="{{skill.id}}">
+        <div class="skill-row row item {{#if skill.career}}career-skill{{/if}}" data-item-id="{{skill.id}}">
+          <span class="col-career">
+            <input type="checkbox" class="career-toggle" data-item-id="{{skill.id}}" data-name="{{skill.name}}" data-characteristic="{{skill.characteristic}}" data-category="{{skill.category}}" {{checked skill.career}} />
+          </span>
           <span class="col-name">{{skill.name}}</span>
           <span class="col-char">{{capitalize skill.characteristic}}</span>
           <span class="col-rank">
-            {{#if skill.id}}
-            <input type="number" class="skill-val-input" data-item-id="{{skill.id}}" name="skill-val-{{skill.id}}" value="{{skill.value}}" />
-            {{else}}
-            0
-            {{/if}}
+            <input type="number" class="skill-val-input" data-item-id="{{skill.id}}" data-name="{{skill.name}}" data-characteristic="{{skill.characteristic}}" data-category="{{skill.category}}" value="{{skill.value}}" min="0" max="6" />
           </span>
           <span class="col-roll">
+            <span class="skill-dice-preview">
+              {{#each skill.dice.yellow}}
+              <span class="die-preview yellow" title="Proficiency">⬢</span>
+              {{/each}}
+              {{#each skill.dice.green}}
+              <span class="die-preview green" title="Ability">◆</span>
+              {{/each}}
+            </span>
             <a class="rollable-skill roll-btn" data-name="{{skill.name}}" data-characteristic="{{skill.characteristic}}" data-rank="{{skill.value}}">
-              Load Skill Pool
+              🎲 Load Pool
             </a>
           </span>
         </div>
@@ -188,10 +141,10 @@
     </div>
 
     <!-- Talents Tab -->
-    <div class="tab talents" data-group="primary" data-tab="talents">
+    <div class="tab talents {{tabs.talents.cssClass}}" data-group="primary" data-tab="talents">
       <div class="tab-header row">
-        <h2>Talents</h2>
-        <a class="item-create button-link" data-type="talent">+ Add Talent</a>
+        <h2>Talents List</h2>
+        <a class="item-create button-link" data-type="talent">+ Add Custom Talent</a>
       </div>
       <div class="item-list">
         {{#each talents as |talent|}}
@@ -205,10 +158,40 @@
         </div>
         {{/each}}
       </div>
+
+      <!-- Specialization Talent Trees -->
+      {{#each specializations as |spec|}}
+      <div class="specialization-tree-container item" data-item-id="{{spec.id}}">
+        <div class="tree-header row">
+          <h2>Specialization: {{spec.name}}</h2>
+          <a class="item-delete button-link" title="Delete Specialization"><i class="fas fa-trash"></i> Remove Spec</a>
+        </div>
+        <div class="talent-grid">
+          {{#each spec.system.talentRows as |row|}}
+            {{#each row.talents as |talent|}}
+            <div class="talent-node-cell">
+              <!-- Connector Lines -->
+              {{#if talent.directions.up}}<div class="connector connector-up"></div>{{/if}}
+              {{#if talent.directions.down}}<div class="connector connector-down"></div>{{/if}}
+              {{#if talent.directions.left}}<div class="connector connector-left"></div>{{/if}}
+              {{#if talent.directions.right}}<div class="connector connector-right"></div>{{/if}}
+
+              <!-- Talent Block -->
+              <div class="talent-card {{#if talent.purchased}}purchased{{/if}}" data-key="{{talent.key}}" data-cost="{{row.cost}}" data-name="{{talent.name}}" data-activation="{{talent.activation}}" data-description="{{talent.description}}" data-tooltip="{{talent.description}}">
+                <div class="talent-name">{{talent.name}}</div>
+                <div class="talent-activation-badge {{talent.activation}}">{{talent.activation}}</div>
+                <div class="talent-cost">{{row.cost}} XP</div>
+              </div>
+            </div>
+            {{/each}}
+          {{/each}}
+        </div>
+      </div>
+      {{/each}}
     </div>
 
     <!-- Inventory Tab -->
-    <div class="tab inventory" data-group="primary" data-tab="inventory">
+    <div class="tab inventory {{tabs.inventory.cssClass}}" data-group="primary" data-tab="inventory">
       <!-- Weapons -->
       <div class="inventory-section">
         <div class="tab-header row">
@@ -219,7 +202,12 @@
           {{#each weapons as |weapon|}}
           <div class="item inventory-row row" data-item-id="{{weapon._id}}">
             <span class="item-name"><strong>{{weapon.name}}</strong> (Dmg: {{weapon.system.damage}} / Crit: {{weapon.system.critical}})</span>
-            <span class="item-detail">{{weapon.system.range}}</span>
+            <span class="item-detail">{{weapon.system.range}} ({{weapon.system.skill}})</span>
+            <span class="item-roll">
+              <a class="rollable-skill roll-btn" data-name="{{weapon.name}}" data-characteristic="{{lookup (lookup ../skills weapon.system.skill) 'characteristic'}}" data-rank="{{lookup (lookup ../skills weapon.system.skill) 'value'}}">
+                🎲 Attack
+              </a>
+            </span>
             <div class="item-controls">
               <a class="item-edit"><i class="fas fa-edit"></i></a>
               <a class="item-delete"><i class="fas fa-trash"></i></a>
@@ -255,7 +243,7 @@
     </div>
 
     <!-- Biography Tab -->
-    <div class="tab biography" data-group="primary" data-tab="biography">
+    <div class="tab biography {{tabs.biography.cssClass}}" data-group="primary" data-tab="biography">
       <div class="bio-grid">
         <div class="bio-block">
           <h3>Obligation</h3>

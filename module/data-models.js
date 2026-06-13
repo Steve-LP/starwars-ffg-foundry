@@ -7,12 +7,12 @@ class BaseActorData extends foundry.abstract.TypeDataModel {
     const fields = foundry.data.fields;
     return {
       characteristics: new fields.SchemaField({
-        brawn: new fields.SchemaField({ value: new fields.NumberField({ initial: 2, min: 1, max: 6 }) }),
-        agility: new fields.SchemaField({ value: new fields.NumberField({ initial: 2, min: 1, max: 6 }) }),
-        intellect: new fields.SchemaField({ value: new fields.NumberField({ initial: 2, min: 1, max: 6 }) }),
-        cunning: new fields.SchemaField({ value: new fields.NumberField({ initial: 2, min: 1, max: 6 }) }),
-        willpower: new fields.SchemaField({ value: new fields.NumberField({ initial: 2, min: 1, max: 6 }) }),
-        presence: new fields.SchemaField({ value: new fields.NumberField({ initial: 2, min: 1, max: 6 }) })
+        brawn: new fields.SchemaField({ value: new fields.NumberField({ initial: 1, min: 1, max: 6 }) }),
+        agility: new fields.SchemaField({ value: new fields.NumberField({ initial: 1, min: 1, max: 6 }) }),
+        intellect: new fields.SchemaField({ value: new fields.NumberField({ initial: 1, min: 1, max: 6 }) }),
+        cunning: new fields.SchemaField({ value: new fields.NumberField({ initial: 1, min: 1, max: 6 }) }),
+        willpower: new fields.SchemaField({ value: new fields.NumberField({ initial: 1, min: 1, max: 6 }) }),
+        presence: new fields.SchemaField({ value: new fields.NumberField({ initial: 1, min: 1, max: 6 }) })
       }),
       stats: new fields.SchemaField({
         wounds: new fields.SchemaField({
@@ -146,7 +146,8 @@ export class SpecializationData extends foundry.abstract.TypeDataModel {
     const fields = foundry.data.fields;
     return {
       description: new fields.HTMLField({ initial: "" }),
-      careerSkills: new fields.StringField({ initial: "" })
+      careerSkills: new fields.StringField({ initial: "" }),
+      talentRows: new fields.ArrayField(new fields.ObjectField(), { initial: [] })
     };
   }
 }
@@ -157,7 +158,44 @@ export class SkillData extends foundry.abstract.TypeDataModel {
       description: new fields.HTMLField({ initial: "" }),
       characteristic: new fields.StringField({ initial: "brawn" }),
       category: new fields.StringField({ initial: "General" }),
-      value: new fields.NumberField({ initial: 0 })
+      value: new fields.NumberField({ initial: 0 }),
+      career: new fields.BooleanField({ initial: false })
+    };
+  }
+}
+
+export class SpeciesData extends foundry.abstract.TypeDataModel {
+  static defineSchema() {
+    const fields = foundry.data.fields;
+    return {
+      description: new fields.HTMLField({ initial: "" }),
+      characteristics: new fields.SchemaField({
+        brawn: new fields.SchemaField({ value: new fields.NumberField({ initial: 2, min: 1, max: 6 }) }),
+        agility: new fields.SchemaField({ value: new fields.NumberField({ initial: 2, min: 1, max: 6 }) }),
+        intellect: new fields.SchemaField({ value: new fields.NumberField({ initial: 2, min: 1, max: 6 }) }),
+        cunning: new fields.SchemaField({ value: new fields.NumberField({ initial: 2, min: 1, max: 6 }) }),
+        willpower: new fields.SchemaField({ value: new fields.NumberField({ initial: 2, min: 1, max: 6 }) }),
+        presence: new fields.SchemaField({ value: new fields.NumberField({ initial: 2, min: 1, max: 6 }) })
+      }),
+      wounds: new fields.SchemaField({
+        base: new fields.NumberField({ initial: 10, min: 1 })
+      }),
+      strain: new fields.SchemaField({
+        base: new fields.NumberField({ initial: 10, min: 1 })
+      }),
+      xp: new fields.NumberField({ initial: 100 }),
+      key: new fields.StringField({ initial: "" })
+    };
+  }
+}
+
+export class CareerData extends foundry.abstract.TypeDataModel {
+  static defineSchema() {
+    const fields = foundry.data.fields;
+    return {
+      description: new fields.HTMLField({ initial: "" }),
+      careerSkills: new fields.StringField({ initial: "" }),
+      key: new fields.StringField({ initial: "" })
     };
   }
 }
