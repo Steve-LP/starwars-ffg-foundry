@@ -34,7 +34,11 @@
           {{#if specializations.length}}
           <span class="bio-value">
             {{#each specializations as |spec idx|}}
-              {{#if idx}}, {{/if}}{{spec.name}}
+              {{#if idx}}, {{/if}}
+              <span class="spec-header-tag">
+                {{spec.name}}
+                <a class="remove-spec-header" data-item-id="{{spec.id}}" title="Remove Specialization"><i class="fas fa-times-circle"></i></a>
+              </span>
             {{/each}}
           </span>
           {{else}}

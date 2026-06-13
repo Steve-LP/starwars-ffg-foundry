@@ -222,6 +222,9 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 
       // Biography removal handler
       html.find(".remove-bio").click(this._onRemoveBio.bind(this));
+
+      // Specialization header removal handler
+      html.find(".remove-spec-header").click(this._onRemoveSpecHeader.bind(this));
     }
   }
 
@@ -631,6 +634,23 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     const type = event.currentTarget.dataset.type;
     if (type === "species") this._onRemoveSpecies();
     else if (type === "career") this._onRemoveCareer();
+  }
+
+  async _onRemoveSpecHeader(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    const itemId = event.currentTarget.dataset.itemId;
+    const item = this.actor.items.get(itemId);
+    if (!item) return;
+
+    const confirmRemove = confirm(`Do you want to remove the specialization ${item.name}? This will update your career skills.`);
+    if (!confirmRemove) return;
+
+    const remainingSpecs = this.actor.items.filter(i => i.type === "specialization" && i.id !== itemId);
+    const careerName = this.actor.system.biography.career;
+    await this.actor.deleteEmbeddedDocuments("Item", [itemId]);
+    await this._recalculateCareerSkills([], remainingSpecs, careerName);
+    this.render();
   }
 
   async _onRemoveSpecies() {
