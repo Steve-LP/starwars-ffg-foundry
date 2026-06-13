@@ -806,3 +806,51 @@
   text-shadow: 0 0 5px rgba(239, 68, 68, 0.5);
 }
 
+/* Specialization Item Sheet Styling */
+.item-sheet-container .specialization-sheet-tree {
+  margin-top: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.career-skills-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.02);
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.career-skills-info label {
+  font-weight: 600;
+  color: var(--sw-accent-orange);
+  white-space: nowrap;
+}
+
+.career-skills-info input {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  color: #fff;
+  padding: 4px 8px;
+  flex: 1;
+}
+
+.xp-hud-bar {
+  background: rgba(0, 180, 216, 0.1);
+  border-left: 3px solid var(--sw-border-glow);
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 13px;
+  color: #fff;
+}
+
+.spec-grid {
+  grid-template-columns: repeat(4, 1fr) !important;
+  margin-top: 0 !important;
+}
+
+

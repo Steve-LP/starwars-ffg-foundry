@@ -31,14 +31,12 @@ Hooks.once("init", async function () {
   CONFIG.Item.documentClass = SWFFGItem;
 
   // Register sheet classes
-  foundry.documents.collections.Actors.unregisterSheet("core", foundry.appv1.sheets.ActorSheet);
-  foundry.documents.collections.Actors.registerSheet("starwars-ffg", SWFFGActorSheet, {
+  foundry.applications.apps.DocumentSheetConfig.registerSheet(Actor, "starwars-ffg", SWFFGActorSheet, {
     types: ["character", "npc", "minion"],
     makeDefault: true
   });
 
-  foundry.documents.collections.Items.unregisterSheet("core", foundry.appv1.sheets.ItemSheet);
-  foundry.documents.collections.Items.registerSheet("starwars-ffg", SWFFGItemSheet, {
+  foundry.applications.apps.DocumentSheetConfig.registerSheet(Item, "starwars-ffg", SWFFGItemSheet, {
     makeDefault: true
   });
 
@@ -46,6 +44,11 @@ Hooks.once("init", async function () {
   Handlebars.registerHelper("capitalize", function (str) {
     if (typeof str !== "string") return "";
     return str.charAt(0).toUpperCase() + str.slice(1);
+  });
+
+  // Handlebars helper: construct array
+  Handlebars.registerHelper("arr", function (...args) {
+    return args.slice(0, -1);
   });
 
   // Handlebars helper: check if positive

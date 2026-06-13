@@ -86,8 +86,17 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       specObj.id = spec.id;
       console.log("SWFFG | Specialization object:", specObj);
       
-      if (specObj.system.talentRows) {
-        specObj.system.talentRows = specObj.system.talentRows.map(row => {
+      let rows = specObj.system.talentRows;
+      if (typeof rows === "string") {
+        try {
+          rows = JSON.parse(rows);
+        } catch (e) {
+          rows = [];
+        }
+      }
+
+      if (rows && Array.isArray(rows)) {
+        specObj.system.talentRows = rows.map(row => {
           const resolvedTalents = row.talents.map((talentKey, colIdx) => {
             const refTalent = talentsIndex.find(t => t.system?.key === talentKey);
             const isPurchased = this.actor.items.some(t => t.type === "talent" && t.system?.key === talentKey);
@@ -109,6 +118,8 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
             talents: resolvedTalents
           };
         });
+      } else {
+        specObj.system.talentRows = [];
       }
       return specObj;
     });

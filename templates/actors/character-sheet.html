@@ -167,35 +167,23 @@
         {{/each}}
       </div>
 
-      <!-- Specialization Talent Trees -->
-      {{#each specializations as |spec|}}
-      <div class="specialization-tree-container item" data-item-id="{{spec.id}}">
-        <div class="tree-header row">
-          <h2>Specialization: {{spec.name}}</h2>
-          <a class="item-delete button-link" title="Delete Specialization"><i class="fas fa-trash"></i> Remove Spec</a>
+      <!-- Specializations List -->
+      <div class="specializations-list-container">
+        <div class="tab-header row">
+          <h2>Specializations</h2>
         </div>
-        <div class="talent-grid">
-          {{#each spec.system.talentRows as |row|}}
-            {{#each row.talents as |talent|}}
-            <div class="talent-node-cell">
-              <!-- Connector Lines -->
-              {{#if talent.directions.up}}<div class="connector connector-up"></div>{{/if}}
-              {{#if talent.directions.down}}<div class="connector connector-down"></div>{{/if}}
-              {{#if talent.directions.left}}<div class="connector connector-left"></div>{{/if}}
-              {{#if talent.directions.right}}<div class="connector connector-right"></div>{{/if}}
-
-              <!-- Talent Block -->
-              <div class="talent-card {{#if talent.purchased}}purchased{{/if}}" data-key="{{talent.key}}" data-cost="{{row.cost}}" data-name="{{talent.name}}" data-activation="{{talent.activation}}" data-description="{{talent.description}}" data-tooltip="{{talent.description}}">
-                <div class="talent-name">{{talent.name}}</div>
-                <div class="talent-activation-badge {{talent.activation}}">{{talent.activation}}</div>
-                <div class="talent-cost">{{row.cost}} XP</div>
-              </div>
+        <div class="item-list">
+          {{#each specializations as |spec|}}
+          <div class="item specialization-row row" data-item-id="{{spec.id}}">
+            <span class="item-name"><strong>{{spec.name}}</strong> (Career Skills: {{spec.system.careerSkills}})</span>
+            <div class="item-controls">
+              <a class="item-edit button-link" title="Open Tree"><i class="fas fa-project-diagram"></i> Open Tree</a>
+              <a class="item-delete button-link" title="Remove Specialization"><i class="fas fa-trash"></i> Remove</a>
             </div>
-            {{/each}}
+          </div>
           {{/each}}
         </div>
       </div>
-      {{/each}}
     </div>
 
     <!-- Inventory Tab -->

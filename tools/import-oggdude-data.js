@@ -318,7 +318,7 @@ function compileTalents() {
       _id: generateId(),
       name: name,
       type: "talent",
-      img: "icons/svg/star-filled.svg",
+      img: "icons/svg/star.svg",
       system: {
         description: desc,
         activation: activation,

@@ -67,6 +67,7 @@
     {{/if}}
 
     <!-- Universal Physical Attributes -->
+    {{#if (ne item.type "specialization")}}
     <div class="form-group">
       <label>Encumbrance</label>
       <input type="number" name="system.encumbrance" value="{{system.encumbrance}}" data-dtype="Number" />
@@ -77,5 +78,49 @@
       <label>Description</label>
       {{editor system.description target="system.description" button=true owner=owner editable=editable}}
     </div>
+    {{/if}}
+
+    <!-- Specialization Talent Tree Grid -->
+    {{#if (eq item.type "specialization")}}
+    <div class="specialization-sheet-tree">
+      <div class="career-skills-info">
+        <label>Career Skills:</label>
+        <input type="text" name="system.careerSkills" value="{{system.careerSkills}}" placeholder="e.g. Charm, Deception, Knowledge (Outer Rim)" />
+      </div>
+
+      {{#if isEmbedded}}
+      <div class="xp-hud-bar">
+        <span>Available XP: <strong>{{availableXp}} XP</strong></span>
+      </div>
+      {{/if}}
+
+      <div class="talent-grid spec-grid">
+        {{#each talentRows as |row|}}
+          {{#each row.talents as |talent|}}
+          <div class="talent-node-cell">
+            <!-- Connector Lines -->
+            {{#if talent.directions.up}}<div class="connector connector-up"></div>{{/if}}
+            {{#if talent.directions.down}}<div class="connector connector-down"></div>{{/if}}
+            {{#if talent.directions.left}}<div class="connector connector-left"></div>{{/if}}
+            {{#if talent.directions.right}}<div class="connector connector-right"></div>{{/if}}
+
+            <!-- Talent Block -->
+            <div class="talent-card {{#if talent.purchased}}purchased{{/if}}" 
+                 data-key="{{talent.key}}" 
+                 data-cost="{{row.cost}}" 
+                 data-name="{{talent.name}}" 
+                 data-activation="{{talent.activation}}" 
+                 data-description="{{talent.description}}" 
+                 data-tooltip="{{talent.description}}">
+              <div class="talent-name">{{talent.name}}</div>
+              <div class="talent-activation-badge {{talent.activation}}">{{talent.activation}}</div>
+              <div class="talent-cost">{{row.cost}} XP</div>
+            </div>
+          </div>
+          {{/each}}
+        {{/each}}
+      </div>
+    </div>
+    {{/if}}
   </section>
 </form>
