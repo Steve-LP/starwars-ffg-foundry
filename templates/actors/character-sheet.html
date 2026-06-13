@@ -30,9 +30,13 @@
           {{/if}}
         </div>
         <div class="bio-item drop-zone" data-drop-type="specialization">
-          <label>Specialization</label>
-          {{#if actor.system.biography.specialization}}
-          <span class="bio-value">{{actor.system.biography.specialization}}</span>
+          <label>Specializations</label>
+          {{#if specializations.length}}
+          <span class="bio-value">
+            {{#each specializations as |spec idx|}}
+              {{#if idx}}, {{/if}}{{spec.name}}
+            {{/each}}
+          </span>
           {{else}}
           <span class="bio-placeholder">Drop Spec here</span>
           {{/if}}
