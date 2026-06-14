@@ -651,7 +651,7 @@
 .talent-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  grid-gap: 25px 20px;
+  grid-gap: 0px; /* Set to 0 so cells touch and lines connect continuously */
   position: relative;
   padding: 25px;
   background: rgba(15, 23, 42, 0.4);
@@ -666,7 +666,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 90px;
+  height: 105px; /* Fixed cell height to ensure perfect alignment */
 }
 
 /* Connectors */
@@ -714,81 +714,197 @@
   transform: translateY(-50%);
 }
 
-/* Talent Card styling */
+/* Talent Card styling (FFG Rulebook Style) */
 .talent-card {
   position: relative;
   z-index: 2;
+  width: 165px;
+  height: 68px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  background: rgba(255, 255, 255, 0.12); /* Default outer border fallback */
+  padding: 2px; /* Border thickness */
+  /* Hexagonal cut corner shape */
+  clip-path: polygon(
+    12px 0%, 
+    calc(100% - 12px) 0%, 
+    100% 12px, 
+    100% calc(100% - 12px), 
+    calc(100% - 12px) 100%, 
+    12px 100%, 
+    0% calc(100% - 12px), 
+    0% 12px
+  );
+}
+
+/* Passive Talents (Default locked style - matte steel blue border) */
+.talent-card.passive {
+  background: linear-gradient(135deg, #4b7a96 0%, #293f4e 100%);
+}
+
+/* Active Talents (Default locked style - matte dark red border) */
+.talent-card.active {
+  background: linear-gradient(135deg, #a34e4e 0%, #572525 100%);
+}
+
+/* Available Talents (Reachable but not yet purchased - bright & glowing frames) */
+.talent-card.passive:not(.unreachable):not(.purchased) {
+  background: linear-gradient(135deg, #00b4d8 0%, #0077b6 100%);
+  box-shadow: 0 0 10px rgba(0, 180, 216, 0.35);
+}
+
+.talent-card.active:not(.unreachable):not(.purchased) {
+  background: linear-gradient(135deg, #ff4757 0%, #b33939 100%);
+  box-shadow: 0 0 10px rgba(255, 71, 87, 0.35);
+}
+
+/* Purchased Talents (Filled with glowing color overlays) */
+.talent-card.purchased.passive {
+  background: linear-gradient(135deg, #00b4d8 0%, #005f73 100%);
+  box-shadow: 0 0 18px rgba(0, 180, 216, 0.6);
+}
+
+.talent-card.purchased.active {
+  background: linear-gradient(135deg, #ff4757 0%, #8c1111 100%);
+  box-shadow: 0 0 18px rgba(255, 71, 87, 0.6);
+}
+
+/* Inner Container */
+.talent-card-inner {
   width: 100%;
   height: 100%;
-  background: rgba(30, 41, 59, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  padding: 8px;
+  background: #0f172a; /* Slate 900 background */
+  clip-path: polygon(
+    11px 0%, 
+    calc(100% - 11px) 0%, 
+    100% 11px, 
+    100% calc(100% - 11px), 
+    calc(100% - 11px) 100%, 
+    11px 100%, 
+    0% calc(100% - 11px), 
+    0% 11px
+  );
+  padding: 8px 10px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-  transition: all 0.2s ease;
-  cursor: pointer;
-  overflow: hidden;
+  transition: background 0.2s ease;
 }
 
+/* Active vs Passive Inner Overlays */
+.talent-card.active .talent-card-inner {
+  background: linear-gradient(180deg, #181013 0%, #0f172a 100%);
+}
+
+/* Filled backgrounds for purchased talents */
+.talent-card.purchased.passive .talent-card-inner {
+  background: linear-gradient(180deg, rgba(0, 180, 216, 0.16) 0%, #0f172a 100%);
+}
+
+.talent-card.purchased.active .talent-card-inner {
+  background: linear-gradient(180deg, rgba(255, 71, 87, 0.16) 0%, #0f172a 100%);
+}
+
+/* Hovers */
 .talent-card:hover {
-  transform: translateY(-2px);
-  border-color: rgba(0, 180, 216, 0.4);
-  box-shadow: 0 6px 15px rgba(0, 180, 216, 0.15);
-  background: rgba(30, 41, 59, 0.95);
+  transform: scale(1.03) translateY(-2px);
+  filter: brightness(1.2);
 }
 
-.talent-card.purchased {
-  border: 1px dashed var(--sw-border-glow);
-  box-shadow: 0 0 10px rgba(0, 180, 216, 0.2);
-  background: radial-gradient(circle at center, rgba(0, 180, 216, 0.1) 0%, rgba(30, 41, 59, 0.85) 100%);
+/* Unreachable / Locked Talents (Paler style, disabled hover) */
+.talent-card.unreachable {
+  opacity: 0.28;
+  filter: contrast(90%);
+  cursor: not-allowed;
 }
 
-.talent-name {
-  font-size: 11px;
-  font-weight: 700;
-  color: #fff;
-  line-height: 1.2;
-  text-align: center;
-  flex: 1;
+.talent-card.unreachable:hover {
+  transform: none;
+  filter: contrast(90%);
+}
+
+.talent-card.purchased:hover {
+  transform: scale(1.03) translateY(-2px);
+}
+
+/* Layout Parts inside Talent Card */
+.talent-header {
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding-bottom: 4px;
   margin-bottom: 4px;
 }
 
-.talent-activation-badge {
-  font-size: 8px;
-  font-weight: bold;
+.talent-card.active .talent-header {
+  border-bottom-color: rgba(239, 68, 68, 0.15);
+}
+
+.talent-name {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.15;
+  text-align: left;
+  flex: 1;
+  white-space: normal;
+  word-break: break-word;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  padding: 2px 4px;
-  border-radius: 3px;
-  text-align: center;
-  align-self: center;
-  width: fit-content;
 }
 
-.talent-activation-badge.Passive {
-  background: rgba(255, 255, 255, 0.05);
+/* Activation badge (small indicator light in header) */
+.talent-activation-badge {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #94a3b8;
+  flex-shrink: 0;
+}
+
+.talent-card.passive .talent-activation-badge {
+  background: #64748b;
+  box-shadow: 0 0 4px #64748b;
+}
+
+.talent-card.active .talent-activation-badge {
+  background: #ef4444;
+  box-shadow: 0 0 6px #ef4444;
+}
+
+.talent-card.purchased.active .talent-activation-badge {
+  box-shadow: 0 0 8px #ef4444;
+}
+
+/* Talent Footer */
+.talent-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.talent-activation-label {
+  font-size: 8px;
+  font-weight: 600;
+  text-transform: uppercase;
   color: var(--sw-text-muted);
-  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.talent-activation-badge.Active {
-  background: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
-  border: 1px solid rgba(239, 68, 68, 0.2);
+.talent-card.active .talent-activation-label {
+  color: rgba(239, 68, 68, 0.7);
 }
 
 .talent-cost {
-  font-size: 9px;
+  font-size: 10px;
   font-family: 'Share Tech Mono', monospace;
-  color: #10b981;
-  text-align: right;
-  margin-top: 4px;
+  font-weight: bold;
+  color: #10b981; /* Default green cost */
+}
+
+.talent-card.purchased .talent-cost {
+  color: #00b4d8; /* Cyan for purchased items */
 }
 
 .remove-bio {
@@ -851,6 +967,21 @@
 .spec-grid {
   grid-template-columns: repeat(4, 1fr) !important;
   margin-top: 0 !important;
+}
+
+.talent-ranks-badge {
+  background: #00b4d8;
+  color: #0f172a;
+  font-weight: 800;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 8px;
+  text-transform: uppercase;
+  margin-left: 6px;
+  display: inline-block;
+  vertical-align: middle;
+  line-height: 1.2;
+  box-shadow: 0 0 6px rgba(0, 180, 216, 0.4);
 }
 
 

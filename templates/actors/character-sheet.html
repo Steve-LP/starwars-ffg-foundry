@@ -157,7 +157,11 @@
       <div class="item-list">
         {{#each talents as |talent|}}
         <div class="item talent-row row" data-item-id="{{talent._id}}">
-          <span class="item-name"><strong>{{talent.name}}</strong> (Tier {{talent.system.tier}})</span>
+          <span class="item-name">
+            <strong>{{talent.name}}</strong>
+            {{#if (gt talent.system.ranks 1)}}<span class="talent-ranks-badge">Rank {{talent.system.ranks}}</span>{{/if}}
+            (Tier {{talent.system.tier}})
+          </span>
           <span class="item-activation">{{talent.system.activation}}</span>
           <div class="item-controls">
             <a class="item-edit"><i class="fas fa-edit"></i></a>

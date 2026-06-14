@@ -105,16 +105,23 @@
             {{#if talent.directions.right}}<div class="connector connector-right"></div>{{/if}}
 
             <!-- Talent Block -->
-            <div class="talent-card {{#if talent.purchased}}purchased{{/if}}" 
+            <div class="talent-card {{#if talent.purchased}}purchased{{/if}} {{#if (eq talent.activation 'Passive')}}passive{{else}}active{{/if}}" 
                  data-key="{{talent.key}}" 
                  data-cost="{{row.cost}}" 
                  data-name="{{talent.name}}" 
                  data-activation="{{talent.activation}}" 
                  data-description="{{talent.description}}" 
                  data-tooltip="{{talent.description}}">
-              <div class="talent-name">{{talent.name}}</div>
-              <div class="talent-activation-badge {{talent.activation}}">{{talent.activation}}</div>
-              <div class="talent-cost">{{row.cost}} XP</div>
+              <div class="talent-card-inner">
+                <div class="talent-header">
+                  <div class="talent-activation-badge {{talent.activation}}"></div>
+                  <div class="talent-name">{{talent.name}}</div>
+                </div>
+                <div class="talent-footer">
+                  <div class="talent-activation-label">{{talent.activation}}</div>
+                  <div class="talent-cost">{{row.cost}} XP</div>
+                </div>
+              </div>
             </div>
           </div>
           {{/each}}

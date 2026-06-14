@@ -128,7 +128,10 @@ export class TalentData extends foundry.abstract.TypeDataModel {
       tier: new fields.NumberField({ initial: 1 }),
       ranked: new fields.BooleanField({ initial: false }),
       ranks: new fields.NumberField({ initial: 1 }),
-      key: new fields.StringField({ initial: "" })
+      key: new fields.StringField({ initial: "" }),
+      specialization: new fields.StringField({ initial: "" }),
+      row: new fields.NumberField({ initial: null, nullable: true }),
+      col: new fields.NumberField({ initial: null, nullable: true })
     };
   }
 }

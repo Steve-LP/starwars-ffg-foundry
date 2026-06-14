@@ -2,6 +2,7 @@ import { SWFFGActor } from "./actor.js";
 import { SWFFGItem } from "./item.js";
 import { SWFFGActorSheet } from "./actor-sheet.js";
 import { SWFFGItemSheet } from "./item-sheet.js";
+import { SWFFGSpecializationSheet } from "./specialization-sheet.js";
 import { oggdudeParser } from "./oggdude-importer.js";
 import { CharacterData, NPCData, MinionData, WeaponData, ArmorData, TalentData, ForcePowerData, SpecializationData, SkillData, SpeciesData, CareerData } from "./data-models.js";
 import { SWFFGDiceRoller } from "./dice-roller.js";
@@ -37,6 +38,12 @@ Hooks.once("init", async function () {
   });
 
   foundry.applications.apps.DocumentSheetConfig.registerSheet(Item, "starwars-ffg", SWFFGItemSheet, {
+    types: ["weapon", "armor", "gear", "talent", "forcePower", "skill", "species", "career"],
+    makeDefault: true
+  });
+
+  foundry.applications.apps.DocumentSheetConfig.registerSheet(Item, "starwars-ffg", SWFFGSpecializationSheet, {
+    types: ["specialization"],
     makeDefault: true
   });
 
@@ -82,5 +89,39 @@ Hooks.on("getSceneControlButtons", (controls) => {
         game.starwarsFFG.diceRoller.render(true);
       }
     });
+  }
+});
+
+Hooks.once("ready", async function () {
+  console.log("Star Wars FFG Scratch | Running database verification in Foundry...");
+  const specPack = game.packs.get("starwars-ffg-scratch.specializations");
+  const talentPack = game.packs.get("starwars-ffg-scratch.talents");
+  if (specPack && talentPack) {
+    const specsIndex = await specPack.getIndex();
+    const talentsIndex = await talentPack.getIndex({ fields: ["system.key"] });
+    console.log(`Star Wars FFG Scratch | Foundry loaded ${specsIndex.size} specializations and ${talentsIndex.size} talents.`);
+    
+    // Look up Ambassador specifically as a test
+    const ambassadorEntry = specsIndex.find(s => s.name === "Ambassador");
+    if (ambassadorEntry) {
+      const ambassadorDoc = await specPack.getDocument(ambassadorEntry._id);
+      const rows = ambassadorDoc.system.talentRows || [];
+      let missingKeys = [];
+      for (const row of rows) {
+        for (const tKey of row.talents) {
+          const found = talentsIndex.some(t => t.system?.key === tKey);
+          if (!found) missingKeys.push(tKey);
+        }
+      }
+      if (missingKeys.length === 0) {
+        console.log("Star Wars FFG Scratch | ✅ Ambassador specialization tree verified successfully inside Foundry VTT!");
+      } else {
+        console.warn("Star Wars FFG Scratch | ❌ Missing keys in Ambassador specialization inside Foundry VTT:", missingKeys);
+      }
+    } else {
+      console.warn("Star Wars FFG Scratch | ❌ Ambassador specialization not found in pack!");
+    }
+  } else {
+    console.warn("Star Wars FFG Scratch | ❌ Specializations or Talents packs could not be loaded!");
   }
 });

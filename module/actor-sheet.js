@@ -67,14 +67,40 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     context.talents = [];
     context.forcePowers = [];
 
+    const rawTalents = [];
+
     // Categorize items
     for (let item of actorData.items) {
       if (item.type === "weapon") context.weapons.push(item);
       else if (item.type === "armor") context.armor.push(item);
       else if (item.type === "gear") context.gear.push(item);
-      else if (item.type === "talent") context.talents.push(item);
+      else if (item.type === "talent") rawTalents.push(item);
       else if (item.type === "forcePower") context.forcePowers.push(item);
     }
+
+    // Group raw talents by key for stacked display
+    const groupedTalents = {};
+    for (let talent of rawTalents) {
+      const key = talent.system?.key?.toLowerCase() || talent.name.toLowerCase();
+      if (!groupedTalents[key]) {
+        groupedTalents[key] = {
+          _id: talent.id,
+          name: talent.name,
+          system: {
+            activation: talent.system?.activation || "Passive",
+            tier: talent.system?.tier || 1,
+            ranked: talent.system?.ranked || false,
+            ranks: 0
+          },
+          ids: [talent.id]
+        };
+      } else {
+        groupedTalents[key].ids.push(talent.id);
+      }
+      groupedTalents[key].system.ranks += 1;
+    }
+    context.talents = Object.values(groupedTalents);
+
 
     // Resolve Specializations and their Talent Trees
     const specializations = this.actor.items.filter(i => i.type === "specialization");
