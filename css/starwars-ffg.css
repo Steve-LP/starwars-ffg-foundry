@@ -81,22 +81,27 @@
   justify-content: center;
 }
 
-.charname input {
-  font-family: 'Rajdhani', sans-serif;
-  font-weight: 800;
-  font-size: 28px;
-  color: var(--sw-border-glow);
-  background: transparent;
-  border: none;
-  border-bottom: 1px solid rgba(0, 180, 216, 0.2);
-  text-shadow: 0 0 8px rgba(0, 180, 216, 0.4);
-  transition: all 0.3s ease;
+.starwars-ffg h1 input,
+.starwars-ffg .sheet-header h1 input,
+.starwars-ffg .charname input {
+  font-family: 'Rajdhani', sans-serif !important;
+  font-weight: 600 !important;
+  font-size: 26px !important;
+  color: #ffffff !important;
+  background: transparent !important;
+  border: none !important;
+  border-bottom: 1px solid rgba(0, 180, 216, 0.25) !important;
+  text-shadow: 0 0 8px rgba(0, 180, 216, 0.4) !important;
+  transition: all 0.3s ease !important;
+  text-transform: uppercase !important;
 }
 
-.charname input:focus {
-  border-bottom: 1px solid var(--sw-border-glow);
-  text-shadow: 0 0 12px rgba(0, 180, 216, 0.6);
-  outline: none;
+.starwars-ffg h1 input:focus,
+.starwars-ffg .sheet-header h1 input:focus,
+.starwars-ffg .charname input:focus {
+  border-bottom: 1px solid var(--sw-border-glow) !important;
+  text-shadow: 0 0 12px rgba(0, 180, 216, 0.6) !important;
+  outline: none !important;
 }
 
 /* Global Form Inputs */
@@ -1537,6 +1542,111 @@ body.game ::-webkit-scrollbar-thumb:hover {
   border-radius: 6px !important;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4) !important;
   font-family: 'Outfit', sans-serif !important;
+}
+
+/* Compendium & Directory List Typography Overrides (Schmale Schriftart für Namen) */
+.starwars-ffg.compendium .directory-item,
+.starwars-ffg.directory .directory-item,
+.starwars-ffg .directory-item,
+.starwars-ffg .entry-name,
+.starwars-ffg .item-name,
+.starwars-ffg .skill-row .col-name,
+.compendium.pack .directory-item {
+  font-family: 'Rajdhani', sans-serif !important;
+  font-weight: 600 !important;
+  font-size: 13px !important;
+  letter-spacing: 0.3px !important;
+  text-transform: none !important;
+}
+
+/* Ensure names in lists do not clip and can wrap if needed */
+.starwars-ffg .directory-list .directory-item .entry-name,
+.starwars-ffg .directory-item .name,
+.compendium.pack .directory-item .entry-name {
+  white-space: normal !important;
+  line-height: 1.2 !important;
+  overflow: visible !important;
+}
+
+/* Custom Pause HUD Styling (Sci-Fi Warning Heartbeat) */
+#pause {
+  background: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+#pause > img {
+  display: none !important; /* Hide default clock logo */
+}
+
+#pause::before {
+  content: "\f04c"; /* FontAwesome pause icon */
+  font-family: "Font Awesome 6 Free", "Font Awesome 5 Free" !important;
+  font-weight: 900;
+  font-size: 44px;
+  color: var(--sw-border-glow);
+  display: block;
+  margin: 0 auto 12px auto;
+  text-shadow: 0 0 15px rgba(0, 180, 216, 0.8);
+  animation: sw-pause-pulse 2s infinite ease-in-out;
+}
+
+@keyframes sw-pause-pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.65;
+    filter: drop-shadow(0 0 4px rgba(0, 180, 216, 0.4));
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 1;
+    filter: drop-shadow(0 0 18px rgba(0, 180, 216, 0.85));
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0.65;
+    filter: drop-shadow(0 0 4px rgba(0, 180, 216, 0.4));
+  }
+}
+
+#pause figcaption,
+#pause h3 {
+  font-family: 'Rajdhani', sans-serif !important;
+  font-size: 20px !important;
+  font-weight: 800 !important;
+  text-transform: uppercase !important;
+  color: var(--sw-accent-orange) !important;
+  text-shadow: 0 0 12px rgba(255, 159, 28, 0.65) !important;
+  letter-spacing: 3px !important;
+}
+
+/* Chat Log Override (Entfernt die standardmäßige Papiertextur) */
+#chat-log {
+  background: rgba(11, 14, 20, 0.95) !important;
+  background-image: none !important;
+  border: none !important;
+}
+
+#chat-form {
+  background: rgba(15, 23, 42, 0.8) !important;
+  border-top: 1px solid rgba(0, 180, 216, 0.2) !important;
+}
+
+#chat-form textarea {
+  background: rgba(0, 0, 0, 0.45) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: #fff !important;
+}
+
+/* Custom Background Overrides (Login Page & Empty Canvas background) */
+body.login,
+body.game,
+#board {
+  background-image: url('../assets/login_background.png') !important;
+  background-size: cover !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+  background-attachment: fixed !important;
 }
 
 
