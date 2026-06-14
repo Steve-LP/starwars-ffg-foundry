@@ -148,9 +148,6 @@ export function rollFFGPool(pool) {
     results
   };
 }
-/**
- * Helper to display the rolled chat message in Foundry VTT
- */
 export async function sendRollToChat(actor, rollResult, title = "Skill Check") {
   // If Dice So Nice! is active, play 3D dice rolling animation first
   if (game.dice3d) {
@@ -185,13 +182,32 @@ export async function sendRollToChat(actor, rollResult, title = "Skill Check") {
     }
   }
 
+  // Format individual rolls for the collapsible details section
+  const formattedRolls = rollResult.rolls.map(r => {
+    const symbols = [];
+    if (r.result.success) symbols.push(`Success: ${r.result.success}`);
+    if (r.result.advantage) symbols.push(`Advantage: ${r.result.advantage}`);
+    if (r.result.triumph) symbols.push(`Triumph`);
+    if (r.result.failure) symbols.push(`Failure: ${r.result.failure}`);
+    if (r.result.threat) symbols.push(`Threat: ${r.result.threat}`);
+    if (r.result.despair) symbols.push(`Despair`);
+    if (r.result.light) symbols.push(`Light: ${r.result.light}`);
+    if (r.result.dark) symbols.push(`Dark: ${r.result.dark}`);
+    
+    return {
+      type: r.type,
+      label: r.type.charAt(0).toUpperCase() + r.type.slice(1),
+      resultString: symbols.join(", ") || "Blank"
+    };
+  });
+
   const templatePath = "systems/starwars-ffg-scratch/templates/chat/roll-card.html";
   
   const templateData = {
     actor: actor,
     title: title,
     pool: rollResult.pool,
-    rolls: rollResult.rolls,
+    formattedRolls: formattedRolls,
     results: rollResult.results
   };
 
@@ -206,3 +222,4 @@ export async function sendRollToChat(actor, rollResult, title = "Skill Check") {
 
   return ChatMessage.create(chatData);
 }
+

@@ -134,9 +134,9 @@ export class SWFFGActor extends Actor {
     // Loop items to find equipped armor
     for (const item of this.items) {
       if (item.type === "armor" && item.system.equipped) {
-        armorSoak += item.derived?.soak ?? item.system.soak || 0;
-        armorMeleeDefence = Math.max(armorMeleeDefence, item.derived?.defence ?? item.system.defence || 0);
-        armorRangedDefence = Math.max(armorRangedDefence, item.derived?.defence ?? item.system.defence || 0);
+        armorSoak += (item.derived?.soak ?? item.system.soak) || 0;
+        armorMeleeDefence = Math.max(armorMeleeDefence, (item.derived?.defence ?? item.system.defence) || 0);
+        armorRangedDefence = Math.max(armorRangedDefence, (item.derived?.defence ?? item.system.defence) || 0);
       }
     }
 

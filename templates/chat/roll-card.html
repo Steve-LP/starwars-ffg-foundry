@@ -82,4 +82,20 @@
       {{/if}}
     </div>
   </div>
+
+  <!-- Collapsible Roll Details -->
+  <details class="roll-details-collapsible">
+    <summary>Einzelne Würfelergebnisse</summary>
+    <div class="roll-details-list">
+      {{#each formattedRolls}}
+      <div class="roll-detail-item die-type-{{type}}">
+        <div>
+          <span class="roll-detail-die-icon"></span>
+          <span class="roll-detail-die-label">{{label}}</span>
+        </div>
+        <span class="roll-detail-result">{{resultString}}</span>
+      </div>
+      {{/each}}
+    </div>
+  </details>
 </div>

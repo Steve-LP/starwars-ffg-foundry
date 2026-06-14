@@ -620,6 +620,96 @@
 .triumph-highlight { background: rgba(251, 192, 45, 0.15); border: 1px solid var(--color-proficiency); color: #FFF176; }
 .despair-highlight { background: rgba(198, 40, 40, 0.15); border: 1px solid var(--color-challenge); color: #FF8A80; }
 
+/* Collapsible Detailed Roll Results styling */
+.roll-details-collapsible {
+  margin-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 8px;
+}
+
+.roll-details-collapsible summary {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--sw-text-muted);
+  cursor: pointer;
+  outline: none;
+  letter-spacing: 0.8px;
+  padding: 4px 0;
+  transition: color 0.2s ease;
+}
+
+.roll-details-collapsible summary:hover {
+  color: var(--sw-border-glow);
+}
+
+.roll-details-list {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  border-radius: 6px;
+  margin-top: 8px;
+  padding: 6px 10px;
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.roll-detail-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  font-family: 'Outfit', sans-serif;
+  padding: 4px 0;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.04);
+}
+
+.roll-detail-item:last-child {
+  border-bottom: none;
+}
+
+.roll-detail-die-label {
+  font-weight: 600;
+  vertical-align: middle;
+}
+
+.roll-detail-die-icon {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  background-color: currentColor;
+  margin-right: 6px;
+  vertical-align: middle;
+  box-shadow: 0 0 4px currentColor;
+}
+
+.die-type-ability .roll-detail-die-label { color: #81C784; }
+.die-type-ability .roll-detail-die-icon { color: var(--color-ability); clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); }
+
+.die-type-proficiency .roll-detail-die-label { color: #FFF176; }
+.die-type-proficiency .roll-detail-die-icon { color: var(--color-proficiency); clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%); }
+
+.die-type-boost .roll-detail-die-label { color: #64B5F6; }
+.die-type-boost .roll-detail-die-icon { color: var(--color-boost); clip-path: polygon(10% 10%, 90% 10%, 90% 90%, 10% 90%); }
+
+.die-type-difficulty .roll-detail-die-label { color: #BA68C8; }
+.die-type-difficulty .roll-detail-die-icon { color: var(--color-difficulty); clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); }
+
+.die-type-challenge .roll-detail-die-label { color: #FF8A80; }
+.die-type-challenge .roll-detail-die-icon { color: var(--color-challenge); clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%); }
+
+.die-type-setback .roll-detail-die-label { color: #94A3B8; }
+.die-type-setback .roll-detail-die-icon { color: #888; clip-path: polygon(10% 10%, 90% 10%, 90% 90%, 10% 90%); }
+
+.die-type-force .roll-detail-die-label { color: #ECEFF1; }
+.die-type-force .roll-detail-die-icon { color: var(--color-force); clip-path: polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%); }
+
+.roll-detail-result {
+  color: #fff;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+}
+
 /* Drag and Drop Zone styling */
 .drop-zone {
   border: 1px dashed rgba(0, 180, 216, 0.4);
