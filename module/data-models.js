@@ -116,7 +116,7 @@ export class WeaponData extends foundry.abstract.TypeDataModel {
         characteristics: new fields.StringField({ initial: "" }),
         skills: new fields.StringField({ initial: "" })
       }),
-      attachments: new fields.JSONField({ initial: [] })
+      attachments: new fields.ArrayField(new fields.ObjectField(), { initial: [] })
     };
   }
 }
@@ -140,7 +140,7 @@ export class ArmorData extends foundry.abstract.TypeDataModel {
         characteristics: new fields.StringField({ initial: "" }),
         skills: new fields.StringField({ initial: "" })
       }),
-      attachments: new fields.JSONField({ initial: [] })
+      attachments: new fields.ArrayField(new fields.ObjectField(), { initial: [] })
     };
   }
 }
