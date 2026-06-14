@@ -4,7 +4,7 @@ import { SWFFGActorSheet } from "./actor-sheet.js";
 import { SWFFGItemSheet } from "./item-sheet.js";
 import { SWFFGSpecializationSheet } from "./specialization-sheet.js";
 import { oggdudeParser } from "./oggdude-importer.js";
-import { CharacterData, NPCData, MinionData, WeaponData, ArmorData, GearData, TalentData, ForcePowerData, SpecializationData, SkillData, SpeciesData, CareerData } from "./data-models.js";
+import { CharacterData, NPCData, MinionData, WeaponData, ArmorData, GearData, TalentData, ForcePowerData, SpecializationData, SkillData, SpeciesData, CareerData, AttachmentData } from "./data-models.js";
 import { SWFFGDiceRoller } from "./dice-roller.js";
 
 Hooks.once("init", async function () {
@@ -25,7 +25,8 @@ Hooks.once("init", async function () {
     specialization: SpecializationData,
     skill: SkillData,
     species: SpeciesData,
-    career: CareerData
+    career: CareerData,
+    attachment: AttachmentData
   };
 
   // Define custom document classes
@@ -39,7 +40,7 @@ Hooks.once("init", async function () {
   });
 
   foundry.applications.apps.DocumentSheetConfig.registerSheet(Item, "starwars-ffg", SWFFGItemSheet, {
-    types: ["weapon", "armor", "gear", "talent", "forcePower", "skill", "species", "career"],
+    types: ["weapon", "armor", "gear", "talent", "forcePower", "skill", "species", "career", "attachment"],
     makeDefault: true
   });
 

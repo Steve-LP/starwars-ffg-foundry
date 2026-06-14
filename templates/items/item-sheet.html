@@ -114,7 +114,38 @@
       <label>Skill Mods</label>
       <input type="text" name="system.modifiers.skills" value="{{system.modifiers.skills}}" placeholder="e.g. athletics:1, stealth:1" />
     </div>
+    {{/if}}
+
+    <!-- Installed Attachments list for Weapon, Armor -->
+    {{#if (or (eq item.type "weapon") (eq item.type "armor"))}}
     <hr />
+    <h3>Installed Attachments (Remaining HP: {{system.derived.hardpointsRemaining}} / {{system.hardpoints}})</h3>
+    <div class="attachments-list" style="margin-bottom: 15px;">
+      {{#each system.attachments as |att attIdx|}}
+      <div class="attachment-item item" style="padding: 8px; border: 1px solid rgba(255,255,255,0.15); margin-bottom: 8px; border-radius: 4px; background: rgba(0,0,0,0.2);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <strong>{{att.name}}</strong> (HP Occupied: {{att.hardpoints}})
+          <a class="remove-attachment button-link" data-attachment-index="{{attIdx}}" title="Remove attachment"><i class="fas fa-trash"></i> Remove</a>
+        </div>
+        {{#if att.mods.length}}
+        <div class="attachment-mods" style="padding-left: 10px; font-size: 13px;">
+          <strong>Upgradeable Mods:</strong>
+          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin-top: 4px;">
+            {{#each att.mods as |mod modIdx|}}
+            <label style="display: flex; align-items: center; gap: 6px;">
+              <input type="checkbox" class="toggle-attachment-mod" data-attachment-index="{{attIdx}}" data-mod-index="{{modIdx}}" {{checked mod.active}} />
+              <span>{{mod.name}}</span>
+            </label>
+            {{/each}}
+          </div>
+        </div>
+        {{/if}}
+      </div>
+      {{/each}}
+      {{#unless system.attachments.length}}
+      <p style="font-style: italic; color: #888;">Drag and drop an attachment item here to install it.</p>
+      {{/unless}}
+    </div>
     {{/if}}
 
     <!-- Item Description -->

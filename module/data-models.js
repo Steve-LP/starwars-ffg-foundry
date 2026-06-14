@@ -115,7 +115,8 @@ export class WeaponData extends foundry.abstract.TypeDataModel {
         encumbrance: new fields.NumberField({ initial: 0 }),
         characteristics: new fields.StringField({ initial: "" }),
         skills: new fields.StringField({ initial: "" })
-      })
+      }),
+      attachments: new fields.ArrayField(new fields.ObjectField(), { initial: [] })
     };
   }
 }
@@ -138,7 +139,8 @@ export class ArmorData extends foundry.abstract.TypeDataModel {
         encumbrance: new fields.NumberField({ initial: 0 }),
         characteristics: new fields.StringField({ initial: "" }),
         skills: new fields.StringField({ initial: "" })
-      })
+      }),
+      attachments: new fields.ArrayField(new fields.ObjectField(), { initial: [] })
     };
   }
 }
@@ -248,6 +250,29 @@ export class CareerData extends foundry.abstract.TypeDataModel {
     return {
       description: new fields.HTMLField({ initial: "" }),
       careerSkills: new fields.StringField({ initial: "" }),
+      key: new fields.StringField({ initial: "" })
+    };
+  }
+}
+
+export class AttachmentData extends foundry.abstract.TypeDataModel {
+  static defineSchema() {
+    const fields = foundry.data.fields;
+    return {
+      description: new fields.HTMLField({ initial: "" }),
+      hardpoints: new fields.NumberField({ initial: 1, min: 0 }),
+      baseModifiers: new fields.SchemaField({
+        wounds: new fields.NumberField({ initial: 0 }),
+        strain: new fields.NumberField({ initial: 0 }),
+        soak: new fields.NumberField({ initial: 0 }),
+        encumbrance: new fields.NumberField({ initial: 0 }),
+        characteristics: new fields.StringField({ initial: "" }),
+        skills: new fields.StringField({ initial: "" }),
+        qualities: new fields.StringField({ initial: "" }),
+        damage: new fields.NumberField({ initial: 0 }),
+        critical: new fields.NumberField({ initial: 0 })
+      }),
+      mods: new fields.ArrayField(new fields.ObjectField(), { initial: [] }),
       key: new fields.StringField({ initial: "" })
     };
   }

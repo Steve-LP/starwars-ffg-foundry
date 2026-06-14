@@ -160,17 +160,46 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     // Parse skill modifiers from equipped items
     const skillModifiers = {};
     for (const item of this.actor.items) {
-      if (item.system?.equipped && item.system?.modifiers) {
-        const skillModStr = item.system.modifiers.skills || "";
-        if (skillModStr) {
-          const parts = skillModStr.split(",");
-          for (const part of parts) {
-            const [skillName, valStr] = part.split(":").map(p => p.trim().toLowerCase());
-            if (skillName && valStr) {
-              const modVal = parseInt(valStr);
-              if (!isNaN(modVal)) {
-                skillModifiers[skillName] = (skillModifiers[skillName] || 0) + modVal;
+      if (item.system?.equipped) {
+        // From base item modifiers
+        if (item.system.modifiers) {
+          const skillModStr = item.system.modifiers.skills || "";
+          if (skillModStr) {
+            const parts = skillModStr.split(",");
+            for (const part of parts) {
+              const [skillName, valStr] = part.split(":").map(p => p.trim().toLowerCase());
+              if (skillName && valStr) {
+                const modVal = parseInt(valStr);
+                if (!isNaN(modVal)) {
+                  skillModifiers[skillName] = (skillModifiers[skillName] || 0) + modVal;
+                }
               }
+            }
+          }
+        }
+
+        // From attachments installed on equipped weapons/armor
+        if (item.system.attachments && Array.isArray(item.system.attachments)) {
+          for (const att of item.system.attachments) {
+            // Base attachment skill modifiers
+            if (att.baseModifiers?.skills) {
+              const parts = att.baseModifiers.skills.split(",");
+              for (const part of parts) {
+                const [skillName, valStr] = part.split(":").map(p => p.trim().toLowerCase());
+                if (skillName && valStr) {
+                  const modVal = parseInt(valStr);
+                  if (!isNaN(modVal)) {
+                    skillModifiers[skillName] = (skillModifiers[skillName] || 0) + modVal;
+                  }
+                }
+              }
+            }
+
+            // Unlocked active skill mods
+            const activeMods = (att.mods || []).filter(m => m.active && m.type === "skill" && m.target);
+            for (const mod of activeMods) {
+              const skillName = mod.target.trim().toLowerCase();
+              skillModifiers[skillName] = (skillModifiers[skillName] || 0) + (mod.value || 0);
             }
           }
         }
@@ -648,6 +677,37 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     const item = await Item.fromDropData(data);
     if (!item) return super._onDrop(event);
     const itemData = item.toObject();
+
+    // Check if dropping an attachment onto a weapon or armor item
+    if (itemData.type === "attachment") {
+      const targetItemEl = event.target.closest(".item");
+      const targetItemId = targetItemEl ? targetItemEl.dataset.itemId : null;
+
+      if (targetItemId) {
+        const targetItem = this.actor.items.get(targetItemId);
+        if (targetItem && (targetItem.type === "weapon" || targetItem.type === "armor")) {
+          const requiredHP = itemData.system.hardpoints || 1;
+          const remainingHP = targetItem.system.derived?.hardpointsRemaining ?? targetItem.system.hardpoints ?? 0;
+          
+          if (remainingHP < requiredHP) {
+            ui.notifications.warn(`Nicht genügend Befestigungspunkte frei auf ${targetItem.name}! (Benötigt: ${requiredHP}, Frei: ${remainingHP})`);
+            return false;
+          }
+
+          const attachments = Array.from(targetItem.system.attachments || []);
+          attachments.push(itemData);
+          
+          await targetItem.update({ "system.attachments": attachments });
+          ui.notifications.info(`Aufsatz "${itemData.name}" erfolgreich auf "${targetItem.name}" installiert.`);
+
+          // If the attachment was already an item owned by this actor, delete it from top-level inventory
+          if (item.actor && item.actor.id === this.actor.id) {
+            await this.actor.deleteEmbeddedDocuments("Item", [item.id]);
+          }
+          return false;
+        }
+      }
+    }
 
     if (itemData.type === "species") {
       return this._onDropSpecies(itemData);

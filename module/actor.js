@@ -48,22 +48,68 @@ export class SWFFGActor extends Actor {
     };
 
     for (const item of this.items) {
-      if (item.system?.equipped && item.system?.modifiers) {
-        inventoryWoundsMod += item.system.modifiers.wounds || 0;
-        inventoryStrainMod += item.system.modifiers.strain || 0;
-        inventorySoakMod += item.system.modifiers.soak || 0;
-        maxEncumbranceBonus += item.system.modifiers.encumbrance || 0;
+      if (item.system?.equipped) {
+        // Base modifiers of the item itself
+        if (item.system.modifiers) {
+          inventoryWoundsMod += item.system.modifiers.wounds || 0;
+          inventoryStrainMod += item.system.modifiers.strain || 0;
+          inventorySoakMod += item.system.modifiers.soak || 0;
+          maxEncumbranceBonus += item.system.modifiers.encumbrance || 0;
 
-        // Parse characteristic modifiers (e.g. "brawn:1, agility:-1")
-        const charModStr = item.system.modifiers.characteristics || "";
-        if (charModStr) {
-          const parts = charModStr.split(",");
-          for (const part of parts) {
-            const [charName, valStr] = part.split(":").map(p => p.trim().toLowerCase());
-            if (charName && valStr && characteristicMods[charName] !== undefined) {
-              const modVal = parseInt(valStr);
-              if (!isNaN(modVal)) {
-                characteristicMods[charName] += modVal;
+          // Parse characteristic modifiers (e.g. "brawn:1, agility:-1")
+          const charModStr = item.system.modifiers.characteristics || "";
+          if (charModStr) {
+            const parts = charModStr.split(",");
+            for (const part of parts) {
+              const [charName, valStr] = part.split(":").map(p => p.trim().toLowerCase());
+              if (charName && valStr && characteristicMods[charName] !== undefined) {
+                const modVal = parseInt(valStr);
+                if (!isNaN(modVal)) {
+                  characteristicMods[charName] += modVal;
+                }
+              }
+            }
+          }
+        }
+
+        // Modifiers from installed attachments on equipped weapons and armor
+        if (item.system.attachments && Array.isArray(item.system.attachments)) {
+          for (const att of item.system.attachments) {
+            // Base modifiers of the attachment
+            if (att.baseModifiers) {
+              inventoryWoundsMod += att.baseModifiers.wounds || 0;
+              inventoryStrainMod += att.baseModifiers.strain || 0;
+              inventorySoakMod += att.baseModifiers.soak || 0;
+              maxEncumbranceBonus += att.baseModifiers.encumbrance || 0;
+
+              const charModStr = att.baseModifiers.characteristics || "";
+              if (charModStr) {
+                const parts = charModStr.split(",");
+                for (const part of parts) {
+                  const [charName, valStr] = part.split(":").map(p => p.trim().toLowerCase());
+                  if (charName && valStr && characteristicMods[charName] !== undefined) {
+                    const modVal = parseInt(valStr);
+                    if (!isNaN(modVal)) {
+                      characteristicMods[charName] += modVal;
+                    }
+                  }
+                }
+              }
+            }
+
+            // Unlocked mods of the attachment
+            const activeMods = (att.mods || []).filter(m => m.active);
+            for (const mod of activeMods) {
+              if (mod.type === "stat") {
+                if (mod.target === "wounds") inventoryWoundsMod += mod.value || 0;
+                else if (mod.target === "strain") inventoryStrainMod += mod.value || 0;
+                else if (mod.target === "soak") inventorySoakMod += mod.value || 0;
+                else if (mod.target === "encumbrance") maxEncumbranceBonus += mod.value || 0;
+              } else if (mod.type === "characteristic" && mod.target) {
+                const charName = mod.target.trim().toLowerCase();
+                if (characteristicMods[charName] !== undefined) {
+                  characteristicMods[charName] += mod.value || 0;
+                }
               }
             }
           }
@@ -88,9 +134,9 @@ export class SWFFGActor extends Actor {
     // Loop items to find equipped armor
     for (const item of this.items) {
       if (item.type === "armor" && item.system.equipped) {
-        armorSoak += item.system.soak || 0;
-        armorMeleeDefence = Math.max(armorMeleeDefence, item.system.defence || 0);
-        armorRangedDefence = Math.max(armorRangedDefence, item.system.defence || 0);
+        armorSoak += item.system.derived?.soak ?? item.system.soak || 0;
+        armorMeleeDefence = Math.max(armorMeleeDefence, item.system.derived?.defence ?? item.system.defence || 0);
+        armorRangedDefence = Math.max(armorRangedDefence, item.system.derived?.defence ?? item.system.defence || 0);
       }
     }
 
