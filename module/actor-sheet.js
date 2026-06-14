@@ -507,7 +507,6 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
         { xpLogDescription: `Löschen der Spezialisierung "${item.name}" (+${refundXp} XP erstattet)` }
       );
       await this.actor.deleteEmbeddedDocuments("Item", idsToDelete);
-      await this._recalculateCareerSkills([], remainingSpecs, careerName);
       
       if (refundXp > 0) {
         ui.notifications.info(`Specialization "${item.name}" removed. Refunded ${refundXp} XP for ${talentsToDelete.length} purchased talents.`);
@@ -792,7 +791,6 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     const remainingSpecs = this.actor.items.filter(i => i.type === "specialization" && i.id !== itemId);
     const careerName = this.actor.system.biography.career;
     await this.actor.deleteEmbeddedDocuments("Item", [itemId]);
-    await this._recalculateCareerSkills([], remainingSpecs, careerName);
     this.render();
   }
 
@@ -823,48 +821,8 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     if (!confirmRemove) return;
 
     await this.actor.update({ "system.biography.career": "" });
-    const remainingSpecs = this.actor.items.filter(i => i.type === "specialization");
-    await this._recalculateCareerSkills([], remainingSpecs, "");
     this.render();
   }
 
-  async _recalculateCareerSkills(removedSpecSkills = [], remainingSpecs = [], careerName = "") {
-    const activeCareerSkills = new Set();
-    
-    for (const spec of remainingSpecs) {
-      const skills = (spec.system?.careerSkills || "").split(",").map(s => s.trim().toLowerCase());
-      for (const s of skills) {
-        if (s) activeCareerSkills.add(s);
-      }
-    }
 
-    if (careerName) {
-      const careerPack = game.packs.get("starwars-ffg-scratch.careers");
-      const careerIndex = careerPack ? await careerPack.getIndex({ fields: ["system.careerSkills"] }) : [];
-      const careerDoc = careerIndex.find(c => c.name.toLowerCase() === careerName.toLowerCase());
-      if (careerDoc) {
-        const skills = (careerDoc.system?.careerSkills || "").split(",").map(s => s.trim().toLowerCase());
-        for (const s of skills) {
-          if (s) activeCareerSkills.add(s);
-        }
-      }
-    }
-
-    const currentSkills = this.actor.items.filter(i => i.type === "skill");
-    const updates = [];
-    
-    for (const skill of currentSkills) {
-      const isStillCareer = activeCareerSkills.has(skill.name.toLowerCase());
-      if (skill.system.career !== isStillCareer) {
-        updates.push({
-          _id: skill.id,
-          "system.career": isStillCareer
-        });
-      }
-    }
-
-    if (updates.length > 0) {
-      await this.actor.updateEmbeddedDocuments("Item", updates);
-    }
-  }
 }

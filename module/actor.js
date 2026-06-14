@@ -168,4 +168,93 @@ export class SWFFGActor extends Actor {
       }
     }
   }
+
+  /**
+   * Recalculates career skills for the character based on current specs, base career, and talents.
+   */
+  async recalculateCareerSkills() {
+    if (this.type !== "character") return;
+    
+    const activeCareerSkills = new Set();
+    const remainingSpecs = this.items.filter(i => i.type === "specialization");
+    const careerName = this.system.biography?.career || "";
+
+    // 1. Add career skills from specializations
+    for (const spec of remainingSpecs) {
+      const skills = (spec.system?.careerSkills || "").split(",").map(s => s.trim().toLowerCase());
+      for (const s of skills) {
+        if (s) activeCareerSkills.add(s);
+      }
+    }
+
+    // 2. Add career skills from base career
+    if (careerName) {
+      const careerPack = game.packs.get("starwars-ffg-scratch.careers");
+      const careerIndex = careerPack ? await careerPack.getIndex({ fields: ["system.careerSkills"] }) : [];
+      const careerDoc = careerIndex.find(c => c.name.toLowerCase() === careerName.toLowerCase());
+      if (careerDoc) {
+        const skills = (careerDoc.system?.careerSkills || "").split(",").map(s => s.trim().toLowerCase());
+        for (const s of skills) {
+          if (s) activeCareerSkills.add(s);
+        }
+      }
+    }
+
+    // 3. Add career skills unlocked by purchased talents
+    const ownedTalents = this.items.filter(t => t.type === "talent");
+    for (const talent of ownedTalents) {
+      const unlocks = (talent.system?.careerSkillsUnlocks || "").split(",").map(s => s.trim().toLowerCase());
+      for (const s of unlocks) {
+        if (s) activeCareerSkills.add(s);
+      }
+    }
+
+    // 4. Update the skills items on the actor
+    const currentSkills = this.items.filter(i => i.type === "skill");
+    const updates = [];
+    
+    for (const skill of currentSkills) {
+      const isStillCareer = activeCareerSkills.has(skill.name.toLowerCase());
+      if (skill.system.career !== isStillCareer) {
+        updates.push({
+          _id: skill.id,
+          "system.career": isStillCareer
+        });
+      }
+    }
+
+    if (updates.length > 0) {
+      await this.updateEmbeddedDocuments("Item", updates);
+    }
+  }
+
+  /** @override */
+  _onCreateEmbeddedDocuments(embeddedName, documents, result, options, userId) {
+    super._onCreateEmbeddedDocuments(embeddedName, documents, result, options, userId);
+    if (userId === game.user.id && (embeddedName === "Item")) {
+      const hasSpecOrTalent = documents.some(d => d.type === "specialization" || d.type === "talent");
+      if (hasSpecOrTalent) {
+        this.recalculateCareerSkills();
+      }
+    }
+  }
+
+  /** @override */
+  _onDeleteEmbeddedDocuments(embeddedName, documents, result, options, userId) {
+    super._onDeleteEmbeddedDocuments(embeddedName, documents, result, options, userId);
+    if (userId === game.user.id && (embeddedName === "Item")) {
+      const hasSpecOrTalent = documents.some(d => d.type === "specialization" || d.type === "talent");
+      if (hasSpecOrTalent) {
+        this.recalculateCareerSkills();
+      }
+    }
+  }
+
+  /** @override */
+  _onUpdate(changed, options, userId) {
+    super._onUpdate(changed, options, userId);
+    if (userId === game.user.id && changed.system?.biography?.career !== undefined) {
+      this.recalculateCareerSkills();
+    }
+  }
 }
