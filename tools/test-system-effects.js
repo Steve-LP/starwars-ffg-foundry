@@ -116,24 +116,27 @@
     const attachments = [laserSightData];
     await blaster[0].update({ "system.attachments": attachments });
 
-    assert(blaster[0].system.derived.hardpointsRemaining === 2, "Attachment consumes 1 HP, 2 remaining");
-    assert(blaster[0].system.derived.qualities === "Accurate 1", "Accurate 1 quality is applied");
-    assert(blaster[0].system.derived.damage === 7, "Damage remains 7 before unlocking mods");
+    let blasterItem = actor.items.get(blaster[0].id);
+    assert(blasterItem.system.derived.hardpointsRemaining === 2, "Attachment consumes 1 HP, 2 remaining");
+    assert(blasterItem.system.derived.qualities === "Accurate 1", "Accurate 1 quality is applied");
+    assert(blasterItem.system.derived.damage === 7, "Damage remains 7 before unlocking mods");
 
     // Toggle mod active state (unlock +1 Damage and Pierce 1)
-    const updatedAttachments = JSON.parse(JSON.stringify(blaster[0].system.attachments));
+    const updatedAttachments = JSON.parse(JSON.stringify(blasterItem.system.attachments));
     updatedAttachments[0].mods[0].active = true; // +1 damage
     updatedAttachments[0].mods[1].active = true; // Pierce 1
-    await blaster[0].update({ "system.attachments": updatedAttachments });
+    await blasterItem.update({ "system.attachments": updatedAttachments });
 
-    assert(blaster[0].system.derived.damage === 8, "Derived weapon damage increases to 8 after unlocking mod");
-    assert(blaster[0].system.derived.qualities.includes("Pierce 1"), "Pierce 1 quality is applied from unlocked mod");
+    blasterItem = actor.items.get(blaster[0].id);
+    assert(blasterItem.system.derived.damage === 8, "Derived weapon damage increases to 8 after unlocking mod");
+    assert(blasterItem.system.derived.qualities.includes("Pierce 1"), "Pierce 1 quality is applied from unlocked mod");
 
     // Uninstall attachment
-    await blaster[0].update({ "system.attachments": [] });
-    assert(blaster[0].system.derived.hardpointsRemaining === 3, "Uninstalling attachment restores HP to 3");
-    assert(blaster[0].system.derived.damage === 7, "Damage reverts to base 7");
-    assert(blaster[0].system.derived.qualities === "", "Attachment qualities are removed");
+    await blasterItem.update({ "system.attachments": [] });
+    blasterItem = actor.items.get(blaster[0].id);
+    assert(blasterItem.system.derived.hardpointsRemaining === 3, "Uninstalling attachment restores HP to 3");
+    assert(blasterItem.system.derived.damage === 7, "Damage reverts to base 7");
+    assert(blasterItem.system.derived.qualities === "", "Attachment qualities are removed");
 
   } catch (error) {
     console.error("SWFFG TEST | Test suite encountered an error:", error);
