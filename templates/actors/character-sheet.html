@@ -51,6 +51,9 @@
             <input type="number" name="system.xp.available" value="{{actor.system.xp.available}}" data-dtype="Number" />
             <span>/</span>
             <input type="number" name="system.xp.total" value="{{actor.system.xp.total}}" data-dtype="Number" />
+            {{#if isGM}}
+            <a class="award-xp-btn" title="XP vergeben / abziehen"><i class="fas fa-award"></i></a>
+            {{/if}}
           </div>
         </div>
       </div>
@@ -80,7 +83,8 @@
       <div class="stat-values">
         <input type="number" name="system.stats.wounds.value" value="{{actor.system.stats.wounds.value}}" data-dtype="Number" />
         <span>/</span>
-        <input type="number" name="system.stats.wounds.max" value="{{actor.system.stats.wounds.max}}" data-dtype="Number" />
+        <input type="number" name="system.stats.wounds.base" value="{{actor.system.stats.wounds.base}}" data-dtype="Number" class="base-input" title="Basis-Wundschwelle (wird durch Talente wie Toughened erhöht)" />
+        <span class="max-derived-value" title="Aktuelle Max-Schwelle (inkl. Talente)">{{actor.system.stats.wounds.max}}</span>
       </div>
     </div>
     <div class="stat-box strain">
@@ -88,7 +92,8 @@
       <div class="stat-values">
         <input type="number" name="system.stats.strain.value" value="{{actor.system.stats.strain.value}}" data-dtype="Number" />
         <span>/</span>
-        <input type="number" name="system.stats.strain.max" value="{{actor.system.stats.strain.max}}" data-dtype="Number" />
+        <input type="number" name="system.stats.strain.base" value="{{actor.system.stats.strain.base}}" data-dtype="Number" class="base-input" title="Basis-Erschöpfungsschwelle (wird durch Talente wie Grit erhöht)" />
+        <span class="max-derived-value" title="Aktuelle Max-Schwelle (inkl. Talente)">{{actor.system.stats.strain.max}}</span>
       </div>
     </div>
     <div class="stat-box defense">
@@ -186,6 +191,47 @@
             </div>
           </div>
           {{/each}}
+        </div>
+      </div>
+
+      <!-- XP History Log -->
+      <div class="xp-history-container">
+        <div class="tab-header row">
+          <h2>XP History & GM Audit Log</h2>
+          {{#if isGM}}
+          <a class="reset-xp-log button-link" title="Reset Audit Log"><i class="fas fa-undo"></i> Reset Log</a>
+          {{/if}}
+        </div>
+        <div class="xp-history-log">
+          {{#if actor.system.xp.log.length}}
+            <table class="xp-history-table">
+              <thead>
+                <tr>
+                  <th>Timestamp</th>
+                  <th>User</th>
+                  <th>Change</th>
+                  <th>XP (Avail/Total)</th>
+                  <th>Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                {{#each actor.system.xp.log}}
+                <tr class="xp-log-row">
+                  <td class="xp-log-time">{{this.timestamp}}</td>
+                  <td class="xp-log-user">{{this.user}}</td>
+                  <td class="xp-log-change {{#if this.positive}}positive{{else}}negative{{/if}}">{{this.change}} XP</td>
+                  <td class="xp-log-current">
+                    Avail: {{this.prevAvailable}} ➔ {{this.available}}<br>
+                    Total: {{this.prevTotal}} ➔ {{this.total}}
+                  </td>
+                  <td class="xp-log-desc">{{this.description}}</td>
+                </tr>
+                {{/each}}
+              </tbody>
+            </table>
+          {{else}}
+            <p class="no-history">No XP transaction history recorded yet.</p>
+          {{/if}}
         </div>
       </div>
     </div>

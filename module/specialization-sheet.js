@@ -227,7 +227,13 @@ export class SWFFGSpecializationSheet extends HandlebarsApplicationMixin(ItemShe
     const availableXp = actor.system.xp.available || 0;
 
     if (isPurchased) {
-      // Refund talent
+      // Path validation for refund
+      const refundValid = this._validateRefund(row, col);
+      if (!refundValid) {
+        ui.notifications.warn(`You cannot refund "${name}" because other purchased talents depend on it!`);
+        return;
+      }
+
       const confirmRefund = confirm(`Do you want to refund ${name} and regain ${cost} XP?`);
       if (!confirmRefund) return;
 
@@ -248,7 +254,10 @@ export class SWFFGSpecializationSheet extends HandlebarsApplicationMixin(ItemShe
       if (talentItem) {
         await actor.deleteEmbeddedDocuments("Item", [talentItem.id]);
         const newAvailable = availableXp + cost;
-        await actor.update({ "system.xp.available": newAvailable });
+        await actor.update(
+          { "system.xp.available": newAvailable },
+          { xpLogDescription: `Erstattung von Talent "${name}" (+${cost} XP) aus ${this.document.name}` }
+        );
         ui.notifications.info(`Refunded ${name}. Regained ${cost} XP.`);
         this.render();
       }
@@ -270,7 +279,10 @@ export class SWFFGSpecializationSheet extends HandlebarsApplicationMixin(ItemShe
 
       // Deduct XP and add talent
       const newAvailable = availableXp - cost;
-      await actor.update({ "system.xp.available": newAvailable });
+      await actor.update(
+        { "system.xp.available": newAvailable },
+        { xpLogDescription: `Kauf von Talent "${name}" (-${cost} XP) aus ${this.document.name}` }
+      );
       await actor.createEmbeddedDocuments("Item", [{
         name: name,
         type: "talent",
@@ -288,5 +300,132 @@ export class SWFFGSpecializationSheet extends HandlebarsApplicationMixin(ItemShe
       ui.notifications.info(`Purchased ${name} for ${cost} XP.`);
       this.render();
     }
+  }
+
+  /**
+   * Validates if a talent can be safely refunded without breaking path reachability
+   * to other purchased talents in this tree.
+   * @param {number} targetRow - Row of the talent to simulate refunding
+   * @param {number} targetCol - Column of the talent to simulate refunding
+   * @returns {boolean} - True if it is safe to refund, false if it breaks the path
+   */
+  _validateRefund(targetRow, targetCol) {
+    const actor = this.document.actor;
+    if (!actor) return true;
+
+    let rows = this.document.system.talentRows;
+    if (typeof rows === "string") {
+      try { rows = JSON.parse(rows); } catch (e) { rows = []; }
+    }
+    if (!rows || !Array.isArray(rows)) return true;
+
+    // 1. Build the simulated grid (pretend the target cell is NOT purchased)
+    const talentGrid = rows.map((row, rIdx) => {
+      return row.talents.map((talentKey, colIdx) => {
+        // Is it purchased?
+        let isPurchased = actor.items.some(t => 
+          t.type === "talent" && 
+          t.system?.key === talentKey && 
+          t.system?.specialization === this.document.name.toLowerCase() && 
+          t.system?.row === rIdx && 
+          t.system?.col === colIdx
+        );
+        
+        // Legacy fallback
+        if (!isPurchased) {
+          const totalOwned = actor.items.filter(t => t.type === "talent" && t.system?.key === talentKey).length;
+          const mappedToOthers = actor.items.filter(t => 
+            t.type === "talent" && 
+            t.system?.key === talentKey && 
+            t.system?.specialization === this.document.name.toLowerCase() && 
+            (t.system?.row !== rIdx || t.system?.col !== colIdx)
+          ).length;
+          isPurchased = (totalOwned - mappedToOthers) >= 1;
+        }
+
+        // Simulate refund: if this is the target cell, mark it as NOT purchased
+        if (rIdx === targetRow && colIdx === targetCol) {
+          isPurchased = false;
+        }
+
+        return {
+          purchased: isPurchased,
+          directions: row.directions[colIdx] || { up: false, down: false, left: false, right: false }
+        };
+      });
+    });
+
+    // 2. Run BFS reachability propagation on the simulated grid
+    for (let r = 0; r < talentGrid.length; r++) {
+      for (let c = 0; c < talentGrid[r].length; c++) {
+        talentGrid[r][c].reachable = (r === 0);
+      }
+    }
+
+    const queue = [];
+    const visited = new Set();
+    const keyOf = (r, c) => `${r},${c}`;
+
+    if (talentGrid.length > 0) {
+      for (let c = 0; c < talentGrid[0].length; c++) {
+        queue.push({ r: 0, c: c });
+      }
+    }
+
+    while (queue.length > 0) {
+      const { r, c } = queue.shift();
+      const key = keyOf(r, c);
+      if (visited.has(key)) continue;
+      visited.add(key);
+
+      const cell = talentGrid[r][c];
+      cell.reachable = true;
+
+      if (cell.purchased) {
+        const neighbors = [
+          { dr: -1, dc: 0, dirSelf: "up", dirOther: "down" },
+          { dr: 1, dc: 0, dirSelf: "down", dirOther: "up" },
+          { dr: 0, dc: -1, dirSelf: "left", dirOther: "right" },
+          { dr: 0, dc: 1, dirSelf: "right", dirOther: "left" }
+        ];
+
+        for (const { dr, dc, dirSelf, dirOther } of neighbors) {
+          const nr = r + dr;
+          const nc = c + dc;
+          if (nr >= 0 && nr < talentGrid.length && nc >= 0 && nc < talentGrid[nr].length) {
+            const neighbor = talentGrid[nr][nc];
+            if (cell.directions[dirSelf] && neighbor.directions[dirOther]) {
+              const neighborKey = keyOf(nr, nc);
+              if (!visited.has(neighborKey)) {
+                queue.push({ r: nr, c: nc });
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // 3. Verify if any talent that is actually purchased on the actor becomes unreachable in the simulated grid
+    for (let r = 0; r < talentGrid.length; r++) {
+      for (let c = 0; c < talentGrid[r].length; c++) {
+        // Skip the one we are refunding
+        if (r === targetRow && c === targetCol) continue;
+        
+        // Check if it was originally purchased
+        const wasPurchased = actor.items.some(t => 
+          t.type === "talent" && 
+          t.system?.key === rows[r].talents[c] && 
+          t.system?.specialization === this.document.name.toLowerCase() && 
+          t.system?.row === r && 
+          t.system?.col === c
+        );
+
+        if (wasPurchased && !talentGrid[r][c].reachable) {
+          return false; // Refunding target breaks the path to (r, c)
+        }
+      }
+    }
+
+    return true; // Safe to refund
   }
 }

@@ -56,6 +56,7 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     const context = await super._prepareContext(options);
     context.actor = this.document;
     const actorData = this.document;
+    context.isGM = game.user.isGM;
 
     // Set up default skills if they don't exist
     context.skills = this._prepareSkills();
@@ -233,6 +234,8 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     html.find(".item-delete").click(this._onItemDelete.bind(this));
     html.find(".item-create").click(this._onItemCreate.bind(this));
     html.find(".item-equip").click(this._onItemEquip.bind(this));
+    html.find(".reset-xp-log").click(this._onResetXpLog.bind(this));
+    html.find(".award-xp-btn").click(this._onAwardXp.bind(this));
 
     // Inline QoL skill edits
     html.find(".skill-val-input").change(this._onSkillValChange.bind(this));
@@ -393,6 +396,74 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     }
   }
 
+  async _onResetXpLog(event) {
+    event.preventDefault();
+    if (!game.user.isGM) {
+      ui.notifications.warn("Nur der Spielleiter darf das XP-Audit-Log zurücksetzen!");
+      return;
+    }
+
+    const confirmReset = confirm("Möchtest du das gesamte XP-Audit-Log für diesen Charakter unwiderruflich löschen?");
+    if (!confirmReset) return;
+
+    await this.actor.update({ "system.xp.log": [] });
+    ui.notifications.info("XP-Audit-Log erfolgreich zurückgesetzt.");
+  }
+
+  async _onAwardXp(event) {
+    event.preventDefault();
+    if (!game.user.isGM) {
+      ui.notifications.warn("Nur der Spielleiter darf XP manuell vergeben oder abziehen!");
+      return;
+    }
+
+    const htmlContent = `
+      <div style="padding: 5px;">
+        <div class="form-group" style="margin-bottom: 8px;">
+          <label style="display: block; font-weight: bold; margin-bottom: 4px;">XP-Menge (positiv vergeben, negativ abziehen):</label>
+          <input type="number" id="award-xp-amount" value="10" style="width: 100%;" />
+        </div>
+        <div class="form-group">
+          <label style="display: block; font-weight: bold; margin-bottom: 4px;">Begründung / Notiz:</label>
+          <input type="text" id="award-xp-reason" placeholder="z. B. Spielabend 4 Belohnung" style="width: 100%;" />
+        </div>
+      </div>
+    `;
+
+    new Dialog({
+      title: "XP vergeben / abziehen",
+      content: htmlContent,
+      buttons: {
+        confirm: {
+          icon: '<i class="fas fa-check"></i>',
+          label: "Bestätigen",
+          callback: async (html) => {
+            const amount = parseInt(html.find("#award-xp-amount").val() || 0);
+            const reason = html.find("#award-xp-reason").val().trim() || "Manuelle XP-Zuweisung";
+            if (amount === 0) return;
+
+            const currentAvail = this.actor.system.xp.available || 0;
+            const currentTotal = this.actor.system.xp.total || 0;
+
+            await this.actor.update({
+              "system.xp.available": Math.max(0, currentAvail + amount),
+              "system.xp.total": Math.max(0, currentTotal + amount)
+            }, {
+              xpLogDescription: reason
+            });
+
+            ui.notifications.info(`${amount > 0 ? "Erfolgreich vergeben:" : "Erfolgreich abgezogen:"} ${Math.abs(amount)} XP.`);
+          }
+        },
+        cancel: {
+          icon: '<i class="fas fa-times"></i>',
+          label: "Abbrechen"
+        }
+      },
+      default: "confirm"
+    }).render(true);
+  }
+
   _onItemEdit(event) {
     event.preventDefault();
     const itemId = event.currentTarget.closest(".item").dataset.itemId;
@@ -406,10 +477,43 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     const item = this.actor.items.get(itemId);
     
     if (item && item.type === "specialization") {
+      const specName = item.name.toLowerCase();
+      // Find all talents belonging to this specialization
+      const talentsToDelete = this.actor.items.filter(t => 
+        t.type === "talent" && 
+        t.system?.specialization === specName
+      );
+      
+      // Calculate XP to refund (cost = (row + 1) * 5)
+      let refundXp = 0;
+      const idsToDelete = [itemId];
+      
+      for (const talent of talentsToDelete) {
+        const row = talent.system?.row ?? 0;
+        const cost = (row + 1) * 5;
+        refundXp += cost;
+        idsToDelete.push(talent.id);
+      }
+      
+      const currentXp = this.actor.system.xp.available || 0;
+      const newXp = currentXp + refundXp;
+      
       const remainingSpecs = this.actor.items.filter(i => i.type === "specialization" && i.id !== itemId);
       const careerName = this.actor.system.biography.career;
-      await this.actor.deleteEmbeddedDocuments("Item", [itemId]);
+      
+      // Perform atomic updates: add XP, delete documents, and recalculate career skills
+      await this.actor.update(
+        { "system.xp.available": newXp },
+        { xpLogDescription: `Löschen der Spezialisierung "${item.name}" (+${refundXp} XP erstattet)` }
+      );
+      await this.actor.deleteEmbeddedDocuments("Item", idsToDelete);
       await this._recalculateCareerSkills([], remainingSpecs, careerName);
+      
+      if (refundXp > 0) {
+        ui.notifications.info(`Specialization "${item.name}" removed. Refunded ${refundXp} XP for ${talentsToDelete.length} purchased talents.`);
+      } else {
+        ui.notifications.info(`Specialization "${item.name}" removed.`);
+      }
     } else {
       await this.actor.deleteEmbeddedDocuments("Item", [itemId]);
     }
@@ -485,6 +589,8 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       "system.characteristics.cunning.value": cu,
       "system.characteristics.willpower.value": wl,
       "system.characteristics.presence.value": pr,
+      "system.stats.wounds.base": woundsBase + br,
+      "system.stats.strain.base": strainBase + wl,
       "system.stats.wounds.max": woundsBase + br,
       "system.stats.strain.max": strainBase + wl,
       "system.xp.total": xpTotal,

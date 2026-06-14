@@ -4,7 +4,7 @@ import { SWFFGActorSheet } from "./actor-sheet.js";
 import { SWFFGItemSheet } from "./item-sheet.js";
 import { SWFFGSpecializationSheet } from "./specialization-sheet.js";
 import { oggdudeParser } from "./oggdude-importer.js";
-import { CharacterData, NPCData, MinionData, WeaponData, ArmorData, TalentData, ForcePowerData, SpecializationData, SkillData, SpeciesData, CareerData } from "./data-models.js";
+import { CharacterData, NPCData, MinionData, WeaponData, ArmorData, GearData, TalentData, ForcePowerData, SpecializationData, SkillData, SpeciesData, CareerData } from "./data-models.js";
 import { SWFFGDiceRoller } from "./dice-roller.js";
 
 Hooks.once("init", async function () {
@@ -19,6 +19,7 @@ Hooks.once("init", async function () {
   CONFIG.Item.dataModels = {
     weapon: WeaponData,
     armor: ArmorData,
+    gear: GearData,
     talent: TalentData,
     forcePower: ForcePowerData,
     specialization: SpecializationData,

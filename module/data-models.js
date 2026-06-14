@@ -17,11 +17,13 @@ class BaseActorData extends foundry.abstract.TypeDataModel {
       stats: new fields.SchemaField({
         wounds: new fields.SchemaField({
           value: new fields.NumberField({ initial: 0, min: 0 }),
-          max: new fields.NumberField({ initial: 10, min: 1 })
+          max: new fields.NumberField({ initial: 10, min: 1 }),
+          base: new fields.NumberField({ initial: 10, min: 0 })
         }),
         strain: new fields.SchemaField({
           value: new fields.NumberField({ initial: 0, min: 0 }),
-          max: new fields.NumberField({ initial: 10, min: 1 })
+          max: new fields.NumberField({ initial: 10, min: 1 }),
+          base: new fields.NumberField({ initial: 10, min: 0 })
         }),
         soak: new fields.SchemaField({
           value: new fields.NumberField({ initial: 0 })
@@ -51,7 +53,8 @@ export class CharacterData extends BaseActorData {
       }),
       xp: new fields.SchemaField({
         total: new fields.NumberField({ initial: 0 }),
-        available: new fields.NumberField({ initial: 0 })
+        available: new fields.NumberField({ initial: 0 }),
+        log: new fields.ArrayField(new fields.ObjectField(), { initial: [] })
       })
     };
   }
@@ -99,7 +102,13 @@ export class WeaponData extends foundry.abstract.TypeDataModel {
       hardpoints: new fields.NumberField({ initial: 0 }),
       qualities: new fields.StringField({ initial: "" }),
       skill: new fields.StringField({ initial: "Ranged-Light" }),
-      key: new fields.StringField({ initial: "" })
+      key: new fields.StringField({ initial: "" }),
+      equipped: new fields.BooleanField({ initial: false }),
+      modifiers: new fields.SchemaField({
+        wounds: new fields.NumberField({ initial: 0 }),
+        strain: new fields.NumberField({ initial: 0 }),
+        soak: new fields.NumberField({ initial: 0 })
+      })
     };
   }
 }
@@ -114,6 +123,29 @@ export class ArmorData extends foundry.abstract.TypeDataModel {
       hardpoints: new fields.NumberField({ initial: 0 }),
       qualities: new fields.StringField({ initial: "" }),
       equipped: new fields.BooleanField({ initial: false }),
+      key: new fields.StringField({ initial: "" }),
+      modifiers: new fields.SchemaField({
+        wounds: new fields.NumberField({ initial: 0 }),
+        strain: new fields.NumberField({ initial: 0 }),
+        soak: new fields.NumberField({ initial: 0 })
+      })
+    };
+  }
+}
+
+export class GearData extends foundry.abstract.TypeDataModel {
+  static defineSchema() {
+    const fields = foundry.data.fields;
+    return {
+      description: new fields.HTMLField({ initial: "" }),
+      quantity: new fields.NumberField({ initial: 1 }),
+      encumbrance: new fields.NumberField({ initial: 1 }),
+      equipped: new fields.BooleanField({ initial: false }),
+      modifiers: new fields.SchemaField({
+        wounds: new fields.NumberField({ initial: 0 }),
+        strain: new fields.NumberField({ initial: 0 }),
+        soak: new fields.NumberField({ initial: 0 })
+      }),
       key: new fields.StringField({ initial: "" })
     };
   }
