@@ -40,7 +40,8 @@ export class SWFFGDiceRoller extends HandlebarsApplicationMixin(ApplicationV2) {
   /** @override */
   async _prepareContext(options) {
     return {
-      dicePool: this.dicePool
+      dicePool: this.dicePool,
+      setbackRemoval: this.setbackRemoval || 0
     };
   }
 
@@ -69,14 +70,19 @@ export class SWFFGDiceRoller extends HandlebarsApplicationMixin(ApplicationV2) {
 
   async _onRoll(event) {
     event.preventDefault();
-    // Dynamically import rolling utilities
     const { rollFFGPool, sendRollToChat } = await import("./dice.js");
     
-    // Check if pool is empty
     const totalDice = Object.values(this.dicePool).reduce((a, b) => a + b, 0);
     if (totalDice === 0) return;
 
-    const result = rollFFGPool(this.dicePool);
+    // Apply setback removal on the final rolled pool
+    const finalPool = { ...this.dicePool };
+    const removal = this.setbackRemoval || 0;
+    if (removal > 0) {
+      finalPool.setback = Math.max(0, finalPool.setback - removal);
+    }
+
+    const result = rollFFGPool(finalPool);
     await sendRollToChat(null, result, "Manual Dice Roll");
     this.clear();
   }
@@ -96,6 +102,7 @@ export class SWFFGDiceRoller extends HandlebarsApplicationMixin(ApplicationV2) {
       setback: 0,
       force: 0
     };
+    this.setbackRemoval = 0;
     this.render();
   }
 
@@ -113,6 +120,7 @@ export class SWFFGDiceRoller extends HandlebarsApplicationMixin(ApplicationV2) {
       setback: 0,
       force: 0
     }, pool);
+    this.setbackRemoval = pool.setbackRemoval || 0;
     this.render({ force: true });
     try { this.bringToTop(); } catch(e) {}
   }

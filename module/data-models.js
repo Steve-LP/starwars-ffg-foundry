@@ -164,7 +164,11 @@ export class TalentData extends foundry.abstract.TypeDataModel {
       specialization: new fields.StringField({ initial: "" }),
       row: new fields.NumberField({ initial: null, nullable: true }),
       col: new fields.NumberField({ initial: null, nullable: true }),
-      careerSkillsUnlocks: new fields.StringField({ initial: "" })
+      careerSkillsUnlocks: new fields.StringField({ initial: "" }),
+      boostSkills: new fields.StringField({ initial: "" }),
+      setbackRemoveSkills: new fields.StringField({ initial: "" }),
+      boostCharacteristics: new fields.StringField({ initial: "" }),
+      setbackRemoveCharacteristics: new fields.StringField({ initial: "" })
     };
   }
 }

@@ -1104,4 +1104,15 @@
   padding: 15px;
 }
 
+.setback-removal-banner {
+  background: rgba(239, 68, 68, 0.15);
+  border-left: 3px solid #ef4444;
+  padding: 6px 12px;
+  border-radius: 4px;
+  margin: 10px 15px;
+  font-size: 11px;
+  color: #fca5a5;
+  text-align: left;
+}
+
 

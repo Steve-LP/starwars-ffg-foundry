@@ -323,6 +323,7 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
   async _onRollSkill(event) {
     event.preventDefault();
     const element = event.currentTarget;
+    const skillName = element.dataset.name || "";
     const charName = element.dataset.characteristic;
     const rank = parseInt(element.dataset.rank || 0);
 
@@ -332,11 +333,48 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     const greenCount = Math.abs(charValue - rank);
     const yellowCount = Math.min(charValue, rank);
 
+    // Calculate boost and setback dice suggestions from talents
+    let boostCount = 0;
+    let setbackRemovalCount = 0;
+
+    for (const item of this.actor.items) {
+      if (item.type === "talent") {
+        const system = item.system;
+        const ranks = system.ranks || 1;
+
+        // Check boost skills
+        const boostSkillsList = (system.boostSkills || "").split(",").map(s => s.trim().toLowerCase());
+        if (boostSkillsList.includes(skillName.toLowerCase())) {
+          boostCount += ranks;
+        }
+
+        // Check setback removal skills
+        const removeSkillsList = (system.setbackRemoveSkills || "").split(",").map(s => s.trim().toLowerCase());
+        if (removeSkillsList.includes(skillName.toLowerCase())) {
+          setbackRemovalCount += ranks;
+        }
+
+        // Check boost characteristics
+        const boostCharsList = (system.boostCharacteristics || "").split(",").map(s => s.trim().toLowerCase());
+        if (boostCharsList.includes(charName.toLowerCase())) {
+          boostCount += ranks;
+        }
+
+        // Check setback removal characteristics
+        const removeCharsList = (system.setbackRemoveCharacteristics || "").split(",").map(s => s.trim().toLowerCase());
+        if (removeCharsList.includes(charName.toLowerCase())) {
+          setbackRemovalCount += ranks;
+        }
+      }
+    }
+
     // Open/set central dice roller pool
     if (game.starwarsFFG.diceRoller) {
       game.starwarsFFG.diceRoller.setPool({
         ability: greenCount,
-        proficiency: yellowCount
+        proficiency: yellowCount,
+        boost: boostCount,
+        setbackRemoval: setbackRemovalCount
       });
     }
   }
@@ -347,10 +385,34 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     const charName = element.dataset.characteristic;
     const charValue = this.actor.system.characteristics[charName]?.value || 0;
 
+    // Calculate boost/setback removal for this characteristic from talents
+    let boostCount = 0;
+    let setbackRemovalCount = 0;
+
+    for (const item of this.actor.items) {
+      if (item.type === "talent") {
+        const system = item.system;
+        const ranks = system.ranks || 1;
+
+        const boostCharsList = (system.boostCharacteristics || "").split(",").map(s => s.trim().toLowerCase());
+        if (boostCharsList.includes(charName.toLowerCase())) {
+          boostCount += ranks;
+        }
+
+        const removeCharsList = (system.setbackRemoveCharacteristics || "").split(",").map(s => s.trim().toLowerCase());
+        if (removeCharsList.includes(charName.toLowerCase())) {
+          setbackRemovalCount += ranks;
+        }
+      }
+    }
+
     // Open/set central dice roller pool
     if (game.starwarsFFG.diceRoller) {
       game.starwarsFFG.diceRoller.setPool({
-        ability: charValue
+        ability: charValue,
+        proficiency: 0,
+        boost: boostCount,
+        setbackRemoval: setbackRemovalCount
       });
     }
   }

@@ -71,6 +71,12 @@
       </div>
     </div>
   </div>
+  {{#if setbackRemoval}}
+  <div class="setback-removal-banner">
+    Setback-Entfernung aktiv: <strong>-{{setbackRemoval}} Setback-Würfel</strong>
+  </div>
+  {{/if}}
+
   <div class="hud-actions">
     <button type="button" class="roll-pool-button">Roll Selected Pool</button>
     <button type="button" class="clear-pool-button">Clear Pool</button>
