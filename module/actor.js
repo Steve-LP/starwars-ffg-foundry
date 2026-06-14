@@ -75,14 +75,15 @@ export class SWFFGActor extends Actor {
         // Modifiers from installed attachments on equipped weapons and armor
         if (item.system.attachments && Array.isArray(item.system.attachments)) {
           for (const att of item.system.attachments) {
+            const attSystem = att.system || {};
             // Base modifiers of the attachment
-            if (att.baseModifiers) {
-              inventoryWoundsMod += att.baseModifiers.wounds || 0;
-              inventoryStrainMod += att.baseModifiers.strain || 0;
-              inventorySoakMod += att.baseModifiers.soak || 0;
-              maxEncumbranceBonus += att.baseModifiers.encumbrance || 0;
+            if (attSystem.baseModifiers) {
+              inventoryWoundsMod += attSystem.baseModifiers.wounds || 0;
+              inventoryStrainMod += attSystem.baseModifiers.strain || 0;
+              inventorySoakMod += attSystem.baseModifiers.soak || 0;
+              maxEncumbranceBonus += attSystem.baseModifiers.encumbrance || 0;
 
-              const charModStr = att.baseModifiers.characteristics || "";
+              const charModStr = attSystem.baseModifiers.characteristics || "";
               if (charModStr) {
                 const parts = charModStr.split(",");
                 for (const part of parts) {
@@ -98,7 +99,7 @@ export class SWFFGActor extends Actor {
             }
 
             // Unlocked mods of the attachment
-            const activeMods = (att.mods || []).filter(m => m.active);
+            const activeMods = (attSystem.mods || []).filter(m => m.active);
             for (const mod of activeMods) {
               if (mod.type === "stat") {
                 if (mod.target === "wounds") inventoryWoundsMod += mod.value || 0;

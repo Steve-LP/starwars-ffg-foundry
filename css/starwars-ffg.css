@@ -1422,19 +1422,121 @@
 }
 
 /* Custom Scrollbars */
-.starwars-ffg ::-webkit-scrollbar {
+.starwars-ffg ::-webkit-scrollbar,
+body.game ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
-.starwars-ffg ::-webkit-scrollbar-track {
+.starwars-ffg ::-webkit-scrollbar-track,
+body.game ::-webkit-scrollbar-track {
   background: rgba(0, 0, 0, 0.2);
 }
-.starwars-ffg ::-webkit-scrollbar-thumb {
+.starwars-ffg ::-webkit-scrollbar-thumb,
+body.game ::-webkit-scrollbar-thumb {
   background: rgba(0, 180, 216, 0.3);
   border-radius: 3px;
 }
-.starwars-ffg ::-webkit-scrollbar-thumb:hover {
+.starwars-ffg ::-webkit-scrollbar-thumb:hover,
+body.game ::-webkit-scrollbar-thumb:hover {
   background: var(--sw-border-glow);
+}
+
+/* ========================================= */
+/* Foundry VTT Global UI Overrides           */
+/* ========================================= */
+
+/* Sidebar */
+#sidebar {
+  background: rgba(11, 14, 20, 0.92) !important;
+  border-left: 1px solid rgba(0, 180, 216, 0.25) !important;
+  box-shadow: -5px 0 20px rgba(0, 0, 0, 0.6) !important;
+}
+
+#sidebar-tabs {
+  border-bottom: 2px solid rgba(255, 255, 255, 0.08) !important;
+  background: rgba(0, 0, 0, 0.4) !important;
+}
+
+#sidebar-tabs > .item.active {
+  color: var(--sw-border-glow) !important;
+  border-bottom: 2px solid var(--sw-border-glow) !important;
+  text-shadow: 0 0 8px rgba(0, 180, 216, 0.5) !important;
+}
+
+/* Scene Navigation (Top) */
+#navigation {
+  background: transparent !important;
+}
+
+#scene-list .scene {
+  background: rgba(21, 27, 38, 0.85) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 6px !important;
+  color: var(--sw-text-main) !important;
+  font-family: 'Rajdhani', sans-serif !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  transition: all 0.25s ease !important;
+}
+
+#scene-list .scene.active {
+  border-color: var(--sw-border-glow) !important;
+  box-shadow: 0 0 10px rgba(0, 180, 216, 0.3) !important;
+  color: var(--sw-border-glow) !important;
+}
+
+#scene-list .scene:hover {
+  border-color: var(--sw-accent-orange) !important;
+  box-shadow: 0 0 8px rgba(255, 159, 28, 0.2) !important;
+}
+
+/* Scene Controls (Left) */
+#controls .scene-control,
+#controls .control-tool {
+  background: rgba(21, 27, 38, 0.85) !important;
+  border: 1px solid rgba(255, 255, 255, 0.05) !important;
+  border-radius: 6px !important;
+  color: var(--sw-text-muted) !important;
+  transition: all 0.2s ease !important;
+}
+
+#controls .scene-control.active,
+#controls .control-tool.active {
+  border-color: var(--sw-border-glow) !important;
+  color: var(--sw-border-glow) !important;
+  box-shadow: 0 0 10px rgba(0, 180, 216, 0.3) !important;
+}
+
+#controls .scene-control:hover,
+#controls .control-tool:hover {
+  color: #fff !important;
+  border-color: var(--sw-accent-orange) !important;
+}
+
+/* Macro Hotbar (Bottom) */
+#hotbar .macro {
+  background: rgba(21, 27, 38, 0.85) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 6px !important;
+  transition: all 0.2s ease !important;
+}
+
+#hotbar .macro:hover {
+  border-color: var(--sw-border-glow) !important;
+  box-shadow: 0 0 8px rgba(0, 180, 216, 0.3) !important;
+}
+
+#hotbar .macro.active {
+  border-color: var(--sw-accent-orange) !important;
+}
+
+/* Players List (Bottom-Left) */
+#players {
+  background: rgba(11, 14, 20, 0.85) !important;
+  border: 1px solid rgba(0, 180, 216, 0.2) !important;
+  border-radius: 6px !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4) !important;
+  font-family: 'Outfit', sans-serif !important;
 }
 
 

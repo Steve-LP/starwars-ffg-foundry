@@ -119,6 +119,7 @@
     let blasterItem = actor.items.get(blaster[0].id);
     console.log("SWFFG TEST DEBUG | blasterItem:", blasterItem);
     console.log("SWFFG TEST DEBUG | blasterItem.system:", blasterItem.system);
+    console.log("SWFFG TEST DEBUG | blasterItem.system.validationFailures:", blasterItem.system.validationFailures);
     console.log("SWFFG TEST DEBUG | blasterItem.derived:", blasterItem.derived);
     assert(blasterItem.derived.hardpointsRemaining === 2, "Attachment consumes 1 HP, 2 remaining");
     assert(blasterItem.derived.qualities === "Accurate 1", "Accurate 1 quality is applied");

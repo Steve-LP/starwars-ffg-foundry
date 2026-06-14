@@ -18,20 +18,21 @@ export class SWFFGItem extends Item {
       const qualityMods = [];
 
       for (const att of attachments) {
-        occupiedHP += att.hardpoints || 0;
+        const attSystem = att.system || {};
+        occupiedHP += attSystem.hardpoints || 0;
 
         // Base modifiers of the attachment
-        if (att.baseModifiers) {
-          damageBonus += att.baseModifiers.damage || 0;
-          criticalMod += att.baseModifiers.critical || 0;
-          soakBonus += att.baseModifiers.soak || 0;
-          if (att.baseModifiers.qualities) {
-            qualityMods.push(att.baseModifiers.qualities);
+        if (attSystem.baseModifiers) {
+          damageBonus += attSystem.baseModifiers.damage || 0;
+          criticalMod += attSystem.baseModifiers.critical || 0;
+          soakBonus += attSystem.baseModifiers.soak || 0;
+          if (attSystem.baseModifiers.qualities) {
+            qualityMods.push(attSystem.baseModifiers.qualities);
           }
         }
 
         // Active/unlocked mods of the attachment
-        const activeMods = (att.mods || []).filter(m => m.active);
+        const activeMods = (attSystem.mods || []).filter(m => m.active);
         for (const mod of activeMods) {
           if (mod.type === "stat") {
             if (mod.target === "damage") damageBonus += mod.value || 0;
