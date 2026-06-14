@@ -127,8 +127,8 @@
 
     // Toggle mod active state (unlock +1 Damage and Pierce 1)
     const updatedAttachments = JSON.parse(JSON.stringify(blasterItem.system.attachments));
-    updatedAttachments[0].mods[0].active = true; // +1 damage
-    updatedAttachments[0].mods[1].active = true; // Pierce 1
+    updatedAttachments[0].system.mods[0].active = true; // +1 damage
+    updatedAttachments[0].system.mods[1].active = true; // Pierce 1
     await blasterItem.update({ "system.attachments": updatedAttachments });
 
     blasterItem = actor.items.get(blaster[0].id);
