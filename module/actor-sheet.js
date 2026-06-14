@@ -687,7 +687,7 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
         const targetItem = this.actor.items.get(targetItemId);
         if (targetItem && (targetItem.type === "weapon" || targetItem.type === "armor")) {
           const requiredHP = itemData.system.hardpoints || 1;
-          const remainingHP = targetItem.system.derived?.hardpointsRemaining ?? targetItem.system.hardpoints ?? 0;
+          const remainingHP = targetItem.derived?.hardpointsRemaining ?? targetItem.system.hardpoints ?? 0;
           
           if (remainingHP < requiredHP) {
             ui.notifications.warn(`Nicht genügend Befestigungspunkte frei auf ${targetItem.name}! (Benötigt: ${requiredHP}, Frei: ${remainingHP})`);

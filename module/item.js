@@ -44,8 +44,8 @@ export class SWFFGItem extends Item {
         }
       }
 
-      // Store derived values on the system object in-memory
-      system.derived = {
+      // Store derived values on the Item document instance
+      this.derived = {
         hardpointsRemaining: Math.max(0, (system.hardpoints || 0) - occupiedHP),
         damage: this.type === "weapon" ? (system.damage || 0) + damageBonus : 0,
         critical: this.type === "weapon" ? (system.critical || 0) + criticalMod : 0,

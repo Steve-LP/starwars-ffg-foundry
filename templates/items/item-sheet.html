@@ -119,7 +119,7 @@
     <!-- Installed Attachments list for Weapon, Armor -->
     {{#if (or (eq item.type "weapon") (eq item.type "armor"))}}
     <hr />
-    <h3>Installed Attachments (Remaining HP: {{system.derived.hardpointsRemaining}} / {{system.hardpoints}})</h3>
+    <h3>Installed Attachments (Remaining HP: {{item.derived.hardpointsRemaining}} / {{system.hardpoints}})</h3>
     <div class="attachments-list" style="margin-bottom: 15px;">
       {{#each system.attachments as |att attIdx|}}
       <div class="attachment-item item" style="padding: 8px; border: 1px solid rgba(255,255,255,0.15); margin-bottom: 8px; border-radius: 4px; background: rgba(0,0,0,0.2);">

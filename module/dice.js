@@ -148,11 +148,43 @@ export function rollFFGPool(pool) {
     results
   };
 }
-
 /**
  * Helper to display the rolled chat message in Foundry VTT
  */
 export async function sendRollToChat(actor, rollResult, title = "Skill Check") {
+  // If Dice So Nice! is active, play 3D dice rolling animation first
+  if (game.dice3d) {
+    const dsnDice = [];
+    const typeMap = {
+      ability: "da",
+      proficiency: "dp",
+      boost: "db",
+      difficulty: "dd",
+      challenge: "dc",
+      setback: "ds",
+      force: "df"
+    };
+
+    for (const roll of rollResult.rolls) {
+      const dsnType = typeMap[roll.type];
+      if (dsnType) {
+        dsnDice.push({
+          type: dsnType,
+          result: roll.index + 1, // 1-indexed face
+          resultLabel: roll.index + 1
+        });
+      }
+    }
+
+    if (dsnDice.length > 0) {
+      await game.dice3d.show({
+        throws: [{
+          dice: dsnDice
+        }]
+      }, game.user);
+    }
+  }
+
   const templatePath = "systems/starwars-ffg-scratch/templates/chat/roll-card.html";
   
   const templateData = {

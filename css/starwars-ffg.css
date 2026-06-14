@@ -353,8 +353,20 @@
 }
 
 .dice-icon {
-  font-size: 18px;
-  margin-bottom: 2px;
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  margin-bottom: 6px;
+  font-size: 0;
+  position: relative;
+  background-color: currentColor;
+  box-shadow: 0 0 8px currentColor;
+  transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.dice-icon:hover {
+  transform: scale(1.1);
+  filter: brightness(1.2);
 }
 
 .dice-controls {
@@ -385,21 +397,34 @@
   font-weight: 600;
 }
 
-/* Specific Dice Colors */
-.color-ability { background-color: rgba(46, 125, 50, 0.2); border-color: var(--color-ability); }
+/* Specific Dice Colors & Shapes */
+.color-ability { background-color: rgba(46, 125, 50, 0.12); border-color: var(--color-ability); }
 .color-ability .dice-icon, .color-ability .dice-pool-control { color: var(--color-ability); }
-.color-proficiency { background-color: rgba(251, 192, 45, 0.15); border-color: var(--color-proficiency); }
+.color-ability .dice-icon { clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); } /* d8 Diamond */
+
+.color-proficiency { background-color: rgba(251, 192, 45, 0.08); border-color: var(--color-proficiency); }
 .color-proficiency .dice-icon, .color-proficiency .dice-pool-control { color: var(--color-proficiency); }
-.color-boost { background-color: rgba(2, 136, 209, 0.2); border-color: var(--color-boost); }
+.color-proficiency .dice-icon { clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%); } /* d12 Hexagon */
+
+.color-boost { background-color: rgba(2, 136, 209, 0.12); border-color: var(--color-boost); }
 .color-boost .dice-icon, .color-boost .dice-pool-control { color: var(--color-boost); }
-.color-difficulty { background-color: rgba(106, 27, 154, 0.2); border-color: var(--color-difficulty); }
+.color-boost .dice-icon { clip-path: polygon(10% 10%, 90% 10%, 90% 90%, 10% 90%); } /* d6 Square */
+
+.color-difficulty { background-color: rgba(106, 27, 154, 0.12); border-color: var(--color-difficulty); }
 .color-difficulty .dice-icon, .color-difficulty .dice-pool-control { color: var(--color-difficulty); }
-.color-challenge { background-color: rgba(198, 40, 40, 0.2); border-color: var(--color-challenge); }
+.color-difficulty .dice-icon { clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); } /* d8 Diamond */
+
+.color-challenge { background-color: rgba(198, 40, 40, 0.12); border-color: var(--color-challenge); }
 .color-challenge .dice-icon, .color-challenge .dice-pool-control { color: var(--color-challenge); }
-.color-setback { background-color: rgba(33, 33, 33, 0.4); border-color: var(--color-setback); }
+.color-challenge .dice-icon { clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%); } /* d12 Hexagon */
+
+.color-setback { background-color: rgba(33, 33, 33, 0.3); border-color: var(--color-setback); }
 .color-setback .dice-icon, .color-setback .dice-pool-control { color: #888; }
-.color-force { background-color: rgba(236, 239, 241, 0.1); border-color: var(--color-force); }
+.color-setback .dice-icon { clip-path: polygon(10% 10%, 90% 10%, 90% 90%, 10% 90%); } /* d6 Square */
+
+.color-force { background-color: rgba(236, 239, 241, 0.08); border-color: var(--color-force); }
 .color-force .dice-icon, .color-force .dice-pool-control { color: var(--color-force); }
+.color-force .dice-icon { clip-path: polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%); } /* d12 Pentagon */
 
 .hud-actions {
   display: flex;
