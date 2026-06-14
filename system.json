@@ -94,6 +94,27 @@
       "path": "packs/critical-injuries-vehicles.db",
       "type": "RollTable",
       "system": "starwars-ffg-scratch"
+    },
+    {
+      "name": "weapons",
+      "label": "Weapons (SRD)",
+      "path": "packs/weapons.db",
+      "type": "Item",
+      "system": "starwars-ffg-scratch"
+    },
+    {
+      "name": "armor",
+      "label": "Armor (SRD)",
+      "path": "packs/armor.db",
+      "type": "Item",
+      "system": "starwars-ffg-scratch"
+    },
+    {
+      "name": "gear",
+      "label": "Gear (SRD)",
+      "path": "packs/gear.db",
+      "type": "Item",
+      "system": "starwars-ffg-scratch"
     }
   ],
   "relationships": {

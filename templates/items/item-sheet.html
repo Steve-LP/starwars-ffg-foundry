@@ -73,6 +73,50 @@
       <input type="number" name="system.encumbrance" value="{{system.encumbrance}}" data-dtype="Number" />
     </div>
 
+    <!-- Quantity for Gear -->
+    {{#if (eq item.type "gear")}}
+    <div class="form-group">
+      <label>Quantity</label>
+      <input type="number" name="system.quantity" value="{{system.quantity}}" data-dtype="Number" />
+    </div>
+    {{/if}}
+
+    <!-- Equipped status for Weapon, Armor, Gear -->
+    {{#if (or (eq item.type "weapon") (eq item.type "armor") (eq item.type "gear"))}}
+    <div class="form-group">
+      <label>Equipped Status</label>
+      <input type="checkbox" name="system.equipped" {{checked system.equipped}} />
+    </div>
+
+    <hr />
+    <h3>Modifiers (Active when Equipped)</h3>
+    <div class="form-group" title="Wound threshold modifier (e.g. +2 Wounds from cybernetics)">
+      <label>Wounds Mod</label>
+      <input type="number" name="system.modifiers.wounds" value="{{system.modifiers.wounds}}" data-dtype="Number" />
+    </div>
+    <div class="form-group" title="Strain threshold modifier (e.g. +1 Strain)">
+      <label>Strain Mod</label>
+      <input type="number" name="system.modifiers.strain" value="{{system.modifiers.strain}}" data-dtype="Number" />
+    </div>
+    <div class="form-group" title="Soak modifier (e.g. +1 Soak)">
+      <label>Soak Mod</label>
+      <input type="number" name="system.modifiers.soak" value="{{system.modifiers.soak}}" data-dtype="Number" />
+    </div>
+    <div class="form-group" title="Encumbrance threshold modifier (e.g. +2 Max Encumbrance from Backpack)">
+      <label>Encumbrance Mod (Backpack)</label>
+      <input type="number" name="system.modifiers.encumbrance" value="{{system.modifiers.encumbrance}}" data-dtype="Number" />
+    </div>
+    <div class="form-group" title="Characteristic modifiers (e.g. brawn:1, agility:-1)">
+      <label>Characteristic Mods</label>
+      <input type="text" name="system.modifiers.characteristics" value="{{system.modifiers.characteristics}}" placeholder="e.g. brawn:1, agility:1" />
+    </div>
+    <div class="form-group" title="Skill modifiers (e.g. athletics:1, stealth:2)">
+      <label>Skill Mods</label>
+      <input type="text" name="system.modifiers.skills" value="{{system.modifiers.skills}}" placeholder="e.g. athletics:1, stealth:1" />
+    </div>
+    <hr />
+    {{/if}}
+
     <!-- Item Description -->
     <div class="form-group description-block">
       <label>Description</label>

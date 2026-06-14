@@ -31,6 +31,10 @@ class BaseActorData extends foundry.abstract.TypeDataModel {
         defence: new fields.SchemaField({
           melee: new fields.NumberField({ initial: 0 }),
           ranged: new fields.NumberField({ initial: 0 })
+        }),
+        encumbrance: new fields.SchemaField({
+          value: new fields.NumberField({ initial: 0, min: 0 }),
+          max: new fields.NumberField({ initial: 5, min: 0 })
         })
       })
     };
@@ -107,7 +111,10 @@ export class WeaponData extends foundry.abstract.TypeDataModel {
       modifiers: new fields.SchemaField({
         wounds: new fields.NumberField({ initial: 0 }),
         strain: new fields.NumberField({ initial: 0 }),
-        soak: new fields.NumberField({ initial: 0 })
+        soak: new fields.NumberField({ initial: 0 }),
+        encumbrance: new fields.NumberField({ initial: 0 }),
+        characteristics: new fields.StringField({ initial: "" }),
+        skills: new fields.StringField({ initial: "" })
       })
     };
   }
@@ -127,7 +134,10 @@ export class ArmorData extends foundry.abstract.TypeDataModel {
       modifiers: new fields.SchemaField({
         wounds: new fields.NumberField({ initial: 0 }),
         strain: new fields.NumberField({ initial: 0 }),
-        soak: new fields.NumberField({ initial: 0 })
+        soak: new fields.NumberField({ initial: 0 }),
+        encumbrance: new fields.NumberField({ initial: 0 }),
+        characteristics: new fields.StringField({ initial: "" }),
+        skills: new fields.StringField({ initial: "" })
       })
     };
   }
@@ -144,7 +154,10 @@ export class GearData extends foundry.abstract.TypeDataModel {
       modifiers: new fields.SchemaField({
         wounds: new fields.NumberField({ initial: 0 }),
         strain: new fields.NumberField({ initial: 0 }),
-        soak: new fields.NumberField({ initial: 0 })
+        soak: new fields.NumberField({ initial: 0 }),
+        encumbrance: new fields.NumberField({ initial: 0 }),
+        characteristics: new fields.StringField({ initial: "" }),
+        skills: new fields.StringField({ initial: "" })
       }),
       key: new fields.StringField({ initial: "" })
     };

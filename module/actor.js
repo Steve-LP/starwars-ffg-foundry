@@ -14,21 +14,6 @@ export class SWFFGActor extends Actor {
     const actorData = this;
     const system = actorData.system;
 
-    // Default calculations for Soak, defense, wounds, strain
-    // Soak = Brawn + soak from armor/items
-    let armorSoak = 0;
-    let armorMeleeDefence = 0;
-    let armorRangedDefence = 0;
-
-    // Loop items to find equipped armor
-    for (const item of this.items) {
-      if (item.type === "armor" && item.system.equipped) {
-        armorSoak += item.system.soak || 0;
-        armorMeleeDefence = Math.max(armorMeleeDefence, item.system.defence || 0);
-        armorRangedDefence = Math.max(armorRangedDefence, item.system.defence || 0);
-      }
-    }
-
     // Loop items to find relevant passive talents (Grit, Toughened, Enduring)
     let gritRanks = 0;
     let toughenedRanks = 0;
@@ -51,12 +36,61 @@ export class SWFFGActor extends Actor {
     let inventoryWoundsMod = 0;
     let inventoryStrainMod = 0;
     let inventorySoakMod = 0;
+    let maxEncumbranceBonus = 0;
+    
+    let characteristicMods = {
+      brawn: 0,
+      agility: 0,
+      intellect: 0,
+      cunning: 0,
+      willpower: 0,
+      presence: 0
+    };
 
     for (const item of this.items) {
       if (item.system?.equipped && item.system?.modifiers) {
         inventoryWoundsMod += item.system.modifiers.wounds || 0;
         inventoryStrainMod += item.system.modifiers.strain || 0;
         inventorySoakMod += item.system.modifiers.soak || 0;
+        maxEncumbranceBonus += item.system.modifiers.encumbrance || 0;
+
+        // Parse characteristic modifiers (e.g. "brawn:1, agility:-1")
+        const charModStr = item.system.modifiers.characteristics || "";
+        if (charModStr) {
+          const parts = charModStr.split(",");
+          for (const part of parts) {
+            const [charName, valStr] = part.split(":").map(p => p.trim().toLowerCase());
+            if (charName && valStr && characteristicMods[charName] !== undefined) {
+              const modVal = parseInt(valStr);
+              if (!isNaN(modVal)) {
+                characteristicMods[charName] += modVal;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Apply characteristic modifiers, clamping values between 1 and 6
+    for (const [charName, modVal] of Object.entries(characteristicMods)) {
+      if (modVal !== 0 && system.characteristics[charName]) {
+        const baseVal = system.characteristics[charName].value || 1;
+        system.characteristics[charName].value = Math.max(1, Math.min(6, baseVal + modVal));
+      }
+    }
+
+    // Default calculations for Soak, defense, wounds, strain
+    // Soak = Brawn + soak from armor/items
+    let armorSoak = 0;
+    let armorMeleeDefence = 0;
+    let armorRangedDefence = 0;
+
+    // Loop items to find equipped armor
+    for (const item of this.items) {
+      if (item.type === "armor" && item.system.equipped) {
+        armorSoak += item.system.soak || 0;
+        armorMeleeDefence = Math.max(armorMeleeDefence, item.system.defence || 0);
+        armorRangedDefence = Math.max(armorRangedDefence, item.system.defence || 0);
       }
     }
 
@@ -75,6 +109,25 @@ export class SWFFGActor extends Actor {
 
     system.stats.defence.melee = armorMeleeDefence;
     system.stats.defence.ranged = armorRangedDefence;
+
+    // Calculate carried encumbrance
+    let carriedEncumbrance = 0;
+    for (const item of this.items) {
+      if (item.type === "weapon" || item.type === "armor" || item.type === "gear") {
+        const enc = item.system.encumbrance || 0;
+        const qty = item.system.quantity !== undefined ? (item.system.quantity || 0) : 1;
+        if (item.type === "armor" && item.system.equipped) {
+          carriedEncumbrance += Math.max(0, enc - 3) * qty;
+        } else {
+          carriedEncumbrance += enc * qty;
+        }
+      }
+    }
+
+    system.stats.encumbrance = {
+      value: carriedEncumbrance,
+      max: 5 + (system.characteristics.brawn.value || 0) + maxEncumbranceBonus
+    };
   }
 
   /**

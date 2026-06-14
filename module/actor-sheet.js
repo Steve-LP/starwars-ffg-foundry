@@ -154,12 +154,29 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     return context;
   }
 
-  /**
-   * Generates default Star Wars FFG skills list
-   */
   _prepareSkills() {
     const currentSkills = this.actor.items.filter(i => i.type === "skill");
     
+    // Parse skill modifiers from equipped items
+    const skillModifiers = {};
+    for (const item of this.actor.items) {
+      if (item.system?.equipped && item.system?.modifiers) {
+        const skillModStr = item.system.modifiers.skills || "";
+        if (skillModStr) {
+          const parts = skillModStr.split(",");
+          for (const part of parts) {
+            const [skillName, valStr] = part.split(":").map(p => p.trim().toLowerCase());
+            if (skillName && valStr) {
+              const modVal = parseInt(valStr);
+              if (!isNaN(modVal)) {
+                skillModifiers[skillName] = (skillModifiers[skillName] || 0) + modVal;
+              }
+            }
+          }
+        }
+      }
+    }
+
     // Default FFG list if none present
     const defaultList = [
       { name: "Astrogation", characteristic: "intellect", category: "General" },
@@ -196,7 +213,10 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     for (const skill of defaultList) {
       // Find matching item in actor items (for rank values)
       const actorSkill = currentSkills.find(s => s.name.toLowerCase() === skill.name.toLowerCase());
-      const value = Math.max(0, actorSkill?.system.value || 0);
+      const baseRank = Math.max(0, actorSkill?.system.value || 0);
+      const skillMod = skillModifiers[skill.name.toLowerCase()] || 0;
+      const value = Math.max(0, baseRank + skillMod);
+
       const characteristic = skill.characteristic;
       const charValue = Math.max(0, this.actor.system.characteristics[characteristic]?.value || 0);
 
@@ -207,7 +227,9 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
         name: skill.name,
         characteristic: skill.characteristic,
         category: skill.category,
+        baseValue: baseRank,
         value: value,
+        modifier: skillMod,
         career: actorSkill?.system.career || false,
         id: actorSkill?._id || null,
         dice: {
@@ -499,14 +521,16 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       </div>
     `;
 
-    new Dialog({
-      title: "XP vergeben / abziehen",
+    const dialog = new foundry.applications.api.DialogV2({
+      window: { title: "XP vergeben / abziehen" },
       content: htmlContent,
-      buttons: {
-        confirm: {
-          icon: '<i class="fas fa-check"></i>',
+      buttons: [
+        {
+          action: "confirm",
           label: "Bestätigen",
-          callback: async (html) => {
+          default: true,
+          callback: async (event, button, dialogInstance) => {
+            const html = $(dialogInstance.element);
             const mode = html.find("#award-xp-mode").val();
             const amount = parseInt(html.find("#award-xp-amount").val() || 0);
             const reason = html.find("#award-xp-reason").val().trim() || "Manuelle XP-Zuweisung";
@@ -534,13 +558,13 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
             }
           }
         },
-        cancel: {
-          icon: '<i class="fas fa-times"></i>',
+        {
+          action: "cancel",
           label: "Abbrechen"
         }
-      },
-      default: "confirm"
-    }).render(true);
+      ]
+    });
+    dialog.render(true);
   }
 
   _onItemEdit(event) {
