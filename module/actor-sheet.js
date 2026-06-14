@@ -482,7 +482,14 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     const htmlContent = `
       <div style="padding: 5px;">
         <div class="form-group" style="margin-bottom: 8px;">
-          <label style="display: block; font-weight: bold; margin-bottom: 4px;">XP-Menge (positiv vergeben, negativ abziehen):</label>
+          <label style="display: block; font-weight: bold; margin-bottom: 4px;">Aktion:</label>
+          <select id="award-xp-mode" style="width: 100%; height: 26px; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid rgba(255,255,255,0.15); border-radius: 4px;">
+            <option value="adjust">XP verändern (Zuweisung / Abzug)</option>
+            <option value="set">XP absolut setzen (Neuer Festwert)</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom: 8px;">
+          <label style="display: block; font-weight: bold; margin-bottom: 4px;">XP-Menge:</label>
           <input type="number" id="award-xp-amount" value="10" style="width: 100%;" />
         </div>
         <div class="form-group">
@@ -500,21 +507,31 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
           icon: '<i class="fas fa-check"></i>',
           label: "Bestätigen",
           callback: async (html) => {
+            const mode = html.find("#award-xp-mode").val();
             const amount = parseInt(html.find("#award-xp-amount").val() || 0);
             const reason = html.find("#award-xp-reason").val().trim() || "Manuelle XP-Zuweisung";
-            if (amount === 0) return;
 
             const currentAvail = this.actor.system.xp.available || 0;
             const currentTotal = this.actor.system.xp.total || 0;
 
-            await this.actor.update({
-              "system.xp.available": Math.max(0, currentAvail + amount),
-              "system.xp.total": Math.max(0, currentTotal + amount)
-            }, {
-              xpLogDescription: reason
-            });
-
-            ui.notifications.info(`${amount > 0 ? "Erfolgreich vergeben:" : "Erfolgreich abgezogen:"} ${Math.abs(amount)} XP.`);
+            if (mode === "set") {
+              await this.actor.update({
+                "system.xp.available": amount,
+                "system.xp.total": amount
+              }, {
+                xpLogDescription: `XP absolut gesetzt auf ${amount} (${reason})`
+              });
+              ui.notifications.info(`XP erfolgreich auf ${amount} gesetzt.`);
+            } else {
+              if (amount === 0) return;
+              await this.actor.update({
+                "system.xp.available": Math.max(0, currentAvail + amount),
+                "system.xp.total": Math.max(0, currentTotal + amount)
+              }, {
+                xpLogDescription: reason
+              });
+              ui.notifications.info(`${amount > 0 ? "Erfolgreich vergeben:" : "Erfolgreich abgezogen:"} ${Math.abs(amount)} XP.`);
+            }
           }
         },
         cancel: {

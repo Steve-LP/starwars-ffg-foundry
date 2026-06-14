@@ -126,7 +126,7 @@ export class SWFFGActor extends Actor {
       
       if (diffAvailable !== 0 || diffTotal !== 0) {
         const timestamp = new Date().toLocaleString("de-DE");
-        const userName = game.users.get(user)?.name || "Unbekannt";
+        const userName = game.users.get(user)?.name || game.user?.name || "Unbekannt";
         
         let desc = "";
         let changeVal = 0;
