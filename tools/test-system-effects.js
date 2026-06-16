@@ -454,11 +454,20 @@
     // 13. Career & Specialization Removal and XP Refund Tests
     console.log("SWFFG TEST | Starting Career & Specialization Removal and XP Refund tests...");
 
-    // Setup: reset starting XP to 100 and clear career/specialization
+    // Setup: reset starting XP to 100, clear career/specialization, and reset characteristics to 1 to restore XP
     await actor.update({
       "system.creation.startingXp": 100,
       "system.creation.isCreationMode": true,
-      "system.biography.career": ""
+      "system.biography.career": "",
+      "system.characteristics.brawn.value": 1,
+      "system.characteristics.agility.value": 1,
+      "system.characteristics.intellect.value": 1,
+      "system.characteristics.cunning.value": 1,
+      "system.characteristics.willpower.value": 1,
+      "system.characteristics.presence.value": 1,
+      "system.creation.baseCharacteristics": {
+        brawn: 1, agility: 1, intellect: 1, cunning: 1, willpower: 1, presence: 1
+      }
     });
     
     // Ensure available XP in database matches totalAvailableXp (100)
@@ -507,8 +516,9 @@
     if (careerPack) {
       console.log("SWFFG TEST | Career pack found, testing Career Removal...");
       const careerIndex = await careerPack.getIndex({ fields: ["system.careerSkills"] });
-      if (careerIndex.size > 0) {
-        const testCareer = careerIndex.first();
+      const hasEntries = careerIndex && (careerIndex.size > 0 || careerIndex.length > 0);
+      if (hasEntries) {
+        const testCareer = careerIndex.first ? careerIndex.first() : (Array.isArray(careerIndex) ? careerIndex[0] : [...careerIndex.values()][0]);
         const testCareerSkills = (testCareer.system?.careerSkills || "").split(",").map(s => s.trim().toLowerCase()).filter(s => s);
         
         if (testCareerSkills.length > 0) {

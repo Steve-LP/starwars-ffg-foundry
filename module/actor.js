@@ -628,14 +628,29 @@ export class SWFFGActor extends Actor {
   async _preUpdate(changed, options, user) {
     await super._preUpdate(changed, options, user);
 
-    const changedXp = changed.system?.xp;
-    // Only character type actor templates contain the xp.log schema
-    if (changedXp && this.type === "character") {
+    if (this.type !== "character") return;
+
+    let changedXpAvailable = undefined;
+    let changedXpTotal = undefined;
+
+    if (changed.system?.xp?.available !== undefined) {
+      changedXpAvailable = changed.system.xp.available;
+    } else if (changed["system.xp.available"] !== undefined) {
+      changedXpAvailable = changed["system.xp.available"];
+    }
+
+    if (changed.system?.xp?.total !== undefined) {
+      changedXpTotal = changed.system.xp.total;
+    } else if (changed["system.xp.total"] !== undefined) {
+      changedXpTotal = changed["system.xp.total"];
+    }
+
+    if (changedXpAvailable !== undefined || changedXpTotal !== undefined) {
       const currentAvailable = this.system.xp?.available ?? 0;
       const currentTotal = this.system.xp?.total ?? 0;
       
-      const newAvailable = changedXp.available !== undefined ? Number(changedXp.available) : currentAvailable;
-      const newTotal = changedXp.total !== undefined ? Number(changedXp.total) : currentTotal;
+      const newAvailable = changedXpAvailable !== undefined ? Number(changedXpAvailable) : currentAvailable;
+      const newTotal = changedXpTotal !== undefined ? Number(changedXpTotal) : currentTotal;
       
       const diffAvailable = newAvailable - currentAvailable;
       const diffTotal = newTotal - currentTotal;
@@ -678,9 +693,13 @@ export class SWFFGActor extends Actor {
         // Keep last 50 entries to avoid bloating
         if (currentLog.length > 50) currentLog.shift();
         
-        if (!changed.system) changed.system = {};
-        if (!changed.system.xp) changed.system.xp = {};
-        changed.system.xp.log = currentLog;
+        if (changed["system.xp.available"] !== undefined || changed["system.xp.total"] !== undefined) {
+          changed["system.xp.log"] = currentLog;
+        } else {
+          if (!changed.system) changed.system = {};
+          if (!changed.system.xp) changed.system.xp = {};
+          changed.system.xp.log = currentLog;
+        }
       }
     }
   }
