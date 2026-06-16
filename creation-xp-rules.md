@@ -59,7 +59,7 @@ XP is not manually subtracted or updated. Instead, the actor's available XP and 
 *   **`calculateSpentSpecializationXp()` (Method)**:
     Sums up XP spent on acquiring new specialization trees:
     *   First specialization (Index 0) is the character's starting spec and costs `0` XP.
-    *   For every subsequent specialization (Index `i`), the base cost is `i * 10` XP.
+    *   For every subsequent specialization (Index `i`), the base cost is `(i + 1) * 10` XP.
     *   If the specialization's classification is `"non-career"`, there is an additional `+10` XP penalty added to that specific purchase.
 *   **`totalAvailableXp` (Getter)**:
     Calculates dynamic XP remaining:
@@ -87,7 +87,7 @@ Attempts to upgrade a characteristic by 1 rank (e.g., `await actor.buyAttribute(
 
 ### `canAffordSpecialization(specItemData)`
 Checks if the actor can afford to purchase the given specialization.
-*   **Cost**: `(currentSpecCount * 10) + (classification === "non-career" ? 10 : 0)`.
+*   **Cost**: `((currentSpecCount + 1) * 10) + (classification === "non-career" ? 10 : 0)`.
 *   **Validation Rules (Bypassed if User is GM)**:
     *   Returns `true` if `totalAvailableXp >= cost`. Otherwise, returns `false`.
 

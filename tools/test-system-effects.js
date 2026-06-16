@@ -239,49 +239,42 @@
     assert(actor.calculateSpentSpecializationXp() === 0, "Starting specialization costs 0 XP");
     assert(actor.totalAvailableXp === 80, "Available XP remains 80");
 
-    // Add second specialization (Index 1: Career Spec) - Costs 10 XP
+    // Add second specialization (Index 1: Career Spec) - Costs 20 XP (base: (1+1)*10)
     const specTestData2 = { type: "specialization", system: { classification: "career" } };
-    assert(actor.canAffordSpecialization(specTestData2) === true, "Actor can afford second specialization (cost: 10 XP)");
+    assert(actor.canAffordSpecialization(specTestData2) === true, "Actor can afford second specialization (cost: 20 XP)");
     
     const spec2 = await actor.createEmbeddedDocuments("Item", [{
       name: "Driver",
       type: "specialization",
       system: { classification: "career" }
     }]);
-    assert(actor.calculateSpentSpecializationXp() === 10, "Spent specialization XP is 10 after purchasing second tree");
-    assert(actor.totalAvailableXp === 70, "Available XP reduced to 70");
+    assert(actor.calculateSpentSpecializationXp() === 20, "Spent specialization XP is 20 after purchasing second tree");
+    assert(actor.totalAvailableXp === 60, "Available XP reduced to 60");
 
-    // Add third specialization (Index 2: Non-Career Spec) - Costs 30 XP (20 base + 10 penalty)
+    // Add third specialization (Index 2: Non-Career Spec) - Costs 40 XP (30 base + 10 penalty)
     const specTestData3 = { type: "specialization", system: { classification: "non-career" } };
-    assert(actor.canAffordSpecialization(specTestData3) === true, "Actor can afford third specialization (non-career, cost: 30 XP)");
+    assert(actor.canAffordSpecialization(specTestData3) === true, "Actor can afford third specialization (non-career, cost: 40 XP)");
 
     const spec3 = await actor.createEmbeddedDocuments("Item", [{
       name: "Mercenary Soldier",
       type: "specialization",
       system: { classification: "non-career" }
     }]);
-    assert(actor.calculateSpentSpecializationXp() === 40, "Spent specialization XP is 40 (10 + 30)");
-    assert(actor.totalAvailableXp === 40, "Available XP reduced to 40");
+    assert(actor.calculateSpentSpecializationXp() === 60, "Spent specialization XP is 60 (20 + 40)");
+    assert(actor.totalAvailableXp === 20, "Available XP reduced to 20");
 
-    // Add fourth specialization (Index 3: Non-Career Spec) - Costs 40 XP (30 base + 10 penalty [exceeding available 30])
+    // Add fourth specialization (Index 3: Non-Career Spec) - Costs 50 XP (40 base + 10 penalty [exceeding available 20])
     const specTestData4 = { type: "specialization", system: { classification: "non-career" } };
     
-    // Temporarily reduce earned XP to 90 so available XP is 30
-    await actor.update({ "system.xp.earned": 90 });
-    assert(actor.totalAvailableXp === 30, "Available XP reduced to 30");
-
     // Mock non-GM
     Object.defineProperty(game.user, "isGM", { value: false, configurable: true });
     try {
-      assert(actor.canAffordSpecialization(specTestData4) === false, "Non-GM cannot afford fourth specialization (cost: 40 XP vs available: 30 XP)");
+      assert(actor.canAffordSpecialization(specTestData4) === false, "Non-GM cannot afford fourth specialization (cost: 50 XP vs available: 20 XP)");
     } finally {
       delete game.user.isGM;
     }
 
     assert(actor.canAffordSpecialization(specTestData4) === true, "GM can afford fourth specialization regardless of available XP");
-
-    // Restore earned XP
-    await actor.update({ "system.xp.earned": 100 });
 
   } catch (error) {
     console.error("SWFFG TEST | Test suite encountered an error:", error);

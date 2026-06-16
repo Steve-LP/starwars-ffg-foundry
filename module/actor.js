@@ -65,7 +65,7 @@ export class SWFFGActor extends Actor {
     let totalCost = 0;
     for (let i = 1; i < specs.length; i++) {
       const spec = specs[i];
-      let cost = i * 10;
+      let cost = (i + 1) * 10;
       const classification = spec.system?.classification || "career";
       if (classification === "non-career") {
         cost += 10;
@@ -85,7 +85,7 @@ export class SWFFGActor extends Actor {
     if (nextIndex === 0) return true;
 
     const classification = specItemData?.system?.classification || "career";
-    let cost = nextIndex * 10;
+    let cost = (nextIndex + 1) * 10;
     if (classification === "non-career") {
       cost += 10;
     }
