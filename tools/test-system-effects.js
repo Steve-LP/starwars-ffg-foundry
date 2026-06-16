@@ -337,6 +337,47 @@
     assert(actor.calculateSpentSpecializationXp() === 105, "Spent specs XP is 105 (100 previous + 5 custom cost override)");
     assert(actor.totalAvailableXp === 45, "Available XP reduced to 45");
 
+    // 10. Species Starting Bonuses Test
+    console.log("SWFFG TEST | Starting Species Starting Bonuses tests...");
+    
+    // Import SWFFGActorSheet dynamically
+    const { SWFFGActorSheet } = await import("/systems/starwars-ffg-scratch/module/actor-sheet.js");
+    
+    // Construct sheet instance linked to our temp actor
+    const sheet = new SWFFGActorSheet({ document: actor });
+    
+    const twilekData = {
+      name: "Twi'lek",
+      type: "species",
+      system: {
+        characteristics: {
+          brawn: 1,
+          agility: 2,
+          intellect: 2,
+          cunning: 2,
+          willpower: 2,
+          presence: 3
+        },
+        wounds: { base: 10 },
+        strain: { base: 11 },
+        xp: 100,
+        modifiers: {
+          skills: "charm:1"
+        },
+        specialAbilities: "Resistance to Heat"
+      }
+    };
+
+    await sheet._onDropSpecies(twilekData);
+
+    assert(actor.system.biography.species === "Twi'lek", "Actor biography species is set to Twi'lek");
+    assert(actor.system.biography.specialAbilities === "Resistance to Heat", "Actor biography specialAbilities contains Resistance to Heat");
+    
+    const charmSkill = actor.items.find(i => i.type === "skill" && i.name.toLowerCase() === "charm");
+    assert(charmSkill !== undefined, "Charm skill item was created");
+    assert(charmSkill.system.value === 1, "Charm skill rank is 1");
+    assert(charmSkill.system.freeRanks === 1, "Charm skill has 1 free rank");
+
   } catch (error) {
     console.error("SWFFG TEST | Test suite encountered an error:", error);
   } finally {

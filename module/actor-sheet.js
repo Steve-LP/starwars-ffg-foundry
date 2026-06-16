@@ -145,11 +145,34 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
             talents: resolvedTalents
           };
         });
-      } else {
-        specObj.system.talentRows = [];
       }
       return specObj;
     });
+
+    // Prepare characteristics with costs and affordance
+    const availableXp = actorData.system.xp?.available || 0;
+    const isCreation = actorData.system.creation?.isCreationMode !== false;
+    
+    context.isCreationMode = isCreation;
+    context.isCreationOrGM = context.isGM || isCreation;
+    context.lockFields = !context.isGM && !isCreation;
+    
+    context.characteristics = {};
+    for (const [key, char] of Object.entries(actorData.system.characteristics || {})) {
+      const currentVal = char.value || 0;
+      const cost = (currentVal + 1) * 10;
+      const canAfford = context.isGM || (
+        availableXp >= cost && 
+        ((actorData.currentAttributeXpSpent || 0) + cost <= (actorData.maxAttributeXpAllowed || 0))
+      );
+      context.characteristics[key] = {
+        value: currentVal,
+        cost: cost,
+        canAfford: canAfford
+      };
+    }
+
+    context.xpSpentInfo = `${actorData.currentAttributeXpSpent || 0} / ${actorData.maxAttributeXpAllowed || 0} XP`;
 
     return context;
   }
@@ -316,6 +339,22 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 
       // Specialization header removal handler
       html.find(".remove-spec-header").click(this._onRemoveSpecHeader.bind(this));
+
+      // Character creation upgrade & locking handlers
+      html.find(".upgrade-characteristic-btn").click(async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const charName = event.currentTarget.dataset.characteristic;
+        if (charName) {
+          await this.actor.buyAttribute(charName);
+        }
+      });
+
+      html.find(".lock-creation-btn").click(async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        await this.actor.lockCreation();
+      });
     }
   }
 
@@ -678,6 +717,14 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     if (!item) return super._onDrop(event);
     const itemData = item.toObject();
 
+    // Check lockFields to prevent species, career, specialization drop if locked
+    const isCreation = this.document.system.creation?.isCreationMode !== false;
+    const lockFields = !game.user.isGM && !isCreation;
+    if (lockFields && ["species", "career", "specialization"].includes(itemData.type)) {
+      ui.notifications.warn("Charaktererstellung ist gesperrt! Spezies, Karriere und Spezialisierungen können nicht mehr geändert werden.");
+      return false;
+    }
+
     // Check if dropping an attachment onto a weapon or armor item
     if (itemData.type === "attachment") {
       const targetItemEl = event.target.closest(".item");
@@ -745,6 +792,7 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 
     const updates = {
       "system.biography.species": speciesData.name,
+      "system.biography.specialAbilities": speciesData.system.specialAbilities || "",
       "system.characteristics.brawn.value": br,
       "system.characteristics.agility.value": ag,
       "system.characteristics.intellect.value": it,
@@ -767,6 +815,83 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       "system.xp.total": xpTotal,
       "system.xp.available": xpTotal
     };
+
+    const skillList = [
+      { name: "Astrogation", characteristic: "intellect", category: "General" },
+      { name: "Athletics", characteristic: "brawn", category: "General" },
+      { name: "Charm", characteristic: "presence", category: "General" },
+      { name: "Coercion", characteristic: "willpower", category: "General" },
+      { name: "Computers", characteristic: "intellect", category: "General" },
+      { name: "Cool", characteristic: "presence", category: "General" },
+      { name: "Coordination", characteristic: "agility", category: "General" },
+      { name: "Deception", characteristic: "cunning", category: "General" },
+      { name: "Discipline", characteristic: "willpower", category: "General" },
+      { name: "Leadership", characteristic: "presence", category: "General" },
+      { name: "Mechanics", characteristic: "intellect", category: "General" },
+      { name: "Medicine", characteristic: "intellect", category: "General" },
+      { name: "Negotiation", characteristic: "presence", category: "General" },
+      { name: "Perception", characteristic: "cunning", category: "General" },
+      { name: "Piloting (Planetary)", characteristic: "agility", category: "General" },
+      { name: "Piloting (Space)", characteristic: "agility", category: "General" },
+      { name: "Resilience", characteristic: "brawn", category: "General" },
+      { name: "Skulduggery", characteristic: "cunning", category: "General" },
+      { name: "Stealth", characteristic: "agility", category: "General" },
+      { name: "Streetwise", characteristic: "cunning", category: "General" },
+      { name: "Survival", characteristic: "cunning", category: "General" },
+      { name: "Vigilance", characteristic: "willpower", category: "General" },
+      { name: "Brawl", characteristic: "brawn", category: "Combat" },
+      { name: "Gunnery", characteristic: "agility", category: "Combat" },
+      { name: "Melee", characteristic: "brawn", category: "Combat" },
+      { name: "Ranged (Light)", characteristic: "agility", category: "Combat" },
+      { name: "Ranged (Heavy)", characteristic: "agility", category: "Combat" }
+    ];
+
+    const skillMods = speciesData.system.modifiers?.skills || "";
+    const itemsToCreate = [];
+    const itemsToUpdate = [];
+    const currentSkills = this.actor.items.filter(i => i.type === "skill");
+
+    if (skillMods) {
+      const parts = skillMods.split(",");
+      for (const part of parts) {
+        const [skillName, valStr] = part.split(":").map(p => p.trim());
+        if (skillName && valStr) {
+          const val = parseInt(valStr);
+          if (!isNaN(val)) {
+            const existing = currentSkills.find(s => s.name.toLowerCase() === skillName.toLowerCase());
+            if (existing) {
+              itemsToUpdate.push({
+                _id: existing.id,
+                "system.freeRanks": val,
+                "system.value": Math.max(existing.system.value, val)
+              });
+            } else {
+              const defSkill = skillList.find(s => s.name.toLowerCase() === skillName.toLowerCase());
+              if (defSkill) {
+                itemsToCreate.push({
+                  name: defSkill.name,
+                  type: "skill",
+                  system: {
+                    value: val,
+                    freeRanks: val,
+                    characteristic: defSkill.characteristic,
+                    category: defSkill.category,
+                    career: false
+                  }
+                });
+              }
+            }
+          }
+        }
+      }
+    }
+
+    if (itemsToCreate.length > 0) {
+      await this.actor.createEmbeddedDocuments("Item", itemsToCreate);
+    }
+    if (itemsToUpdate.length > 0) {
+      await this.actor.updateEmbeddedDocuments("Item", itemsToUpdate);
+    }
 
     return this.actor.update(updates);
   }

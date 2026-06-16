@@ -53,7 +53,8 @@ export class CharacterData extends BaseActorData {
         specialization: new fields.StringField({ initial: "" }),
         obligation: new fields.StringField({ initial: "" }),
         duty: new fields.StringField({ initial: "" }),
-        morality: new fields.StringField({ initial: "" })
+        morality: new fields.StringField({ initial: "" }),
+        specialAbilities: new fields.HTMLField({ initial: "" })
       }),
       creation: new fields.SchemaField({
         isCreationMode: new fields.BooleanField({ initial: true }),
@@ -231,6 +232,7 @@ export class SkillData extends foundry.abstract.TypeDataModel {
       characteristic: new fields.StringField({ initial: "brawn" }),
       category: new fields.StringField({ initial: "General" }),
       value: new fields.NumberField({ initial: 0 }),
+      freeRanks: new fields.NumberField({ initial: 0, min: 0 }),
       career: new fields.BooleanField({ initial: false })
     };
   }
@@ -256,7 +258,16 @@ export class SpeciesData extends foundry.abstract.TypeDataModel {
         base: new fields.NumberField({ initial: 10, min: 1 })
       }),
       xp: new fields.NumberField({ initial: 100 }),
-      key: new fields.StringField({ initial: "" })
+      key: new fields.StringField({ initial: "" }),
+      modifiers: new fields.SchemaField({
+        wounds: new fields.NumberField({ initial: 0 }),
+        strain: new fields.NumberField({ initial: 0 }),
+        soak: new fields.NumberField({ initial: 0 }),
+        encumbrance: new fields.NumberField({ initial: 0 }),
+        characteristics: new fields.StringField({ initial: "" }),
+        skills: new fields.StringField({ initial: "" })
+      }),
+      specialAbilities: new fields.HTMLField({ initial: "" })
     };
   }
 }
