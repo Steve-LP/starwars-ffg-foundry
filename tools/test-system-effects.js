@@ -276,6 +276,67 @@
 
     assert(actor.canAffordSpecialization(specTestData4) === true, "GM can afford fourth specialization regardless of available XP");
 
+    // 9. Force Powers & Signature Abilities Tests
+    console.log("SWFFG TEST | Starting Force Power & Signature Ability tests...");
+    
+    // Earn more campaign XP so available is 120 (currently 20 available + 100 earned)
+    await actor.update({ "system.xp.earned": 200 });
+    assert(actor.totalAvailableXp === 120, "Earned campaign XP updated. Available XP is 120");
+
+    // Buy a Force Power tree (classification: "force-power") - Costs 10 XP
+    const forcePowerItem = await actor.createEmbeddedDocuments("Item", [{
+      name: "Sense",
+      type: "specialization",
+      system: { classification: "force-power" }
+    }]);
+    assert(actor.calculateSpentSpecializationXp() === 70, "Total specs cost is 70 (60 regular specs + 10 Force Power)");
+    assert(actor.totalAvailableXp === 110, "Available XP reduced to 110");
+
+    // Purchase a Row 0 upgrade in the Force Power tree (specialization: "sense") - Costs 5 XP
+    const senseUpgrade = await actor.createEmbeddedDocuments("Item", [{
+      name: "Sense Duration Upgrade",
+      type: "talent",
+      system: { row: 0, col: 0, specialization: "sense" }
+    }]);
+    assert(actor.calculateSpentTalentXp() === 5, "Spent talent XP is 5 (Row 0 force power upgrade)");
+    assert(actor.totalAvailableXp === 105, "Available XP reduced to 105");
+
+    // Buy a Signature Ability tree (classification: "signature-ability") - Costs 30 XP
+    const sigAbilityItem = await actor.createEmbeddedDocuments("Item", [{
+      name: "My Signature Ability",
+      type: "specialization",
+      system: { classification: "signature-ability" }
+    }]);
+    assert(actor.calculateSpentSpecializationXp() === 100, "Total specs cost is 100 (70 previous + 30 Signature Ability)");
+    assert(actor.totalAvailableXp === 75, "Available XP reduced to 75");
+
+    // Buy Row 0 upgrade in Signature Ability - Costs 10 XP
+    const sigUpgrade1 = await actor.createEmbeddedDocuments("Item", [{
+      name: "Sig Row 0 Upgrade",
+      type: "talent",
+      system: { row: 0, col: 0, specialization: "my signature ability" }
+    }]);
+    assert(actor.calculateSpentTalentXp() === 15, "Spent talent XP is 15 (5 Sense + 10 Signature Ability Row 0)");
+    assert(actor.totalAvailableXp === 65, "Available XP reduced to 65");
+
+    // Buy Row 2 upgrade in Signature Ability - Costs 15 XP
+    const sigUpgrade2 = await actor.createEmbeddedDocuments("Item", [{
+      name: "Sig Row 2 Upgrade",
+      type: "talent",
+      system: { row: 2, col: 0, specialization: "my signature ability" }
+    }]);
+    assert(actor.calculateSpentTalentXp() === 30, "Spent talent XP is 30 (15 previous + 15 Signature Ability Row 2)");
+    assert(actor.totalAvailableXp === 50, "Available XP reduced to 50");
+
+    // Test customXpCost override on a Force Power - Custom cost 5 XP instead of 10 XP
+    const customForcePower = await actor.createEmbeddedDocuments("Item", [{
+      name: "Minor Force Power",
+      type: "specialization",
+      system: { classification: "force-power", customXpCost: 5 }
+    }]);
+    assert(actor.calculateSpentSpecializationXp() === 105, "Spent specs XP is 105 (100 previous + 5 custom cost override)");
+    assert(actor.totalAvailableXp === 45, "Available XP reduced to 45");
+
   } catch (error) {
     console.error("SWFFG TEST | Test suite encountered an error:", error);
   } finally {

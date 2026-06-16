@@ -45,9 +45,17 @@ export class SWFFGActor extends Actor {
     let spent = 0;
     for (const item of this.items) {
       if (item.type === "talent") {
+        const specName = item.system?.specialization?.toLowerCase() || "";
+        const parentSpec = this.items.find(s => s.type === "specialization" && s.name.toLowerCase() === specName);
+        const isSignatureAbility = parentSpec?.system?.classification === "signature-ability";
+
         const row = item.system?.row;
         if (row !== undefined && row !== null) {
-          spent += (row + 1) * 5;
+          if (isSignatureAbility) {
+            spent += (row <= 1) ? 10 : 15;
+          } else {
+            spent += (row + 1) * 5;
+          }
         } else {
           const tier = item.system?.tier || 1;
           spent += tier * 5;
@@ -60,18 +68,44 @@ export class SWFFGActor extends Actor {
   calculateSpentSpecializationXp() {
     if (this.type !== "character") return 0;
     const specs = this.items.filter(item => item.type === "specialization");
-    if (specs.length <= 1) return 0;
+    if (specs.length === 0) return 0;
 
     let totalCost = 0;
-    for (let i = 1; i < specs.length; i++) {
-      const spec = specs[i];
-      let cost = (i + 1) * 10;
-      const classification = spec.system?.classification || "career";
-      if (classification === "non-career") {
-        cost += 10;
+
+    // 1. Calculate regular specializations
+    const regularSpecs = specs.filter(s => {
+      const cls = s.system?.classification || "career";
+      return ["career", "non-career", "universal"].includes(cls);
+    });
+    
+    for (let i = 1; i < regularSpecs.length; i++) {
+      const spec = regularSpecs[i];
+      if (spec.system?.customXpCost !== null && spec.system?.customXpCost !== undefined) {
+        totalCost += spec.system.customXpCost;
+      } else {
+        let cost = (i + 1) * 10;
+        if (spec.system?.classification === "non-career") {
+          cost += 10;
+        }
+        totalCost += cost;
       }
-      totalCost += cost;
     }
+
+    // 2. Calculate Force Powers and Signature Abilities
+    const nonRegularSpecs = specs.filter(s => {
+      const cls = s.system?.classification;
+      return ["force-power", "signature-ability"].includes(cls);
+    });
+
+    for (const spec of nonRegularSpecs) {
+      if (spec.system?.customXpCost !== null && spec.system?.customXpCost !== undefined) {
+        totalCost += spec.system.customXpCost;
+      } else {
+        const cls = spec.system.classification;
+        totalCost += (cls === "signature-ability") ? 30 : 10;
+      }
+    }
+
     return totalCost;
   }
 
@@ -80,14 +114,27 @@ export class SWFFGActor extends Actor {
     const isGM = game.user?.isGM || false;
     if (isGM) return true;
 
-    const specs = this.items.filter(item => item.type === "specialization");
-    const nextIndex = specs.length;
-    if (nextIndex === 0) return true;
-
     const classification = specItemData?.system?.classification || "career";
-    let cost = (nextIndex + 1) * 10;
-    if (classification === "non-career") {
-      cost += 10;
+    let cost = 0;
+
+    if (specItemData?.system?.customXpCost !== null && specItemData?.system?.customXpCost !== undefined) {
+      cost = specItemData.system.customXpCost;
+    } else if (classification === "force-power") {
+      cost = 10;
+    } else if (classification === "signature-ability") {
+      cost = 30;
+    } else {
+      const specs = this.items.filter(item => {
+        const cls = item.system?.classification || "career";
+        return ["career", "non-career", "universal"].includes(cls);
+      });
+      const nextIndex = specs.length;
+      if (nextIndex === 0) return true;
+
+      cost = (nextIndex + 1) * 10;
+      if (classification === "non-career") {
+        cost += 10;
+      }
     }
 
     return this.totalAvailableXp >= cost;
