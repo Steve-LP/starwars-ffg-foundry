@@ -217,6 +217,7 @@ export class SpecializationData extends foundry.abstract.TypeDataModel {
     return {
       description: new fields.HTMLField({ initial: "" }),
       careerSkills: new fields.StringField({ initial: "" }),
+      classification: new fields.StringField({ initial: "career", choices: ["career", "non-career", "universal"] }),
       talentRows: new fields.ArrayField(new fields.ObjectField(), { initial: [] })
     };
   }

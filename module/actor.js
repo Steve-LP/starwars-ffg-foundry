@@ -57,10 +57,46 @@ export class SWFFGActor extends Actor {
     return spent;
   }
 
+  calculateSpentSpecializationXp() {
+    if (this.type !== "character") return 0;
+    const specs = this.items.filter(item => item.type === "specialization");
+    if (specs.length <= 1) return 0;
+
+    let totalCost = 0;
+    for (let i = 1; i < specs.length; i++) {
+      const spec = specs[i];
+      let cost = i * 10;
+      const classification = spec.system?.classification || "career";
+      if (classification === "non-career") {
+        cost += 10;
+      }
+      totalCost += cost;
+    }
+    return totalCost;
+  }
+
+  canAffordSpecialization(specItemData) {
+    if (this.type !== "character") return true;
+    const isGM = game.user?.isGM || false;
+    if (isGM) return true;
+
+    const specs = this.items.filter(item => item.type === "specialization");
+    const nextIndex = specs.length;
+    if (nextIndex === 0) return true;
+
+    const classification = specItemData?.system?.classification || "career";
+    let cost = nextIndex * 10;
+    if (classification === "non-career") {
+      cost += 10;
+    }
+
+    return this.totalAvailableXp >= cost;
+  }
+
   get totalAvailableXp() {
     if (this.type !== "character") return 0;
     const total = (this.system.creation?.startingXp || 0) + this.dutyXp + (this.system.xp?.earned || 0);
-    return total - this.currentAttributeXpSpent - this.calculateSpentTalentXp();
+    return total - this.currentAttributeXpSpent - this.calculateSpentTalentXp() - this.calculateSpentSpecializationXp();
   }
 
   async buyAttribute(attributeName) {

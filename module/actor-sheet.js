@@ -887,6 +887,10 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     // Create the specialization item on the actor if they do not have it
     const hasSpec = this.actor.items.some(i => i.type === "specialization" && i.name.toLowerCase() === specData.name.toLowerCase());
     if (!hasSpec) {
+      if (!this.actor.canAffordSpecialization(specData)) {
+        ui.notifications?.warn(`Nicht genug XP vorhanden, um die Spezialisierung "${specData.name}" zu erwerben!`);
+        return;
+      }
       itemsToCreate.push(specData);
     }
 

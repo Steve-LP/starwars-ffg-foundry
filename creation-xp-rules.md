@@ -31,6 +31,11 @@ xp: new fields.SchemaField({
 })
 ```
 
+Under `SpecializationData` items:
+```javascript
+classification: new fields.StringField({ initial: "career", choices: ["career", "non-career", "universal"] })
+```
+
 ---
 
 ## 2. Dynamic Calculations & Getters (on `SWFFGActor` / `actor.js`)
@@ -51,9 +56,14 @@ XP is not manually subtracted or updated. Instead, the actor's available XP and 
     Sums up XP spent on all owned talents.
     *   Talents with a `system.row` (specialization-tree talents) cost `(row + 1) * 5` XP.
     *   Standalone talents cost `system.tier * 5` XP.
+*   **`calculateSpentSpecializationXp()` (Method)**:
+    Sums up XP spent on acquiring new specialization trees:
+    *   First specialization (Index 0) is the character's starting spec and costs `0` XP.
+    *   For every subsequent specialization (Index `i`), the base cost is `i * 10` XP.
+    *   If the specialization's classification is `"non-career"`, there is an additional `+10` XP penalty added to that specific purchase.
 *   **`totalAvailableXp` (Getter)**:
     Calculates dynamic XP remaining:
-    `(startingXp + dutyXp + earned) - currentAttributeXpSpent - calculateSpentTalentXp()`.
+    `(startingXp + dutyXp + earned) - currentAttributeXpSpent - calculateSpentTalentXp() - calculateSpentSpecializationXp()`.
 
 ### XP Property Binding
 In `prepareDerivedData()`, the following bindings are automatically enforced:
@@ -74,6 +84,12 @@ Attempts to upgrade a characteristic by 1 rank (e.g., `await actor.buyAttribute(
     2.  Character must have sufficient global available XP (`totalAvailableXp >= cost`).
     3.  Upgrading must not exceed the species ceiling (`currentAttributeXpSpent + cost <= maxAttributeXpAllowed`).
 *   **Updates**: Atomically increments `system.characteristics.[attributeName].value`.
+
+### `canAffordSpecialization(specItemData)`
+Checks if the actor can afford to purchase the given specialization.
+*   **Cost**: `(currentSpecCount * 10) + (classification === "non-career" ? 10 : 0)`.
+*   **Validation Rules (Bypassed if User is GM)**:
+    *   Returns `true` if `totalAvailableXp >= cost`. Otherwise, returns `false`.
 
 ### `lockCreation()`
 Finalizes character creation:

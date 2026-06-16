@@ -227,6 +227,55 @@
     assert(actor._source.system.characteristics.agility.value === 4, "GM successfully bypassed limits and upgraded Agility to 4");
     assert(actor.currentAttributeXpSpent === 140, "Current attribute XP spent updated to 140");
 
+    // 8. Specialization XP Purchasing Tests
+    console.log("SWFFG TEST | Starting Specialization XP Purchasing tests...");
+    
+    // Add first specialization (Index 0: Starting Spec) - Costs 0 XP
+    const spec1 = await actor.createEmbeddedDocuments("Item", [{
+      name: "Slick Pilot",
+      type: "specialization",
+      system: { classification: "career" }
+    }]);
+    assert(actor.calculateSpentSpecializationXp() === 0, "Starting specialization costs 0 XP");
+    assert(actor.totalAvailableXp === 80, "Available XP remains 80");
+
+    // Add second specialization (Index 1: Career Spec) - Costs 10 XP
+    const specTestData2 = { type: "specialization", system: { classification: "career" } };
+    assert(actor.canAffordSpecialization(specTestData2) === true, "Actor can afford second specialization (cost: 10 XP)");
+    
+    const spec2 = await actor.createEmbeddedDocuments("Item", [{
+      name: "Driver",
+      type: "specialization",
+      system: { classification: "career" }
+    }]);
+    assert(actor.calculateSpentSpecializationXp() === 10, "Spent specialization XP is 10 after purchasing second tree");
+    assert(actor.totalAvailableXp === 70, "Available XP reduced to 70");
+
+    // Add third specialization (Index 2: Non-Career Spec) - Costs 30 XP (20 base + 10 penalty)
+    const specTestData3 = { type: "specialization", system: { classification: "non-career" } };
+    assert(actor.canAffordSpecialization(specTestData3) === true, "Actor can afford third specialization (non-career, cost: 30 XP)");
+
+    const spec3 = await actor.createEmbeddedDocuments("Item", [{
+      name: "Mercenary Soldier",
+      type: "specialization",
+      system: { classification: "non-career" }
+    }]);
+    assert(actor.calculateSpentSpecializationXp() === 40, "Spent specialization XP is 40 (10 + 30)");
+    assert(actor.totalAvailableXp === 40, "Available XP reduced to 40");
+
+    // Add fourth specialization (Index 3: Non-Career Spec) - Costs 50 XP (30 base + 10 penalty + 10 [exceeding available 40])
+    const specTestData4 = { type: "specialization", system: { classification: "non-career" } };
+    
+    // Mock non-GM
+    Object.defineProperty(game.user, "isGM", { value: false, configurable: true });
+    try {
+      assert(actor.canAffordSpecialization(specTestData4) === false, "Non-GM cannot afford fifth specialization (cost: 50 XP vs available: 40 XP)");
+    } finally {
+      delete game.user.isGM;
+    }
+
+    assert(actor.canAffordSpecialization(specTestData4) === true, "GM can afford fifth specialization regardless of available XP");
+
   } catch (error) {
     console.error("SWFFG TEST | Test suite encountered an error:", error);
   } finally {
