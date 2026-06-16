@@ -340,47 +340,64 @@ export class SWFFGActor extends Actor {
 
   async resetToCreationMode() {
     if (this.type !== "character") return;
-    const confirmReset = confirm("Möchtest du alle gesteigerten Attribute, gekauften Fertigkeitsränge und verbrauchten XP auf die Ausgangswerte der Spezies zurücksetzen? Spezies, Karriere und Spezialisierungen bleiben erhalten.");
+    const confirmReset = confirm("Möchtest du den Charakter komplett auf die Standardwerte zurücksetzen? Dadurch werden auch Spezies, Karriere, Spezialisierungen und alle erworbenen Fertigkeiten/Talente gelöscht.");
     if (!confirmReset) return;
 
-    const baseChars = this.system.creation?.baseCharacteristics || {
-      brawn: 2, agility: 2, intellect: 2, cunning: 2, willpower: 2, presence: 2
-    };
+    // Delete all specialization, talent, and other items
+    const itemsToDelete = this.items.filter(i => ["specialization", "talent", "forcepower", "signatureability"].includes(i.type)).map(i => i.id);
+    if (itemsToDelete.length > 0) {
+      await this.deleteEmbeddedDocuments("Item", itemsToDelete);
+    }
 
-    const updates = {
-      "system.creation.isCreationMode": true,
-      "system.creation.sandboxMode": false,
-      "system.characteristics.brawn.value": baseChars.brawn,
-      "system.characteristics.agility.value": baseChars.agility,
-      "system.characteristics.intellect.value": baseChars.intellect,
-      "system.characteristics.cunning.value": baseChars.cunning,
-      "system.characteristics.willpower.value": baseChars.willpower,
-      "system.characteristics.presence.value": baseChars.presence,
-      "system.xp.available": this.system.creation?.startingXp || 100
-    };
-
-    // Reset skill ranks back to freeRanks (granted by species drops)
+    // Reset skill items back to value 0, freeRanks 0, career false
     const skillUpdates = [];
     for (const item of this.items) {
       if (item.type === "skill") {
-        const freeRanks = item.system?.freeRanks || 0;
-        if (item.system.value !== freeRanks) {
-          skillUpdates.push({
-            _id: item.id,
-            "system.value": freeRanks
-          });
-        }
+        skillUpdates.push({
+          _id: item.id,
+          "system.value": 0,
+          "system.freeRanks": 0,
+          "system.career": false
+        });
       }
     }
-
     if (skillUpdates.length > 0) {
       await this.updateEmbeddedDocuments("Item", skillUpdates);
     }
 
+    const updates = {
+      "system.creation.isCreationMode": true,
+      "system.creation.sandboxMode": false,
+      "system.biography.species": "",
+      "system.biography.career": "",
+      "system.biography.specialization": "",
+      "system.biography.specialAbilities": "",
+      "system.characteristics.brawn.value": 2,
+      "system.characteristics.agility.value": 2,
+      "system.characteristics.intellect.value": 2,
+      "system.characteristics.cunning.value": 2,
+      "system.characteristics.willpower.value": 2,
+      "system.characteristics.presence.value": 2,
+      "system.creation.baseCharacteristics": {
+        brawn: 2, agility: 2, intellect: 2, cunning: 2, willpower: 2, presence: 2
+      },
+      "system.stats.wounds.base": 10,
+      "system.stats.strain.base": 10,
+      "system.stats.wounds.max": 10,
+      "system.stats.strain.max": 10,
+      "system.creation.startingXp": 0,
+      "system.xp.available": 0,
+      "system.xp.total": 0,
+      "system.xp.earned": 0,
+      "system.xp.log": []
+    };
+
     await this.update(updates, {
-      xpLogDescription: "Charakter auf Ausgangswerte zurückgesetzt (Full-Reset zur Erstellungsphase)"
+      xpLogDescription: "Charakter vollständig zurückgesetzt (Full-Reset auf Standardwerte)"
     });
-    ui.notifications?.info("Charakter erfolgreich auf Spezies-Ausgangswerte zurückgesetzt.");
+    
+    await this.recalculateCareerSkills();
+    ui.notifications?.info("Charakter erfolgreich auf Standardwerte zurückgesetzt.");
   }
 
   async lockCreation() {

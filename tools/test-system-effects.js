@@ -389,9 +389,9 @@
 
     assert(actor.system.biography.species === "", "Actor biography species is reset to empty");
     assert(actor.system.biography.specialAbilities === "", "Actor biography specialAbilities is reset to empty");
-    assert(actor.system.characteristics.brawn.value === 1, "Brawn reset to 1");
+    assert(actor.system.characteristics.brawn.value === 2, "Brawn reset to 2");
     assert(actor.system.creation.startingXp === 0, "Starting XP reset to 0");
-    assert(actor.system.creation.baseCharacteristics.brawn === 1, "Base Brawn reset to 1");
+    assert(actor.system.creation.baseCharacteristics.brawn === 2, "Base Brawn reset to 2");
     assert(charmSkill.system.value === 0, "Charm skill rank reverted back to 0");
     assert(charmSkill.system.freeRanks === 0, "Charm skill free ranks reverted back to 0");
 
