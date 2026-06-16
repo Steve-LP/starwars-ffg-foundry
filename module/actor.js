@@ -140,10 +140,31 @@ export class SWFFGActor extends Actor {
     return this.totalAvailableXp >= cost;
   }
 
+  calculateSpentSkillXp() {
+    if (this.type !== "character") return 0;
+    let spent = 0;
+    for (const item of this.items) {
+      if (item.type === "skill") {
+        const val = item.system?.value || 0;
+        const freeRanks = item.system?.freeRanks || 0;
+        const isCareer = item.system?.career || false;
+        if (val > freeRanks) {
+          // FFG Rules:
+          // Career Skill: rank * 5
+          // Non-career Skill: (rank * 5) + 5
+          for (let r = freeRanks + 1; r <= val; r++) {
+            spent += isCareer ? (r * 5) : ((r * 5) + 5);
+          }
+        }
+      }
+    }
+    return spent;
+  }
+
   get totalAvailableXp() {
     if (this.type !== "character") return 0;
     const total = (this.system.creation?.startingXp || 0) + this.dutyXp + (this.system.xp?.earned || 0);
-    return total - this.currentAttributeXpSpent - this.calculateSpentTalentXp() - this.calculateSpentSpecializationXp();
+    return total - this.currentAttributeXpSpent - this.calculateSpentTalentXp() - this.calculateSpentSpecializationXp() - this.calculateSpentSkillXp();
   }
 
   async buyAttribute(attributeName) {
@@ -156,8 +177,11 @@ export class SWFFGActor extends Actor {
     const currentRawValue = currentRawChars[attributeName]?.value !== undefined ? currentRawChars[attributeName].value : baseVal;
 
     const cost = (currentRawValue + 1) * 10;
+    const currentAvailable = this.system.xp?.available || 0;
 
-    if (!isGM) {
+    const isSandbox = this.system.creation?.sandboxMode || false;
+
+    if (!isGM && !isSandbox) {
       if (!this.system.creation?.isCreationMode) {
         ui.notifications?.error("Attribute können nach der Charaktererstellung nicht mehr mit XP gesteigert werden!");
         return;
@@ -172,16 +196,200 @@ export class SWFFGActor extends Actor {
       }
     }
 
+    // Force an update to available XP so it records in _preUpdate logs
+    const newAvailable = Math.max(0, currentAvailable - cost);
     await this.update({
-      [`system.characteristics.${attributeName}.value`]: currentRawValue + 1
+      [`system.characteristics.${attributeName}.value`]: currentRawValue + 1,
+      "system.xp.available": newAvailable
+    }, {
+      xpLogDescription: `Attribut gesteigert: ${attributeName.toUpperCase()} von ${currentRawValue} auf ${currentRawValue + 1} (-${cost} XP)`
     });
     ui.notifications?.info(`${attributeName.toUpperCase()} auf ${currentRawValue + 1} gesteigert für ${cost} XP.`);
+  }
+
+  async decreaseAttribute(attributeName) {
+    if (this.type !== "character") return;
+    const isGM = game.user?.isGM || false;
+
+    const currentRawChars = this._source.system.characteristics || {};
+    const baseChars = this.system.creation?.baseCharacteristics || {};
+    const baseVal = baseChars[attributeName] !== undefined ? baseChars[attributeName] : 2;
+    const currentRawValue = currentRawChars[attributeName]?.value !== undefined ? currentRawChars[attributeName].value : baseVal;
+
+    if (currentRawValue <= baseVal) {
+      ui.notifications?.warn(`Kann ${attributeName.toUpperCase()} nicht unter den Basiswert von ${baseVal} senken!`);
+      return;
+    }
+
+    if (!isGM && !this.system.creation?.isCreationMode) {
+      ui.notifications?.error("Attribute können nach der Charaktererstellung nicht mehr verändert werden!");
+      return;
+    }
+
+    const refund = currentRawValue * 10;
+    const currentAvailable = this.system.xp?.available || 0;
+    const newAvailable = currentAvailable + refund;
+
+    await this.update({
+      [`system.characteristics.${attributeName}.value`]: currentRawValue - 1,
+      "system.xp.available": newAvailable
+    }, {
+      xpLogDescription: `Attribut gesenkt: ${attributeName.toUpperCase()} von ${currentRawValue} auf ${currentRawValue - 1} (+${refund} XP erstattet)`
+    });
+    ui.notifications?.info(`${attributeName.toUpperCase()} auf ${currentRawValue - 1} gesenkt. ${refund} XP erstattet.`);
+  }
+
+  async buySkillRank(skillName, skillChar, skillCat) {
+    if (this.type !== "character") return;
+    const isGM = game.user?.isGM || false;
+
+    // Find the skill item if it exists
+    const skillItem = this.items.find(i => i.type === "skill" && i.name.toLowerCase() === skillName.toLowerCase());
+    const currentRank = skillItem?.system?.value || 0;
+    const isCareer = skillItem?.system?.career || false;
+
+    const nextRank = currentRank + 1;
+    const cost = isCareer ? (nextRank * 5) : ((nextRank * 5) + 5);
+    const currentAvailable = this.system.xp?.available || 0;
+
+    const isSandbox = this.system.creation?.sandboxMode || false;
+
+    if (!isGM && !isSandbox) {
+      if (!this.system.creation?.isCreationMode) {
+        ui.notifications?.error("Fertigkeiten können nach der Charaktererstellung hier nicht gesteigert werden!");
+        return;
+      }
+      if (this.totalAvailableXp < cost) {
+        ui.notifications?.warn(`Nicht genug XP vorhanden! (Kosten: ${cost} XP, Verfügbar: ${this.totalAvailableXp} XP)`);
+        return;
+      }
+      if (currentRank >= 2) {
+        ui.notifications?.warn(`Während der Charaktererstellung dürfen Fertigkeiten nicht über Rang 2 gesteigert werden!`);
+        return;
+      }
+    }
+
+    const newAvailable = Math.max(0, currentAvailable - cost);
+    // Perform update of available XP and item values to log correctly
+    await this.update({
+      "system.xp.available": newAvailable
+    }, {
+      xpLogDescription: `Rang erworben: ${skillName} von ${currentRank} auf ${nextRank} (-${cost} XP)`
+    });
+
+    if (skillItem) {
+      await skillItem.update({ "system.value": nextRank });
+    } else {
+      await this.createEmbeddedDocuments("Item", [{
+        name: skillName,
+        type: "skill",
+        system: { value: 1, characteristic: skillChar, category: skillCat, career: false }
+      }]);
+    }
+    ui.notifications?.info(`Rang ${nextRank} in ${skillName} gekauft für ${cost} XP.`);
+  }
+
+  async decreaseSkillRank(skillName) {
+    if (this.type !== "character") return;
+    const isGM = game.user?.isGM || false;
+
+    const skillItem = this.items.find(i => i.type === "skill" && i.name.toLowerCase() === skillName.toLowerCase());
+    const currentRank = skillItem?.system?.value || 0;
+
+    const freeRanks = skillItem?.system?.freeRanks || 0;
+
+    if (currentRank <= freeRanks) {
+      ui.notifications?.warn(`Kann ${skillName} nicht unter den Startwert von ${freeRanks} senken!`);
+      return;
+    }
+
+    if (!isGM && !this.system.creation?.isCreationMode) {
+      ui.notifications?.error("Fertigkeiten können nach der Charaktererstellung hier nicht verändert werden!");
+      return;
+    }
+
+    const isCareer = skillItem?.system?.career || false;
+    const refund = isCareer ? (currentRank * 5) : ((currentRank * 5) + 5);
+    const currentAvailable = this.system.xp?.available || 0;
+    const newAvailable = currentAvailable + refund;
+
+    await this.update({
+      "system.xp.available": newAvailable
+    }, {
+      xpLogDescription: `Rang zurückgesetzt: ${skillName} von ${currentRank} auf ${currentRank - 1} (+${refund} XP erstattet)`
+    });
+
+    await skillItem.update({ "system.value": currentRank - 1 });
+    ui.notifications?.info(`Rang ${currentRank} in ${skillName} zurückgesetzt. ${refund} XP erstattet.`);
+  }
+
+  async toggleSandboxMode() {
+    if (this.type !== "character") return;
+    if (!game.user?.isGM) return;
+
+    const currentSandbox = this.system.creation?.sandboxMode || false;
+    const newSandbox = !currentSandbox;
+
+    await this.update({
+      "system.creation.sandboxMode": newSandbox
+    }, {
+      xpLogDescription: `GM Sandbox-Modus ${newSandbox ? "AKTIVIERT" : "DEAKTIVIERT"} (Validierungsregeln umgangen)`
+    });
+    ui.notifications?.info(`GM Sandbox-Modus ${newSandbox ? "aktiviert" : "deaktiviert"}.`);
+  }
+
+  async resetToCreationMode() {
+    if (this.type !== "character") return;
+    const confirmReset = confirm("Möchtest du alle gesteigerten Attribute, gekauften Fertigkeitsränge und verbrauchten XP auf die Ausgangswerte der Spezies zurücksetzen? Spezies, Karriere und Spezialisierungen bleiben erhalten.");
+    if (!confirmReset) return;
+
+    const baseChars = this.system.creation?.baseCharacteristics || {
+      brawn: 2, agility: 2, intellect: 2, cunning: 2, willpower: 2, presence: 2
+    };
+
+    const updates = {
+      "system.creation.isCreationMode": true,
+      "system.creation.sandboxMode": false,
+      "system.characteristics.brawn.value": baseChars.brawn,
+      "system.characteristics.agility.value": baseChars.agility,
+      "system.characteristics.intellect.value": baseChars.intellect,
+      "system.characteristics.cunning.value": baseChars.cunning,
+      "system.characteristics.willpower.value": baseChars.willpower,
+      "system.characteristics.presence.value": baseChars.presence,
+      "system.xp.available": this.system.creation?.startingXp || 100
+    };
+
+    // Reset skill ranks back to freeRanks (granted by species drops)
+    const skillUpdates = [];
+    for (const item of this.items) {
+      if (item.type === "skill") {
+        const freeRanks = item.system?.freeRanks || 0;
+        if (item.system.value !== freeRanks) {
+          skillUpdates.push({
+            _id: item.id,
+            "system.value": freeRanks
+          });
+        }
+      }
+    }
+
+    if (skillUpdates.length > 0) {
+      await this.updateEmbeddedDocuments("Item", skillUpdates);
+    }
+
+    await this.update(updates, {
+      xpLogDescription: "Charakter auf Ausgangswerte zurückgesetzt (Full-Reset zur Erstellungsphase)"
+    });
+    ui.notifications?.info("Charakter erfolgreich auf Spezies-Ausgangswerte zurückgesetzt.");
   }
 
   async lockCreation() {
     if (this.type !== "character") return;
     await this.update({
-      "system.creation.isCreationMode": false
+      "system.creation.isCreationMode": false,
+      "system.creation.sandboxMode": false
+    }, {
+      xpLogDescription: "Erstellungsphase abgeschlossen (Bogen gesperrt)"
     });
     ui.notifications?.info("Charaktererstellung abgeschlossen. Bogen gesperrt.");
   }
@@ -196,10 +404,11 @@ export class SWFFGActor extends Actor {
       system.xp.total = (system.creation?.startingXp || 0) + this.dutyXp + (system.xp?.earned || 0);
     }
 
-    // Loop items to find relevant passive talents (Grit, Toughened, Enduring)
+    // Loop items to find relevant passive talents (Grit, Toughened, Enduring, Force Rating)
     let gritRanks = 0;
     let toughenedRanks = 0;
     let enduringRanks = 0;
+    let forceRatingTalents = 0;
 
     for (const item of this.items) {
       if (item.type === "talent") {
@@ -210,7 +419,32 @@ export class SWFFGActor extends Actor {
           toughenedRanks += 1;
         } else if (key === "enduring") {
           enduringRanks += 1;
+        } else if (key === "force rating" || key === "forcerating") {
+          forceRatingTalents += 1;
         }
+      }
+    }
+
+    // Determine initial force rating from specializations that unlock force user status
+    let baseForceRating = 0;
+    for (const item of this.items) {
+      if (item.type === "specialization") {
+        // Exile, Initiate, etc. might grant base force rating
+        if (item.system.classification === "force-power" || item.system.classification === "force-user") {
+          baseForceRating = Math.max(baseForceRating, 1);
+        }
+        // Check for specific classifications or custom settings in the specialization
+        if (item.system.careerSkills?.toLowerCase().includes("force") || item.name.toLowerCase().includes("force")) {
+          baseForceRating = Math.max(baseForceRating, 1);
+        }
+      }
+    }
+
+    const totalForceRating = baseForceRating + forceRatingTalents;
+    if (system.stats.force) {
+      system.stats.force.max = totalForceRating;
+      if (system.stats.force.value === undefined || system.stats.force.value === null) {
+        system.stats.force.value = totalForceRating;
       }
     }
 
@@ -513,8 +747,26 @@ export class SWFFGActor extends Actor {
       }
     }
 
+    const prevAvailable = this.system.xp?.available || 0;
+
     if (updates.length > 0) {
       await this.updateEmbeddedDocuments("Item", updates);
+    }
+
+    const newAvailable = this.totalAvailableXp;
+    if (newAvailable !== prevAvailable) {
+      const diff = newAvailable - prevAvailable;
+      let desc = diff > 0 ? `XP erstattet: +${diff} XP` : `XP ausgegeben: ${diff} XP`;
+      if (updates.length > 0) {
+        desc = diff > 0 
+          ? `XP erstattet durch Zurücksetzen von Fertigkeitsrängen: +${diff} XP`
+          : `XP angepasst durch Fertigkeits-Karrierestatus-Änderung: ${diff} XP`;
+      }
+      await this.update({
+        "system.xp.available": newAvailable
+      }, {
+        xpLogDescription: desc
+      });
     }
   }
 
@@ -543,7 +795,8 @@ export class SWFFGActor extends Actor {
   /** @override */
   _onUpdate(changed, options, userId) {
     super._onUpdate(changed, options, userId);
-    if (userId === game.user.id && changed.system?.biography?.career !== undefined) {
+    const careerChanged = (changed.system?.biography?.career !== undefined) || (changed["system.biography.career"] !== undefined);
+    if (userId === game.user.id && careerChanged) {
       this.recalculateCareerSkills();
     }
   }

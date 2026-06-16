@@ -8,8 +8,8 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
   static DEFAULT_OPTIONS = {
     classes: ["starwars-ffg", "sheet", "actor"],
     position: {
-      width: 780,
-      height: 700
+      width: 840,
+      height: 720
     },
     window: {
       resizable: true
@@ -35,7 +35,8 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
         { id: "skills", label: "Skills" },
         { id: "talents", label: "Talents & Force" },
         { id: "inventory", label: "Inventory" },
-        { id: "biography", label: "Biography" }
+        { id: "biography", label: "Biography" },
+        { id: "xpLog", label: "XP Log" }
       ]
     }
   };
@@ -104,11 +105,11 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 
 
     // Resolve Specializations and their Talent Trees
-    const specializations = this.actor.items.filter(i => i.type === "specialization");
+    const allSpecs = this.actor.items.filter(i => i.type === "specialization");
     const talentPack = game.packs.get("starwars-ffg-scratch.talents");
     const talentsIndex = talentPack ? await talentPack.getIndex({ fields: ["system.description", "system.activation", "system.ranked", "system.key"] }) : [];
 
-    context.specializations = specializations.map(spec => {
+    const resolvedSpecs = allSpecs.map(spec => {
       const specObj = spec.toObject();
       specObj.id = spec.id;
       console.log("SWFFG | Specialization object:", specObj);
@@ -149,6 +150,11 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       return specObj;
     });
 
+    // Categorize by classification
+    context.specializations = resolvedSpecs.filter(s => !["force-power", "signature-ability"].includes(s.system.classification));
+    context.forceSpecializations = resolvedSpecs.filter(s => s.system.classification === "force-power");
+    context.signatureSpecializations = resolvedSpecs.filter(s => s.system.classification === "signature-ability");
+
     // Prepare characteristics with costs and affordance
     const availableXp = actorData.system.xp?.available || 0;
     const isCreation = actorData.system.creation?.isCreationMode !== false;
@@ -158,17 +164,21 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     context.lockFields = !context.isGM && !isCreation;
     
     context.characteristics = {};
+    const baseChars = actorData.system.creation?.baseCharacteristics || {};
     for (const [key, char] of Object.entries(actorData.system.characteristics || {})) {
       const currentVal = char.value || 0;
+      const baseVal = baseChars[key] !== undefined ? baseChars[key] : 2;
       const cost = (currentVal + 1) * 10;
       const canAfford = context.isGM || (
         availableXp >= cost && 
         ((actorData.currentAttributeXpSpent || 0) + cost <= (actorData.maxAttributeXpAllowed || 0))
       );
+      const isDecreasable = currentVal > baseVal;
       context.characteristics[key] = {
         value: currentVal,
         cost: cost,
-        canAfford: canAfford
+        canAfford: canAfford,
+        isDecreasable: isDecreasable
       };
     }
 
@@ -275,6 +285,17 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       const greenCount = Math.max(0, Math.abs(charValue - value));
       const yellowCount = Math.max(0, Math.min(charValue, value));
 
+      const isCareer = actorSkill?.system.career || false;
+      const freeRanks = actorSkill?.system.freeRanks || 0;
+      const nextRank = baseRank + 1;
+      const cost = isCareer ? (nextRank * 5) : ((nextRank * 5) + 5);
+      const isGM = game.user?.isGM || false;
+      const canAfford = isGM || (
+        this.actor.totalAvailableXp >= cost &&
+        baseRank < 2
+      );
+      const isDecreasable = baseRank > freeRanks;
+
       finalSkills[skill.name] = {
         name: skill.name,
         characteristic: skill.characteristic,
@@ -282,8 +303,11 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
         baseValue: baseRank,
         value: value,
         modifier: skillMod,
-        career: actorSkill?.system.career || false,
+        career: isCareer,
         id: actorSkill?._id || null,
+        cost: cost,
+        canAfford: canAfford,
+        isDecreasable: isDecreasable,
         dice: {
           green: Array(greenCount).fill(true),
           yellow: Array(yellowCount).fill(true)
@@ -340,7 +364,7 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       // Specialization header removal handler
       html.find(".remove-spec-header").click(this._onRemoveSpecHeader.bind(this));
 
-      // Character creation upgrade & locking handlers
+      // Character creation upgrade, decrease & locking handlers
       html.find(".upgrade-characteristic-btn").click(async (event) => {
         event.preventDefault();
         event.stopPropagation();
@@ -350,10 +374,52 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
         }
       });
 
+      html.find(".decrease-characteristic-btn").click(async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const charName = event.currentTarget.dataset.characteristic;
+        if (charName) {
+          await this.actor.decreaseAttribute(charName);
+        }
+      });
+
       html.find(".lock-creation-btn").click(async (event) => {
         event.preventDefault();
         event.stopPropagation();
         await this.actor.lockCreation();
+      });
+
+      html.find(".toggle-sandbox-btn").click(async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        await this.actor.toggleSandboxMode();
+      });
+
+      html.find(".reset-creation-btn").click(async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        await this.actor.resetToCreationMode();
+      });
+
+      // Skill purchase and decrease handlers for character creation phase
+      html.find(".upgrade-skill-btn").click(async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const skillName = event.currentTarget.dataset.name;
+        const skillChar = event.currentTarget.dataset.characteristic;
+        const skillCat = event.currentTarget.dataset.category;
+        if (skillName) {
+          await this.actor.buySkillRank(skillName, skillChar, skillCat);
+        }
+      });
+
+      html.find(".decrease-skill-btn").click(async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const skillName = event.currentTarget.dataset.name;
+        if (skillName) {
+          await this.actor.decreaseSkillRank(skillName);
+        }
       });
     }
   }
@@ -846,7 +912,24 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       { name: "Ranged (Heavy)", characteristic: "agility", category: "Combat" }
     ];
 
-    const skillMods = speciesData.system.modifiers?.skills || "";
+    // Use specialAbilities from Oggdude imported species data if available
+    let specialAbilitiesText = speciesData.system.specialAbilities || "";
+
+    // Check for hardcoded species features (like Twi'lek Charm & heat resistance)
+    let skillMods = speciesData.system.modifiers?.skills || "";
+    if (speciesData.name.toLowerCase() === "twi'lek") {
+      if (!skillMods.toLowerCase().includes("charm")) {
+        skillMods = skillMods ? `${skillMods},Charm:1` : "Charm:1";
+      }
+      if (!specialAbilitiesText) {
+        specialAbilitiesText = "Hitzeresistenz: Twi'leks entfernen ein Setback-Dice (Schwarzer Würfel) aus allen Proben aufgrund von heißer oder arider Umgebung.";
+      }
+    }
+
+    if (specialAbilitiesText) {
+      updates["system.biography.specialAbilities"] = specialAbilitiesText;
+    }
+
     const itemsToCreate = [];
     const itemsToUpdate = [];
     const currentSkills = this.actor.items.filter(i => i.type === "skill");
@@ -1092,6 +1175,7 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     const remainingSpecs = this.actor.items.filter(i => i.type === "specialization" && i.id !== itemId);
     const careerName = this.actor.system.biography.career;
     await this.actor.deleteEmbeddedDocuments("Item", [itemId]);
+    await this.actor.recalculateCareerSkills();
     this.render();
   }
 
@@ -1152,6 +1236,7 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     if (!confirmRemove) return;
 
     await this.actor.update({ "system.biography.career": "" });
+    await this.actor.recalculateCareerSkills();
     this.render();
   }
 

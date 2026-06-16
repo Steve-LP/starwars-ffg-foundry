@@ -79,6 +79,138 @@ export function parseOggdudeWeapons(xmlString) {
   return items;
 }
 
+export function parseOggdudeSpecies(xmlString) {
+  const parser = new DOMParser();
+  const xmlDoc = parser.parseFromString(xmlString, "text/xml");
+  const speciesNode = xmlDoc.getElementsByTagName("Species")[0];
+  if (!speciesNode) return [];
+
+  const key = speciesNode.getElementsByTagName("Key")[0]?.textContent || "";
+  const name = speciesNode.getElementsByTagName("Name")[0]?.textContent || "Unnamed Species";
+  
+  // Extract description
+  let description = speciesNode.getElementsByTagName("Description")[0]?.textContent || "";
+  description = description.replace(/\[H4\]/g, "<h4>").replace(/\[h4\]/g, "</h4>");
+
+  // Starting Characteristics
+  const brawn = parseInt(speciesNode.getElementsByTagName("Brawn")[0]?.textContent || "2");
+  const agility = parseInt(speciesNode.getElementsByTagName("Agility")[0]?.textContent || "2");
+  const intellect = parseInt(speciesNode.getElementsByTagName("Intellect")[0]?.textContent || "2");
+  const cunning = parseInt(speciesNode.getElementsByTagName("Cunning")[0]?.textContent || "2");
+  const willpower = parseInt(speciesNode.getElementsByTagName("Willpower")[0]?.textContent || "2");
+  const presence = parseInt(speciesNode.getElementsByTagName("Presence")[0]?.textContent || "2");
+
+  // Attrs
+  const woundThreshold = parseInt(speciesNode.getElementsByTagName("WoundThreshold")[0]?.textContent || "10");
+  const strainThreshold = parseInt(speciesNode.getElementsByTagName("StrainThreshold")[0]?.textContent || "10");
+  const experience = parseInt(speciesNode.getElementsByTagName("Experience")[0]?.textContent || "100");
+
+  // Parse skill modifiers and option choices
+  const skillModList = [];
+  
+  // Fixed SkillModifiers
+  const fixedMods = speciesNode.getElementsByTagName("SkillModifiers")[0]?.getElementsByTagName("SkillModifier") || [];
+  for (let i = 0; i < fixedMods.length; i++) {
+    const modKey = fixedMods[i].getElementsByTagName("Key")[0]?.textContent || "";
+    const startRank = parseInt(fixedMods[i].getElementsByTagName("RankStart")[0]?.textContent || "1");
+    
+    // Map Oggdude skill keys to standard display names
+    const skillMap = {
+      "ASTRO": "Astrogation", "ATHL": "Athletics", "CHARM": "Charm", "COERC": "Coercion",
+      "COMP": "Computers", "COOL": "Cool", "COORD": "Coordination", "DECEP": "Deception",
+      "DISC": "Discipline", "LEAD": "Leadership", "MECH": "Mechanics", "MED": "Medicine",
+      "NEGOT": "Negotiation", "PERC": "Perception", "PILOTPL": "Piloting (Planetary)",
+      "PILOTSP": "Piloting (Space)", "RESIL": "Resilience", "SKULD": "Skulduggery",
+      "STEAL": "Stealth", "STREET": "Streetwise", "SURV": "Survival", "VIGIL": "Vigilance",
+      "BRAWL": "Brawl", "GUNN": "Gunnery", "MELEE": "Melee", "RANGELT": "Ranged (Light)",
+      "RANGEHV": "Ranged (Heavy)"
+    };
+    const mappedName = skillMap[modKey.toUpperCase()] || modKey;
+    skillModList.push(`${mappedName}:${startRank}`);
+  }
+
+  // Option Choices (e.g. choice between Charm & Deception for Twi'leks)
+  const choices = speciesNode.getElementsByTagName("OptionChoices")[0]?.getElementsByTagName("OptionChoice") || [];
+  const choiceSkills = [];
+  for (let i = 0; i < choices.length; i++) {
+    const options = choices[i].getElementsByTagName("Option");
+    for (let j = 0; j < options.length; j++) {
+      const optMods = options[j].getElementsByTagName("SkillModifier");
+      for (let k = 0; k < optMods.length; k++) {
+        const modKey = optMods[k].getElementsByTagName("Key")[0]?.textContent || "";
+        const startRank = parseInt(optMods[k].getElementsByTagName("RankStart")[0]?.textContent || "1");
+        
+        const skillMap = {
+          "ASTRO": "Astrogation", "ATHL": "Athletics", "CHARM": "Charm", "COERC": "Coercion",
+          "COMP": "Computers", "COOL": "Cool", "COORD": "Coordination", "DECEP": "Deception",
+          "DISC": "Discipline", "LEAD": "Leadership", "MECH": "Mechanics", "MED": "Medicine",
+          "NEGOT": "Negotiation", "PERC": "Perception", "PILOTPL": "Piloting (Planetary)",
+          "PILOTSP": "Piloting (Space)", "RESIL": "Resilience", "SKULD": "Skulduggery",
+          "STEAL": "Stealth", "STREET": "Streetwise", "SURV": "Survival", "VIGIL": "Vigilance",
+          "BRAWL": "Brawl", "GUNN": "Gunnery", "MELEE": "Melee", "RANGELT": "Ranged (Light)",
+          "RANGEHV": "Ranged (Heavy)"
+        };
+        const mappedName = skillMap[modKey.toUpperCase()] || modKey;
+        choiceSkills.push(`${mappedName}:${startRank}`);
+      }
+    }
+  }
+
+  // If there are choice-based skills (like Twi'lek Charm or Deception), default to the first one but list them all
+  if (choiceSkills.length > 0) {
+    for (const cSkill of choiceSkills) {
+      if (!skillModList.includes(cSkill)) {
+        skillModList.push(cSkill);
+      }
+    }
+  }
+
+  // Special Abilities extraction from OptionChoices (like Environmental, Rage, etc.)
+  const specialAbilitiesList = [];
+  for (let i = 0; i < choices.length; i++) {
+    const choiceName = choices[i].getElementsByTagName("Name")[0]?.textContent || "";
+    if (choiceName.toLowerCase() !== "skills") {
+      const options = choices[i].getElementsByTagName("Option");
+      for (let j = 0; j < options.length; j++) {
+        const optName = options[j].getElementsByTagName("Name")[0]?.textContent || "";
+        const optDesc = options[j].getElementsByTagName("Description")[0]?.textContent || "";
+        specialAbilitiesList.push(`<strong>${optName}</strong>: ${optDesc.trim()}`);
+      }
+    }
+  }
+
+  const specialAbilitiesHtml = specialAbilitiesList.join("<br><br>");
+
+  return [{
+    name: name,
+    type: "species",
+    system: {
+      description: description,
+      characteristics: {
+        brawn: { value: brawn },
+        agility: { value: agility },
+        intellect: { value: intellect },
+        cunning: { value: cunning },
+        willpower: { value: willpower },
+        presence: { value: presence }
+      },
+      wounds: { base: woundThreshold },
+      strain: { base: strainThreshold },
+      xp: experience,
+      key: key,
+      modifiers: {
+        wounds: 0,
+        strain: 0,
+        soak: 0,
+        encumbrance: 0,
+        characteristics: "",
+        skills: skillModList.join(",")
+      },
+      specialAbilities: specialAbilitiesHtml
+    }
+  }];
+}
+
 /**
  * Exposing a general dispatcher
  */
@@ -87,6 +219,8 @@ export function oggdudeParser(xmlString, type) {
     return parseOggdudeTalents(xmlString);
   } else if (type === "weapon") {
     return parseOggdudeWeapons(xmlString);
+  } else if (type === "species") {
+    return parseOggdudeSpecies(xmlString);
   }
   return [];
 }

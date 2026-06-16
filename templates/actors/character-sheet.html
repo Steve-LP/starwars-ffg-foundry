@@ -1,56 +1,41 @@
 <form class="{{cssClass}} actor-sheet-container" autocomplete="off">
+  {{#if isCreationMode}}
+  <!-- Creation Phase Banner -->
+  <div class="creation-phase-banner row" style="gap: 8px;">
+    <div class="banner-title"><i class="fas fa-hammer"></i> Erstellungsphase</div>
+    <div class="banner-xp-info">Gesteigert: <span class="highlight">{{xpSpentInfo}}</span></div>
+    
+    <div class="banner-controls" style="display: flex; gap: 8px; align-items: center;">
+      {{#if isGM}}
+      <button type="button" class="toggle-sandbox-btn {{#if actor.system.creation.sandboxMode}}active{{/if}}" title="Regeln & XP-Limits ignorieren" style="background: {{#if actor.system.creation.sandboxMode}}#da70d6{{else}}rgba(255,255,255,0.1){{/if}}; color: {{#if actor.system.creation.sandboxMode}}#000{{else}}#fff{{/if}}; border: 1px solid {{#if actor.system.creation.sandboxMode}}#da70d6{{else}}rgba(255,255,255,0.25){{/if}}; padding: 4px 8px; border-radius: 4px; font-family: 'Rajdhani', sans-serif; font-weight: 700; cursor: pointer; text-transform: uppercase; font-size: 11px;">
+        <i class="fas fa-flask"></i> Sandbox Mode: {{#if actor.system.creation.sandboxMode}}AN{{else}}AUS{{/if}}
+      </button>
+      {{/if}}
+      
+      <button type="button" class="reset-creation-btn" title="Alle Attribute & Ränge zurücksetzen" style="background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid #ef4444; padding: 4px 8px; border-radius: 4px; font-family: 'Rajdhani', sans-serif; font-weight: 700; cursor: pointer; text-transform: uppercase; font-size: 11px;">
+        <i class="fas fa-undo"></i> Reset
+      </button>
+
+      <button type="button" class="lock-creation-btn"><i class="fas fa-lock"></i> Charakter sperren</button>
+    </div>
+  </div>
+  {{/if}}
+
   <!-- Header Info -->
-  <header class="sheet-header">
-    <img class="profile-img" src="{{actor.img}}" data-edit="img" title="{{actor.name}}" />
+  <header class="sheet-header" style="margin-bottom: 4px;">
+    <div class="profile-image-container">
+      <img class="profile-img" src="{{actor.img}}" data-edit="img" title="{{actor.name}}" />
+    </div>
     <div class="header-details">
-      <div class="row">
-        <h1 class="charname"><input name="name" type="text" value="{{actor.name}}" placeholder="Name" /></h1>
-      </div>
-      <div class="row bio-row">
-        <div class="bio-item drop-zone" data-drop-type="species">
-          <label>Species</label>
-          {{#if actor.system.biography.species}}
-          <span class="bio-value">
-            {{actor.system.biography.species}}
-            <a class="remove-bio" data-type="species" title="Remove Species"><i class="fas fa-times-circle"></i></a>
-          </span>
-          {{else}}
-          <span class="bio-placeholder">Drop Species here</span>
-          {{/if}}
-        </div>
-        <div class="bio-item drop-zone" data-drop-type="career">
-          <label>Career</label>
-          {{#if actor.system.biography.career}}
-          <span class="bio-value">
-            {{actor.system.biography.career}}
-            <a class="remove-bio" data-type="career" title="Remove Career"><i class="fas fa-times-circle"></i></a>
-          </span>
-          {{else}}
-          <span class="bio-placeholder">Drop Career here</span>
-          {{/if}}
-        </div>
-        <div class="bio-item drop-zone" data-drop-type="specialization">
-          <label>Specializations</label>
-          {{#if specializations.length}}
-          <span class="bio-value">
-            {{#each specializations as |spec idx|}}
-              {{#if idx}}, {{/if}}
-              <span class="spec-header-tag">
-                {{spec.name}}
-                <a class="remove-spec-header" data-item-id="{{spec.id}}" title="Remove Specialization"><i class="fas fa-times-circle"></i></a>
-              </span>
-            {{/each}}
-          </span>
-          {{else}}
-          <span class="bio-placeholder">Drop Spec here</span>
-          {{/if}}
-        </div>
-        <div class="bio-item xp-box">
-          <label>XP (Avail / Total)</label>
+      <div class="row header-name-row" style="justify-content: space-between; align-items: center; border-bottom: none; padding: 0;">
+        <h1 class="charname" style="flex: 1;"><input name="name" type="text" value="{{actor.name}}" placeholder="Name" /></h1>
+        <!-- XP Box on the right of the name -->
+        <div class="xp-profile-box xp-box" style="flex: 0 0 auto; display: flex; align-items: center; gap: 8px;">
+          <label style="margin-bottom: 0; padding-right: 4px;">XP (Avail/Total)</label>
           <div class="xp-values">
-            <input type="number" name="system.xp.available" value="{{actor.system.xp.available}}" data-dtype="Number" />
+            <input type="number" name="system.xp.available" value="{{actor.system.xp.available}}" data-dtype="Number" {{#if lockFields}}disabled{{/if}} />
             <span>/</span>
-            <input type="number" name="system.xp.total" value="{{actor.system.xp.total}}" data-dtype="Number" />
+            <input type="number" name="system.xp.total" value="{{actor.system.xp.total}}" data-dtype="Number" {{#if lockFields}}disabled{{/if}} />
             {{#if isGM}}
             <a class="award-xp-btn" title="XP vergeben / abziehen"><i class="fas fa-award"></i></a>
             {{/if}}
@@ -60,14 +45,118 @@
     </div>
   </header>
 
+  <!-- Biography grid row aligned perfectly with characteristics columns -->
+  <section class="row bio-row">
+        <div class="bio-item drop-zone {{#if lockFields}}locked{{/if}}" data-drop-type="species">
+          <label>Species</label>
+          <div class="bio-inner-value">
+            {{#if actor.system.biography.species}}
+              {{actor.system.biography.species}}
+              {{#if isCreationOrGM}}
+              <a class="remove-bio" data-type="species" title="Remove Species"><i class="fas fa-times-circle"></i></a>
+              {{/if}}
+            {{else}}
+              <span class="bio-placeholder">Drop Species</span>
+            {{/if}}
+          </div>
+        </div>
+        <div class="bio-item drop-zone {{#if lockFields}}locked{{/if}}" data-drop-type="career">
+          <label>Career</label>
+          <div class="bio-inner-value">
+            {{#if actor.system.biography.career}}
+              {{actor.system.biography.career}}
+              {{#if isCreationOrGM}}
+              <a class="remove-bio" data-type="career" title="Remove Career"><i class="fas fa-times-circle"></i></a>
+              {{/if}}
+            {{else}}
+              <span class="bio-placeholder">Drop Career</span>
+            {{/if}}
+          </div>
+        </div>
+        <div class="bio-item drop-zone {{#if lockFields}}locked{{/if}}" data-drop-type="specialization">
+          <label>Specializations</label>
+          <div class="bio-inner-value">
+            {{#if specializations.length}}
+              {{#each specializations as |spec idx|}}
+                {{#if idx}}, {{/if}}
+                <span class="spec-header-tag">
+                  {{spec.name}}
+                  {{#if ../isCreationOrGM}}
+                  <a class="remove-spec-header" data-item-id="{{spec.id}}" title="Remove Specialization"><i class="fas fa-times-circle"></i></a>
+                  {{/if}}
+                </span>
+              {{/each}}
+            {{else}}
+              <span class="bio-placeholder">Drop Spec</span>
+            {{/if}}
+          </div>
+        </div>
+        <div class="bio-item drop-zone {{#if lockFields}}locked{{/if}}" data-drop-type="specialization">
+          <label>Signature Abilities</label>
+          <div class="bio-inner-value">
+            {{#if signatureSpecializations.length}}
+              {{#each signatureSpecializations as |spec idx|}}
+                {{#if idx}}, {{/if}}
+                <span class="spec-header-tag" style="color: var(--sw-accent-orange);">
+                  {{spec.name}}
+                  {{#if ../isCreationOrGM}}
+                  <a class="remove-spec-header" data-item-id="{{spec.id}}" title="Remove Signature Ability"><i class="fas fa-times-circle"></i></a>
+                  {{/if}}
+                </span>
+              {{/each}}
+            {{else}}
+              <span class="bio-placeholder">Drop Signature</span>
+            {{/if}}
+          </div>
+        </div>
+        <div class="bio-item drop-zone force-talents-box {{#if lockFields}}locked{{/if}}" data-drop-type="specialization">
+          <label>Force Talents</label>
+          <div class="bio-inner-value">
+            {{#if forceSpecializations.length}}
+              {{#each forceSpecializations as |spec idx|}}
+                {{#if idx}}, {{/if}}
+                <span class="spec-header-tag">
+                  {{spec.name}}
+                  {{#if ../isCreationOrGM}}
+                  <a class="remove-spec-header" data-item-id="{{spec.id}}" title="Remove Force Tree"><i class="fas fa-times-circle"></i></a>
+                  {{/if}}
+                </span>
+              {{/each}}
+            {{else}}
+              <span class="bio-placeholder">Drop Force Tree</span>
+            {{/if}}
+          </div>
+        </div>
+        <div class="bio-item force-rating-box">
+          <label>Force Rating</label>
+          <div class="force-rating-values">
+            <input type="number" name="system.stats.force.value" value="{{actor.system.stats.force.value}}" data-dtype="Number" {{#if lockFields}}disabled{{/if}} />
+            <span>/</span>
+            <input type="number" name="system.stats.force.max" value="{{actor.system.stats.force.max}}" data-dtype="Number" {{#if lockFields}}disabled{{/if}} />
+          </div>
+        </div>
+      </section>
+
   <!-- Characteristics Circular Nodes -->
   <section class="characteristics-grid">
-    {{#each actor.system.characteristics as |char id|}}
-    <div class="char-node rollable-char" data-characteristic="{{id}}">
-      <div class="char-label">{{capitalize id}}</div>
-      <div class="char-value-circle">
-        <input class="char-input" type="number" name="system.characteristics.{{id}}.value" value="{{char.value}}" data-dtype="Number" onClick="this.select(); event.stopPropagation();" />
+    {{#each characteristics as |char id|}}
+    <div class="char-node-wrapper">
+      <div class="char-node rollable-char" data-characteristic="{{id}}">
+        <div class="char-label">{{capitalize id}}</div>
+        <div class="char-value-circle">
+          <input class="char-input" type="number" name="system.characteristics.{{id}}.value" value="{{char.value}}" data-dtype="Number" onClick="this.select(); event.stopPropagation();" {{#if ../lockFields}}disabled{{/if}} />
+        </div>
       </div>
+      {{#if ../isCreationOrGM}}
+      <div class="char-controls-row">
+        <button type="button" class="decrease-characteristic-btn {{#unless char.isDecreasable}}disabled{{/unless}}" data-characteristic="{{id}}" title="Senken (XP erstattet)" {{#unless char.isDecreasable}}disabled{{/unless}}>
+          <i class="fas fa-minus"></i>
+        </button>
+        <button type="button" class="upgrade-characteristic-btn {{#unless char.canAfford}}disabled{{/unless}}" data-characteristic="{{id}}" title="Upgrade für {{char.cost}} XP" {{#unless char.canAfford}}disabled{{/unless}}>
+          <i class="fas fa-plus"></i> <span class="cost-val">{{char.cost}} XP</span>
+        </button>
+      </div>
+      {{/if}}
     </div>
     {{/each}}
   </section>
@@ -119,6 +208,7 @@
     <a class="item {{tabs.talents.cssClass}}" data-action="tab" data-group="primary" data-tab="talents">Talents & Force</a>
     <a class="item {{tabs.inventory.cssClass}}" data-action="tab" data-group="primary" data-tab="inventory">Inventory</a>
     <a class="item {{tabs.biography.cssClass}}" data-action="tab" data-group="primary" data-tab="biography">Biography</a>
+    <a class="item {{tabs.xpLog.cssClass}}" data-action="tab" data-group="primary" data-tab="xpLog">XP Log</a>
   </nav>
 
   <!-- Sheet Body -->
@@ -141,7 +231,19 @@
           <span class="col-name">{{skill.name}}</span>
           <span class="col-char">{{capitalize skill.characteristic}}</span>
           <span class="col-rank">
-            <input type="number" class="skill-val-input" data-item-id="{{skill.id}}" data-name="{{skill.name}}" data-characteristic="{{skill.characteristic}}" data-category="{{skill.category}}" value="{{skill.value}}" min="0" max="6" />
+            {{#if ../isCreationOrGM}}
+            <div class="skill-controls-row">
+              <button type="button" class="decrease-skill-btn {{#unless skill.isDecreasable}}disabled{{/unless}}" data-name="{{skill.name}}" title="Rang verringern (XP erstattet)" {{#unless skill.isDecreasable}}disabled{{/unless}}>
+                <i class="fas fa-minus"></i>
+              </button>
+              <span class="skill-rank-badge">{{skill.baseValue}}</span>
+              <button type="button" class="upgrade-skill-btn {{#unless skill.canAfford}}disabled{{/unless}}" data-name="{{skill.name}}" data-characteristic="{{skill.characteristic}}" data-category="{{skill.category}}" title="Upgrade für {{skill.cost}} XP" {{#unless skill.canAfford}}disabled{{/unless}}>
+                <i class="fas fa-plus"></i> <span class="cost-val">{{skill.cost}} XP</span>
+              </button>
+            </div>
+            {{else}}
+            <input type="number" class="skill-val-input" data-item-id="{{skill.id}}" data-name="{{skill.name}}" data-characteristic="{{skill.characteristic}}" data-category="{{skill.category}}" value="{{skill.value}}" min="0" max="6" {{#if ../lockFields}}disabled{{/if}} />
+            {{/if}}
           </span>
           <span class="col-roll">
             <span class="skill-dice-preview">
@@ -184,10 +286,10 @@
         {{/each}}
       </div>
 
-      <!-- Specializations List -->
+      <!-- Specializations & Trees List -->
       <div class="specializations-list-container">
         <div class="tab-header row">
-          <h2>Specializations</h2>
+          <h2>Specialization Trees</h2>
         </div>
         <div class="item-list">
           {{#each specializations as |spec|}}
@@ -202,44 +304,62 @@
         </div>
       </div>
 
-      <!-- XP History Log -->
-      <div class="xp-history-container">
+      <!-- Force Power Trees List -->
+      {{#if forceSpecializations.length}}
+      <div class="specializations-list-container force-trees" style="margin-top: 15px;">
         <div class="tab-header row">
-          <h2>XP History & GM Audit Log</h2>
-          {{#if isGM}}
-          <a class="reset-xp-log button-link" title="Reset Audit Log"><i class="fas fa-undo"></i> Reset Log</a>
-          {{/if}}
+          <h2>Force Power Trees</h2>
         </div>
-        <div class="xp-history-log">
-          {{#if actor.system.xp.log.length}}
-            <table class="xp-history-table">
-              <thead>
-                <tr>
-                  <th>Timestamp</th>
-                  <th>User</th>
-                  <th>Change</th>
-                  <th>XP (Avail/Total)</th>
-                  <th>Description</th>
-                </tr>
-              </thead>
-              <tbody>
-                {{#each actor.system.xp.log}}
-                <tr class="xp-log-row">
-                  <td class="xp-log-time">{{this.timestamp}}</td>
-                  <td class="xp-log-user">{{this.user}}</td>
-                  <td class="xp-log-change {{#if this.positive}}positive{{else}}negative{{/if}}">{{this.change}} XP</td>
-                  <td class="xp-log-current">
-                    Avail: {{this.prevAvailable}} ➔ {{this.available}}<br>
-                    Total: {{this.prevTotal}} ➔ {{this.total}}
-                  </td>
-                  <td class="xp-log-desc">{{this.description}}</td>
-                </tr>
-                {{/each}}
-              </tbody>
-            </table>
-          {{else}}
-            <p class="no-history">No XP transaction history recorded yet.</p>
-          {{/if}}
+        <div class="item-list">
+          {{#each forceSpecializations as |spec|}}
+          <div class="item specialization-row row" data-item-id="{{spec.id}}" style="border-left: 2px solid #da70d6;">
+            <span class="item-name"><strong>{{spec.name}}</strong> (Force Tree)</span>
+            <div class="item-controls">
+              <a class="item-edit button-link" title="Open Tree" style="color: #ffb7ff; border-color: rgba(218,112,214,0.3);"><i class="fas fa-project-diagram"></i> Open Tree</a>
+              <a class="item-delete button-link" title="Remove Force Tree"><i class="fas fa-trash"></i> Remove</a>
+            </div>
+          </div>
+          {{/each}}
+        </div>
+      </div>
+      {{/if}}
+
+      <!-- Signature Abilities Trees List -->
+      {{#if signatureSpecializations.length}}
+      <div class="specializations-list-container signature-trees" style="margin-top: 15px;">
+        <div class="tab-header row">
+          <h2>Signature Abilities</h2>
+        </div>
+        <div class="item-list">
+          {{#each signatureSpecializations as |spec|}}
+          <div class="item specialization-row row" data-item-id="{{spec.id}}" style="border-left: 2px solid var(--sw-accent-orange);">
+            <span class="item-name"><strong>{{spec.name}}</strong> (Signature Ability)</span>
+            <div class="item-controls">
+              <a class="item-edit button-link" title="Open Tree" style="color: var(--sw-accent-orange); border-color: rgba(255,159,28,0.3);"><i class="fas fa-project-diagram"></i> Open Tree</a>
+              <a class="item-delete button-link" title="Remove Signature Ability"><i class="fas fa-trash"></i> Remove</a>
+            </div>
+          </div>
+          {{/each}}
+        </div>
+      </div>
+      {{/if}}
+
+      <!-- Force Powers List (Flat items listing fallback) -->
+      <div class="force-powers-list-container" style="margin-top: 20px;">
+        <div class="tab-header row">
+          <h2>Raw Force Powers (Individual items)</h2>
+          <a class="item-create button-link" data-type="forcePower">+ Add Force Power</a>
+        </div>
+        <div class="item-list">
+          {{#each forcePowers as |power|}}
+          <div class="item force-power-row row" data-item-id="{{power._id}}">
+            <span class="item-name"><strong>{{power.name}}</strong></span>
+            <div class="item-controls">
+              <a class="item-edit"><i class="fas fa-edit"></i></a>
+              <a class="item-delete"><i class="fas fa-trash"></i></a>
+            </div>
+          </div>
+          {{/each}}
         </div>
       </div>
     </div>
@@ -329,11 +449,68 @@
         </div>
         <div class="bio-block">
           <h3>Duty</h3>
+          {{#if isCreationMode}}
+          <div class="creation-duty-controls row" style="margin-bottom: 8px; font-size: 13px; gap: 10px; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 4px;">
+              <label style="font-weight: 600;">Gruppen-Basis-Duty XP:</label>
+              <input type="number" name="system.creation.baseGroupDutyXp" value="{{actor.system.creation.baseGroupDutyXp}}" style="width: 50px; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid rgba(0,180,216,0.3); border-radius: 4px; text-align: center;" />
+            </div>
+            <div style="display: flex; align-items: center; gap: 4px;">
+              <input type="checkbox" name="system.creation.doubleDuty" {{#if actor.system.creation.doubleDuty}}checked{{/if}} style="width: 14px; height: 14px; margin: 0;" />
+              <label style="font-weight: 600; cursor: pointer;">Double Duty (+10 XP)</label>
+            </div>
+          </div>
+          {{/if}}
           <textarea name="system.biography.duty">{{actor.system.biography.duty}}</textarea>
         </div>
         <div class="bio-block">
           <h3>Morality</h3>
           <textarea name="system.biography.morality">{{actor.system.biography.morality}}</textarea>
+        </div>
+        <div class="bio-block full-width-block" style="grid-column: span 3; margin-top: 15px;">
+          <h3>Spezies-Eigenschaften & Fähigkeiten</h3>
+          <textarea name="system.biography.specialAbilities" style="height: 120px;">{{actor.system.biography.specialAbilities}}</textarea>
+        </div>
+      </div>
+    <!-- XP Log Tab -->
+    <div class="tab xpLog {{tabs.xpLog.cssClass}}" data-group="primary" data-tab="xpLog">
+      <div class="xp-history-container">
+        <div class="tab-header row">
+          <h2>XP History & GM Audit Log</h2>
+          {{#if isGM}}
+          <a class="reset-xp-log button-link" title="Reset Audit Log"><i class="fas fa-undo"></i> Reset Log</a>
+          {{/if}}
+        </div>
+        <div class="xp-history-log">
+          {{#if actor.system.xp.log.length}}
+            <table class="xp-history-table">
+              <thead>
+                <tr>
+                  <th>Timestamp</th>
+                  <th>User</th>
+                  <th>Change</th>
+                  <th>XP (Avail/Total)</th>
+                  <th>Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                {{#each actor.system.xp.log}}
+                <tr class="xp-log-row">
+                  <td class="xp-log-time">{{this.timestamp}}</td>
+                  <td class="xp-log-user">{{this.user}}</td>
+                  <td class="xp-log-change {{#if this.positive}}positive{{else}}negative{{/if}}">{{this.change}} XP</td>
+                  <td class="xp-log-current">
+                    Avail: {{this.prevAvailable}} ➔ {{this.available}}<br>
+                    Total: {{this.prevTotal}} ➔ {{this.total}}
+                  </td>
+                  <td class="xp-log-desc">{{this.description}}</td>
+                </tr>
+                {{/each}}
+              </tbody>
+            </table>
+          {{else}}
+            <p class="no-history">No XP transaction history recorded yet.</p>
+          {{/if}}
         </div>
       </div>
     </div>

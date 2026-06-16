@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const oggdudeDataDir = '/home/steve/Dokumente/rpg/StarWarsSteve/SWCharGen/Data';
+const oggdudeDataDir = path.join(__dirname, 'data-oggdude');
 const destDir = path.join(__dirname, '..', 'packs');
 
 // Unique ID Generator
@@ -111,6 +111,66 @@ function compileSpecies() {
     const strain = parseInt(getTag(startingAttrs, 'StrainThreshold')) || 10;
     const xp = parseInt(getTag(startingAttrs, 'Experience')) || 100;
 
+    // Parse starting skills (fixed SkillModifiers)
+    const skillModList = [];
+    const fixedModsSection = getTag(rawXml, 'SkillModifiers');
+    if (fixedModsSection) {
+      const fixedModRegex = /<SkillModifier>([\s\S]*?)<\/SkillModifier>/gi;
+      let fMatch;
+      while ((fMatch = fixedModRegex.exec(fixedModsSection)) !== null) {
+        const modXml = fMatch[1];
+        const modKey = getTag(modXml, 'Key').toUpperCase();
+        const startRank = parseInt(getTag(modXml, 'RankStart')) || 1;
+        const mappedName = skillMap[modKey] || modKey;
+        skillModList.push(`${mappedName}:${startRank}`);
+      }
+    }
+
+    // Parse OptionChoices for skill options or special abilities
+    const specialAbilitiesList = [];
+    const choicesSection = getTag(rawXml, 'OptionChoices');
+    if (choicesSection) {
+      const choiceRegex = /<OptionChoice>([\s\S]*?)<\/OptionChoice>/gi;
+      let cMatch;
+      while ((cMatch = choiceRegex.exec(choicesSection)) !== null) {
+        const choiceXml = cMatch[1];
+        const choiceName = getTag(choiceXml, 'Name');
+        const optionsSection = getTag(choiceXml, 'Options');
+        if (optionsSection) {
+          const optionRegex = /<Option>([\s\S]*?)<\/Option>/gi;
+          let oMatch;
+          while ((oMatch = optionRegex.exec(optionsSection)) !== null) {
+            const optionXml = oMatch[1];
+            const optName = getTag(optionXml, 'Name');
+            const optDesc = getTag(optionXml, 'Description');
+
+            if (choiceName.toLowerCase() === "skills") {
+              // Parse choice-based skills
+              const optModsSection = getTag(optionXml, 'SkillModifiers');
+              if (optModsSection) {
+                const optModRegex = /<SkillModifier>([\s\S]*?)<\/SkillModifier>/gi;
+                let omMatch;
+                while ((omMatch = optModRegex.exec(optModsSection)) !== null) {
+                  const omodXml = omMatch[1];
+                  const modKey = getTag(omodXml, 'Key').toUpperCase();
+                  const startRank = parseInt(getTag(omodXml, 'RankStart')) || 1;
+                  const mappedName = skillMap[modKey] || modKey;
+                  if (!skillModList.includes(`${mappedName}:${startRank}`)) {
+                    skillModList.push(`${mappedName}:${startRank}`);
+                  }
+                }
+              }
+            } else {
+              // Non-skill choice options are special abilities
+              specialAbilitiesList.push(`<strong>${optName}</strong>: ${optDesc.trim()}`);
+            }
+          }
+        }
+      }
+    }
+
+    const specialAbilitiesHtml = specialAbilitiesList.join('<br><br>');
+
     // Image mapping
     const cleanKey = key.toUpperCase();
     const matchImg = imgFiles.find(img => {
@@ -137,7 +197,16 @@ function compileSpecies() {
         wounds: { base: wounds },
         strain: { base: strain },
         xp: xp,
-        key: key.toLowerCase()
+        key: key.toLowerCase(),
+        modifiers: {
+          wounds: 0,
+          strain: 0,
+          soak: 0,
+          encumbrance: 0,
+          characteristics: "",
+          skills: skillModList.join(",")
+        },
+        specialAbilities: specialAbilitiesHtml
       },
       effects: [],
       flags: {}

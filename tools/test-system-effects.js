@@ -422,6 +422,123 @@
     assert(updatedCharmSkill.system.career === false, "Charm reverted to non-career skill after specialization deletion");
     assert(updatedCharmSkill.system.value === 0, "Charm skill value automatically reset to freeRanks (0) to prevent illegal states");
 
+    // 12. Skill Rank Creation Limit Tests
+    console.log("SWFFG TEST | Starting Skill Rank Creation Limit tests...");
+    
+    // Create new temporary skill item
+    const tempSkill = await actor.createEmbeddedDocuments("Item", [{
+      name: "Cool",
+      type: "skill",
+      system: { value: 2, characteristic: "presence", category: "General", career: true }
+    }]);
+    const coolSkill = actor.items.find(i => i.name === "Cool");
+
+    // Mock non-GM user for restriction testing
+    const originalIsGMForSkills = game.user.isGM;
+    Object.defineProperty(game.user, "isGM", {
+      value: false,
+      configurable: true
+    });
+    try {
+      // Try to upgrade Cool: 2 -> 3 during creation mode. Should fail.
+      await actor.buySkillRank("Cool", "presence", "General");
+      assert(coolSkill.system.value === 2, "Cool skill upgrade to 3 rejected during creation mode (limit: rank 2)");
+    } finally {
+      // Restore GM status
+      delete game.user.isGM;
+    }
+
+    // Cleanup Cool skill
+    await actor.deleteEmbeddedDocuments("Item", [tempSkill[0].id]);
+
+    // 13. Career & Specialization Removal and XP Refund Tests
+    console.log("SWFFG TEST | Starting Career & Specialization Removal and XP Refund tests...");
+
+    // Setup: reset starting XP to 100 and clear career/specialization
+    await actor.update({
+      "system.creation.startingXp": 100,
+      "system.creation.isCreationMode": true,
+      "system.biography.career": ""
+    });
+    
+    // Ensure available XP in database matches totalAvailableXp (100)
+    await actor.update({ "system.xp.available": actor.totalAvailableXp });
+    const initialXp = actor.system.xp.available;
+    assert(initialXp === 100, "Starting test with 100 available XP");
+
+    // Add Specialization tree granting Charm as career skill
+    const refundSpecTree = await actor.createEmbeddedDocuments("Item", [{
+      name: "Performer Tree 2",
+      type: "specialization",
+      system: { careerSkills: "charm", classification: "career" }
+    }]);
+    await actor.recalculateCareerSkills();
+
+    // Verify Charm is career skill
+    const charm = actor.items.find(i => i.type === "skill" && i.name.toLowerCase() === "charm");
+    assert(charm.system.career === true, "Charm is career skill before upgrade");
+
+    // Buy Charm rank 1 (cost: 5 XP)
+    await actor.buySkillRank("Charm", "presence", "General");
+    assert(charm.system.value === 1, "Charm upgraded to rank 1");
+    // Buy Charm rank 2 (cost: 10 XP)
+    await actor.buySkillRank("Charm", "presence", "General");
+    assert(charm.system.value === 2, "Charm upgraded to rank 2");
+
+    // Available XP should now be 100 - 5 - 10 = 85 XP
+    assert(actor.system.xp.available === 85, "XP correctly deducted: 85 available");
+
+    // Now delete the Specialization tree
+    await actor.deleteEmbeddedDocuments("Item", [refundSpecTree[0].id]);
+    await actor.recalculateCareerSkills();
+
+    // Verify Charm career status is false, rank is reset to 0 (freeRanks), and 15 XP is refunded
+    assert(charm.system.career === false, "Charm career status reset to false");
+    assert(charm.system.value === 0, "Charm rank reset to 0");
+    assert(actor.system.xp.available === 100, "XP refunded: available XP is back to 100");
+    
+    // Verify that the XP log contains the refund entry
+    const lastLogEntry = actor.system.xp.log[actor.system.xp.log.length - 1];
+    assert(lastLogEntry.change === "+15", "XP log recorded +15 refund");
+    assert(lastLogEntry.description.includes("erstattet durch Zurücksetzen"), "XP log description mentions refund/reset");
+
+    // Test Career Removal Refund
+    const careerPack = game.packs.get("starwars-ffg-scratch.careers");
+    if (careerPack) {
+      console.log("SWFFG TEST | Career pack found, testing Career Removal...");
+      const careerIndex = await careerPack.getIndex({ fields: ["system.careerSkills"] });
+      if (careerIndex.size > 0) {
+        const testCareer = careerIndex.first();
+        const testCareerSkills = (testCareer.system?.careerSkills || "").split(",").map(s => s.trim().toLowerCase()).filter(s => s);
+        
+        if (testCareerSkills.length > 0) {
+          const testSkillName = testCareerSkills[0];
+          
+          // Set actor career
+          await actor.update({ "system.biography.career": testCareer.name });
+          await actor.recalculateCareerSkills();
+          
+          const careerSkillObj = actor.items.find(i => i.type === "skill" && i.name.toLowerCase() === testSkillName);
+          assert(careerSkillObj.system.career === true, `${testSkillName} marked as career skill from career ${testCareer.name}`);
+          
+          // Upgrade the career skill
+          await actor.buySkillRank(careerSkillObj.name, careerSkillObj.system.characteristic, careerSkillObj.system.category);
+          assert(careerSkillObj.system.value === 1, `${testSkillName} upgraded to rank 1`);
+          
+          // Save XP level
+          const xpBeforeCareerRemove = actor.system.xp.available;
+          
+          // Remove career
+          await actor.update({ "system.biography.career": "" });
+          await actor.recalculateCareerSkills();
+          
+          assert(careerSkillObj.system.career === false, `${testSkillName} career status reset to false after career removal`);
+          assert(careerSkillObj.system.value === 0, `${testSkillName} value reset to 0 after career removal`);
+          assert(actor.system.xp.available === xpBeforeCareerRemove + 5, `XP refunded after career removal`);
+        }
+      }
+    }
+
   } catch (error) {
     console.error("SWFFG TEST | Test suite encountered an error:", error);
   } finally {

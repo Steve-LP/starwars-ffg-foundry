@@ -35,6 +35,10 @@ class BaseActorData extends foundry.abstract.TypeDataModel {
         encumbrance: new fields.SchemaField({
           value: new fields.NumberField({ initial: 0, min: 0 }),
           max: new fields.NumberField({ initial: 5, min: 0 })
+        }),
+        force: new fields.SchemaField({
+          value: new fields.NumberField({ initial: 0, min: 0 }),
+          max: new fields.NumberField({ initial: 0, min: 0 })
         })
       })
     };
