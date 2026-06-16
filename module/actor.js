@@ -497,10 +497,18 @@ export class SWFFGActor extends Actor {
     
     for (const skill of currentSkills) {
       const isStillCareer = activeCareerSkills.has(skill.name.toLowerCase());
-      if (skill.system.career !== isStillCareer) {
+      const wasCareer = skill.system.career;
+      let newValue = skill.system.value;
+
+      if (wasCareer && !isStillCareer) {
+        newValue = skill.system.freeRanks || 0;
+      }
+
+      if (skill.system.career !== isStillCareer || skill.system.value !== newValue) {
         updates.push({
           _id: skill.id,
-          "system.career": isStillCareer
+          "system.career": isStillCareer,
+          "system.value": newValue
         });
       }
     }

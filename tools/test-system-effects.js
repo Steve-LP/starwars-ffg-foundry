@@ -395,6 +395,31 @@
     assert(charmSkill.system.value === 0, "Charm skill rank reverted back to 0");
     assert(charmSkill.system.freeRanks === 0, "Charm skill free ranks reverted back to 0");
 
+    // 11. Career Status Reversion Test
+    console.log("SWFFG TEST | Starting Career Status Reversion tests...");
+    
+    // Add a specialization tree that grants Charm as a career skill
+    const specTree = await actor.createEmbeddedDocuments("Item", [{
+      name: "Performer Tree",
+      type: "specialization",
+      system: { careerSkills: "charm", classification: "career" }
+    }]);
+
+    // Charm should now be a career skill
+    const updatedCharmSkill = actor.items.find(i => i.type === "skill" && i.name.toLowerCase() === "charm");
+    assert(updatedCharmSkill.system.career === true, "Charm is now marked as a career skill");
+
+    // Simulate player purchasing rank 2 in Charm (above freeRanks which is 0)
+    await updatedCharmSkill.update({ "system.value": 2 });
+    assert(updatedCharmSkill.system.value === 2, "Charm skill rank updated to 2");
+
+    // Delete the specialization tree
+    await actor.deleteEmbeddedDocuments("Item", [specTree[0].id]);
+    
+    // Charm should revert to non-career and value should fall back to freeRanks (0)
+    assert(updatedCharmSkill.system.career === false, "Charm reverted to non-career skill after specialization deletion");
+    assert(updatedCharmSkill.system.value === 0, "Charm skill value automatically reset to freeRanks (0) to prevent illegal states");
+
   } catch (error) {
     console.error("SWFFG TEST | Test suite encountered an error:", error);
   } finally {

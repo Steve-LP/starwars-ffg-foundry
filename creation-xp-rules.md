@@ -116,6 +116,11 @@ When the species is removed from the sheet (e.g., during creation phase modifica
     *   Any `system.freeRanks` granted by the species is cleanly subtracted from the skill's current `system.value` (preserving any additional player XP purchases on top of it).
     *   `system.freeRanks` for all skills is reset to `0`.
 
+### Career Status Loss Reversion
+When a specialization tree or a career is removed, the actor's career skills are automatically recalculated. If a skill loses its `"career"` status (i.e. changing from career to non-career):
+*   To prevent illegal character build states (as non-career ranks would have been more expensive to purchase), any purchased ranks in that skill are automatically reset.
+*   The skill's `system.value` is reverted back to its `system.freeRanks` (usually `0`), automatically refunding the spent XP back to the actor's `totalAvailableXp`.
+
 ---
 
 ## 5. UI Hook Recommendations
