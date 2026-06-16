@@ -404,6 +404,7 @@
       type: "specialization",
       system: { careerSkills: "charm", classification: "career" }
     }]);
+    await actor.recalculateCareerSkills(); // Await async recalculation
 
     // Charm should now be a career skill
     const updatedCharmSkill = actor.items.find(i => i.type === "skill" && i.name.toLowerCase() === "charm");
@@ -415,6 +416,7 @@
 
     // Delete the specialization tree
     await actor.deleteEmbeddedDocuments("Item", [specTree[0].id]);
+    await actor.recalculateCareerSkills(); // Await async recalculation
     
     // Charm should revert to non-career and value should fall back to freeRanks (0)
     assert(updatedCharmSkill.system.career === false, "Charm reverted to non-career skill after specialization deletion");
