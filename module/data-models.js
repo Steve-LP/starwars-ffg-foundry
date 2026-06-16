@@ -55,9 +55,24 @@ export class CharacterData extends BaseActorData {
         duty: new fields.StringField({ initial: "" }),
         morality: new fields.StringField({ initial: "" })
       }),
+      creation: new fields.SchemaField({
+        isCreationMode: new fields.BooleanField({ initial: true }),
+        startingXp: new fields.NumberField({ initial: 0, min: 0 }),
+        baseGroupDutyXp: new fields.NumberField({ initial: 0, min: 0 }),
+        doubleDuty: new fields.BooleanField({ initial: false }),
+        baseCharacteristics: new fields.SchemaField({
+          brawn: new fields.NumberField({ initial: 2, min: 1, max: 6 }),
+          agility: new fields.NumberField({ initial: 2, min: 1, max: 6 }),
+          intellect: new fields.NumberField({ initial: 2, min: 1, max: 6 }),
+          cunning: new fields.NumberField({ initial: 2, min: 1, max: 6 }),
+          willpower: new fields.NumberField({ initial: 2, min: 1, max: 6 }),
+          presence: new fields.NumberField({ initial: 2, min: 1, max: 6 })
+        })
+      }),
       xp: new fields.SchemaField({
         total: new fields.NumberField({ initial: 0 }),
         available: new fields.NumberField({ initial: 0 }),
+        earned: new fields.NumberField({ initial: 0, min: 0 }),
         log: new fields.ArrayField(new fields.ObjectField(), { initial: [] })
       })
     };

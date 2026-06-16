@@ -751,6 +751,15 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       "system.characteristics.cunning.value": cu,
       "system.characteristics.willpower.value": wl,
       "system.characteristics.presence.value": pr,
+      "system.creation.startingXp": xpTotal,
+      "system.creation.baseCharacteristics": {
+        brawn: br,
+        agility: ag,
+        intellect: it,
+        cunning: cu,
+        willpower: wl,
+        presence: pr
+      },
       "system.stats.wounds.base": woundsBase + br,
       "system.stats.strain.base": strainBase + wl,
       "system.stats.wounds.max": woundsBase + br,

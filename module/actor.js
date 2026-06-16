@@ -9,10 +9,109 @@ export class SWFFGActor extends Actor {
     super.prepareData();
   }
 
+  get dutyXp() {
+    if (this.type !== "character") return 0;
+    return (this.system.creation?.baseGroupDutyXp || 0) + (this.system.creation?.doubleDuty ? 10 : 0);
+  }
+
+  get maxAttributeXpAllowed() {
+    if (this.type !== "character") return 0;
+    return (this.system.creation?.startingXp || 0) + this.dutyXp;
+  }
+
+  get currentAttributeXpSpent() {
+    if (this.type !== "character") return 0;
+    let totalCost = 0;
+    const characteristics = ["brawn", "agility", "intellect", "cunning", "willpower", "presence"];
+    
+    const currentChars = this._source.system.characteristics || {};
+    const baseChars = this.system.creation?.baseCharacteristics || {};
+    
+    for (const charName of characteristics) {
+      const baseVal = baseChars[charName] !== undefined ? baseChars[charName] : 2;
+      const currentVal = currentChars[charName]?.value !== undefined ? currentChars[charName].value : baseVal;
+      
+      if (currentVal > baseVal) {
+        for (let v = baseVal + 1; v <= currentVal; v++) {
+          totalCost += v * 10;
+        }
+      }
+    }
+    return totalCost;
+  }
+
+  calculateSpentTalentXp() {
+    if (this.type !== "character") return 0;
+    let spent = 0;
+    for (const item of this.items) {
+      if (item.type === "talent") {
+        const row = item.system?.row;
+        if (row !== undefined && row !== null) {
+          spent += (row + 1) * 5;
+        } else {
+          const tier = item.system?.tier || 1;
+          spent += tier * 5;
+        }
+      }
+    }
+    return spent;
+  }
+
+  get totalAvailableXp() {
+    if (this.type !== "character") return 0;
+    const total = (this.system.creation?.startingXp || 0) + this.dutyXp + (this.system.xp?.earned || 0);
+    return total - this.currentAttributeXpSpent - this.calculateSpentTalentXp();
+  }
+
+  async buyAttribute(attributeName) {
+    if (this.type !== "character") return;
+    const isGM = game.user?.isGM || false;
+
+    const currentRawChars = this._source.system.characteristics || {};
+    const baseChars = this.system.creation?.baseCharacteristics || {};
+    const baseVal = baseChars[attributeName] !== undefined ? baseChars[attributeName] : 2;
+    const currentRawValue = currentRawChars[attributeName]?.value !== undefined ? currentRawChars[attributeName].value : baseVal;
+
+    const cost = (currentRawValue + 1) * 10;
+
+    if (!isGM) {
+      if (!this.system.creation?.isCreationMode) {
+        ui.notifications?.error("Attribute können nach der Charaktererstellung nicht mehr mit XP gesteigert werden!");
+        return;
+      }
+      if (this.totalAvailableXp < cost) {
+        ui.notifications?.warn(`Nicht genug XP vorhanden! (Kosten: ${cost} XP, Verfügbar: ${this.totalAvailableXp} XP)`);
+        return;
+      }
+      if (this.currentAttributeXpSpent + cost > this.maxAttributeXpAllowed) {
+        ui.notifications?.warn(`Das Spezies-Limit für Attribute (${this.maxAttributeXpAllowed} XP) wurde erreicht!`);
+        return;
+      }
+    }
+
+    await this.update({
+      [`system.characteristics.${attributeName}.value`]: currentRawValue + 1
+    });
+    ui.notifications?.info(`${attributeName.toUpperCase()} auf ${currentRawValue + 1} gesteigert für ${cost} XP.`);
+  }
+
+  async lockCreation() {
+    if (this.type !== "character") return;
+    await this.update({
+      "system.creation.isCreationMode": false
+    });
+    ui.notifications?.info("Charaktererstellung abgeschlossen. Bogen gesperrt.");
+  }
+
   /** @override */
   prepareDerivedData() {
     const actorData = this;
     const system = actorData.system;
+
+    if (this.type === "character") {
+      system.xp.available = this.totalAvailableXp;
+      system.xp.total = (system.creation?.startingXp || 0) + this.dutyXp + (system.xp?.earned || 0);
+    }
 
     // Loop items to find relevant passive talents (Grit, Toughened, Enduring)
     let gritRanks = 0;

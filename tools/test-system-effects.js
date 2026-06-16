@@ -142,6 +142,91 @@
     assert(blasterItem.derived.damage === 7, "Damage reverts to base 7");
     assert(blasterItem.derived.qualities === "", "Attachment qualities are removed");
 
+    // 7. Character Creation & XP Engine Tests
+    console.log("SWFFG TEST | Starting Character Creation & XP Ledger tests...");
+    await actor.update({
+      "system.creation.startingXp": 100,
+      "system.creation.baseGroupDutyXp": 10,
+      "system.creation.doubleDuty": true,
+      "system.creation.isCreationMode": true,
+      "system.creation.baseCharacteristics": {
+        brawn: 2,
+        agility: 2,
+        intellect: 2,
+        cunning: 2,
+        willpower: 2,
+        presence: 2
+      },
+      "system.characteristics.brawn.value": 2,
+      "system.characteristics.agility.value": 2,
+      "system.characteristics.intellect.value": 2,
+      "system.characteristics.cunning.value": 2,
+      "system.characteristics.willpower.value": 2,
+      "system.characteristics.presence.value": 2
+    });
+
+    assert(actor.dutyXp === 20, "Duty XP is 20 (baseGroupDutyXp 10 + doubleDuty (+10))");
+    assert(actor.maxAttributeXpAllowed === 120, "Max attribute XP allowed is 120 (startingXp 100 + dutyXp 20)");
+    assert(actor.currentAttributeXpSpent === 0, "No XP spent on attributes initially");
+    assert(actor.totalAvailableXp === 120, "Total available XP matches max starting XP");
+
+    // Upgrade Brawn: 2 -> 3 (cost: 30)
+    await actor.buyAttribute("brawn");
+    assert(actor._source.system.characteristics.brawn.value === 3, "Brawn successfully upgraded to 3");
+    assert(actor.currentAttributeXpSpent === 30, "Current attribute XP spent is 30");
+    assert(actor.totalAvailableXp === 90, "Remaining available XP is 90");
+
+    // Upgrade Brawn: 3 -> 4 (cost: 40)
+    await actor.buyAttribute("brawn");
+    assert(actor._source.system.characteristics.brawn.value === 4, "Brawn successfully upgraded to 4");
+    assert(actor.currentAttributeXpSpent === 70, "Current attribute XP spent is 70 (30 + 40)");
+    assert(actor.totalAvailableXp === 50, "Remaining available XP is 50");
+
+    // Upgrade Agility: 2 -> 3 (cost: 30)
+    await actor.buyAttribute("agility");
+    assert(actor._source.system.characteristics.agility.value === 3, "Agility successfully upgraded to 3");
+    assert(actor.currentAttributeXpSpent === 100, "Current attribute XP spent is 100");
+    assert(actor.totalAvailableXp === 20, "Remaining available XP is 20");
+
+    // Mock non-GM user for restriction testing
+    const originalIsGM = game.user.isGM;
+    Object.defineProperty(game.user, "isGM", {
+      value: false,
+      configurable: true
+    });
+    try {
+      // Try to upgrade Agility: 3 -> 4 (cost: 40). Should fail due to insufficient global available XP (20)
+      await actor.buyAttribute("agility");
+      assert(actor._source.system.characteristics.agility.value === 3, "Agility upgrade to 4 rejected due to insufficient available XP");
+      assert(actor.totalAvailableXp === 20, "Available XP remains 20");
+
+      // Give campaign earned XP: +100
+      await actor.update({ "system.xp.earned": 100 });
+      assert(actor.totalAvailableXp === 120, "Available XP is now 120 (20 + 100 earned)");
+
+      // Try to upgrade Agility: 3 -> 4 (cost: 40). `currentAttributeXpSpent + 40 = 140` which exceeds limit (120)
+      await actor.buyAttribute("agility");
+      assert(actor._source.system.characteristics.agility.value === 3, "Agility upgrade to 4 rejected: exceeds maxAttributeXpAllowed (120)");
+      assert(actor.totalAvailableXp === 120, "Available XP remains 120");
+
+      // Lock creation mode
+      await actor.lockCreation();
+      assert(actor.system.creation.isCreationMode === false, "Creation mode locked successfully");
+
+      // Try to upgrade Agility: 3 -> 4 (cost: 40) after creation mode is locked. Should fail.
+      await actor.buyAttribute("agility");
+      assert(actor._source.system.characteristics.agility.value === 3, "Agility upgrade rejected: creation mode locked");
+    } finally {
+      // Restore GM status
+      delete game.user.isGM;
+    }
+
+    // GM Override test: bypass locked creation mode and exceed limits
+    assert(game.user.isGM === true, "Restored GM status for override test");
+    await actor.buyAttribute("agility");
+    assert(actor._source.system.characteristics.agility.value === 4, "GM successfully bypassed limits and upgraded Agility to 4");
+    assert(actor.currentAttributeXpSpent === 140, "Current attribute XP spent updated to 140");
+
   } catch (error) {
     console.error("SWFFG TEST | Test suite encountered an error:", error);
   } finally {
