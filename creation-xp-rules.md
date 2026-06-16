@@ -98,7 +98,27 @@ Finalizes character creation:
 
 ---
 
-## 4. UI Hook Recommendations
+## 4. Species Boni & Removal Reversion
+
+### Species Drop (`_onDropSpecies`)
+When a species item is dropped onto the character sheet:
+1.  Characteristics (`brawn`, `agility`, etc.) are set to the species base characteristics.
+2.  `system.creation.baseCharacteristics` is updated to store these base reference characteristics.
+3.  Any skill ranks granted by the species modifiers (e.g. `system.modifiers.skills = "charm:1"`) are parsed:
+    *   The skill's `system.freeRanks` is updated to the granted rank.
+    *   The skill's current rank `system.value` is adjusted to at least that rank.
+4.  Passive traits and descriptions (e.g. "Resistance to Heat") from `system.specialAbilities` are copied into `system.biography.specialAbilities`.
+
+### Species Removal (`_onRemoveSpecies`)
+When the species is removed from the sheet (e.g., during creation phase modifications):
+1.  All starting characteristics, thresholds, and biography fields are reset to default values.
+2.  All skill items on the actor are checked:
+    *   Any `system.freeRanks` granted by the species is cleanly subtracted from the skill's current `system.value` (preserving any additional player XP purchases on top of it).
+    *   `system.freeRanks` for all skills is reset to `0`.
+
+---
+
+## 5. UI Hook Recommendations
 
 When building the character sheet UI:
 *   **Attribute Upgrades**:

@@ -1096,22 +1096,52 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
   }
 
   async _onRemoveSpecies() {
-    const confirmRemove = confirm("Do you want to remove your Species? This will reset starting characteristics and thresholds back to default.");
+    const confirmRemove = confirm("Do you want to remove your Species? This will reset starting characteristics, thresholds, and starting skill bonuses back to default.");
     if (!confirmRemove) return;
 
     const updates = {
       "system.biography.species": "",
+      "system.biography.specialAbilities": "",
       "system.characteristics.brawn.value": 1,
       "system.characteristics.agility.value": 1,
       "system.characteristics.intellect.value": 1,
       "system.characteristics.cunning.value": 1,
       "system.characteristics.willpower.value": 1,
       "system.characteristics.presence.value": 1,
+      "system.creation.startingXp": 0,
+      "system.creation.baseCharacteristics": {
+        brawn: 1,
+        agility: 1,
+        intellect: 1,
+        cunning: 1,
+        willpower: 1,
+        presence: 1
+      },
+      "system.stats.wounds.base": 10,
+      "system.stats.strain.base": 10,
       "system.stats.wounds.max": 10,
       "system.stats.strain.max": 10,
       "system.xp.total": 0,
       "system.xp.available": 0
     };
+
+    // Revert species starting skill bonuses
+    const currentSkills = this.actor.items.filter(i => i.type === "skill");
+    const skillUpdates = [];
+    for (const skill of currentSkills) {
+      const free = skill.system.freeRanks || 0;
+      if (free > 0) {
+        skillUpdates.push({
+          _id: skill.id,
+          "system.freeRanks": 0,
+          "system.value": Math.max(0, (skill.system.value || 0) - free)
+        });
+      }
+    }
+
+    if (skillUpdates.length > 0) {
+      await this.actor.updateEmbeddedDocuments("Item", skillUpdates);
+    }
 
     await this.actor.update(updates);
     this.render();
