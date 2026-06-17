@@ -775,6 +775,28 @@
     await actor.update({ "system.xp.total": 200, "system.xp.available": 170 });
     assert(actor.system.xp.log.length === logLengthBefore + 3, "Updates post-creation are logged individually");
 
+    // Verify resetToCreationMode() resets skills, characteristics, and cached arrays
+    const originalConfirmReset = window.confirm;
+    window.confirm = () => true;
+    try {
+      await actor.resetToCreationMode();
+      assert(actor.system.creation.isCreationMode === true, "Creation mode is active after reset");
+      assert(actor.system.creation.careerSkills.length === 0, "Career skills cache is empty after reset");
+      assert(actor.system.creation.freeCareerSkills.length === 0, "Free career skills cache is empty after reset");
+      assert(actor.system.creation.specializationSkills.length === 0, "Specialization skills cache is empty after reset");
+      assert(actor.system.creation.freeSpecializationSkills.length === 0, "Free specialization skills cache is empty after reset");
+      assert(actor.system.biography.species === "", "Species is cleared after reset");
+      assert(actor.system.biography.career === "", "Career is cleared after reset");
+      assert(actor.system.characteristics.brawn.value === 2, "Characteristics are reset to 2");
+
+      const resetBrawl = actor.items.find(s => s.name === "Brawl");
+      assert(resetBrawl.system.value === 0, "Brawl rank is reset to 0 after full reset");
+      assert(resetBrawl.system.freeRanks === 0, "Brawl freeRanks is reset to 0 after full reset");
+      assert(resetBrawl.system.career === false, "Brawl career status is false after full reset");
+    } finally {
+      window.confirm = originalConfirmReset;
+    }
+
   } catch (error) {
     console.error("SWFFG TEST | Test suite encountered an error:", error);
   } finally {

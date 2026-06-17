@@ -395,6 +395,10 @@ export class SWFFGActor extends Actor {
     const updates = {
       "system.creation.isCreationMode": true,
       "system.creation.sandboxMode": false,
+      "system.creation.careerSkills": [],
+      "system.creation.freeCareerSkills": [],
+      "system.creation.specializationSkills": [],
+      "system.creation.freeSpecializationSkills": [],
       "system.biography.species": "",
       "system.biography.career": "",
       "system.biography.specialization": "",
