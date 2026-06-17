@@ -1,3 +1,6 @@
+const { HandlebarsApplicationMixin } = foundry.applications.api;
+const { ActorSheetV2 } = foundry.applications.sheets;
+
 const DEFAULT_SKILLS = [
   { name: "Astrogation", characteristic: "intellect", category: "General" },
   { name: "Athletics", characteristic: "brawn", category: "General" },
