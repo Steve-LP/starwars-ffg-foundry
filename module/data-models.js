@@ -62,6 +62,7 @@ export class CharacterData extends BaseActorData {
       }),
       creation: new fields.SchemaField({
         isCreationMode: new fields.BooleanField({ initial: true }),
+        sandboxMode: new fields.BooleanField({ initial: false }),
         startingXp: new fields.NumberField({ initial: 0, min: 0 }),
         baseGroupDutyXp: new fields.NumberField({ initial: 0, min: 0 }),
         doubleDuty: new fields.BooleanField({ initial: false }),
@@ -73,10 +74,36 @@ export class CharacterData extends BaseActorData {
           willpower: new fields.NumberField({ initial: 2, min: 1, max: 6 }),
           presence: new fields.NumberField({ initial: 2, min: 1, max: 6 })
         }),
+        careerSkills: new fields.ArrayField(new fields.StringField(), { initial: [] }),
+        specializationSkills: new fields.ArrayField(new fields.StringField(), { initial: [] }),
         freeCareerSkills: new fields.ArrayField(new fields.StringField(), { initial: [] }),
         freeSpecializationSkills: new fields.ArrayField(new fields.StringField(), { initial: [] }),
-        careerSkills: new fields.ArrayField(new fields.StringField(), { initial: [] }),
-        specializationSkills: new fields.ArrayField(new fields.StringField(), { initial: [] })
+        speciesSkillChoice: new fields.StringField({ initial: "" }),
+        
+        // Snapshots (Cached static data from drops, loaded synchronously with the Actor)
+        speciesSnapshot: new fields.ObjectField({ nullable: true, initial: null }), 
+        careerSnapshot: new fields.ObjectField({ nullable: true, initial: null }),  
+        specializationSnapshot: new fields.ObjectField({ nullable: true, initial: null }), 
+        
+        // Ledger (Stores player intent/choices)
+        ledger: new fields.SchemaField({
+          speciesSkillChoice: new fields.StringField({ initial: "" }), 
+          freeCareerSkills: new fields.ArrayField(new fields.StringField(), { initial: [] }), 
+          freeSpecializationSkills: new fields.ArrayField(new fields.StringField(), { initial: [] }), 
+          upgrades: new fields.SchemaField({
+            characteristics: new fields.SchemaField({
+              brawn: new fields.NumberField({ initial: 0, min: 0 }),
+              agility: new fields.NumberField({ initial: 0, min: 0 }),
+              intellect: new fields.NumberField({ initial: 0, min: 0 }),
+              cunning: new fields.NumberField({ initial: 0, min: 0 }),
+              willpower: new fields.NumberField({ initial: 0, min: 0 }),
+              presence: new fields.NumberField({ initial: 0, min: 0 })
+            }),
+            skills: new fields.ObjectField({ initial: {} }), 
+            talents: new fields.ArrayField(new fields.ObjectField(), { initial: [] }), 
+            specializations: new fields.ArrayField(new fields.StringField(), { initial: [] }) 
+          })
+        })
       }),
       xp: new fields.SchemaField({
         total: new fields.NumberField({ initial: 0 }),

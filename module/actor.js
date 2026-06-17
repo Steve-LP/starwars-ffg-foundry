@@ -1,4 +1,5 @@
 import { rollFFGPool, sendRollToChat } from "./dice.js";
+import { DEFAULT_SKILLS } from "./actor-sheet.js";
 
 /**
  * Custom Actor class for Star Wars FFG Ruleset
@@ -144,15 +145,20 @@ export class SWFFGActor extends Actor {
     if (!item) return 0;
     if (this.type !== "character") return item.system.freeRanks || 0;
     const nameLower = item.name.toLowerCase();
-    const baseFreeRanks = item._source?.system?.freeRanks || 0;
+    if (this.derivedSkills?.[nameLower]) {
+      return this.derivedSkills[nameLower].freeRanks;
+    }
+    const baseFreeRanks = item._source?.system?.freeRanks ?? item.system?.freeRanks ?? 0;
     
     let careerBonus = 0;
-    if ((this.system.creation?.freeCareerSkills || []).some(s => s.toLowerCase() === nameLower)) {
+    const freeCareer = this.system.creation?.ledger?.freeCareerSkills || this.system.creation?.freeCareerSkills || [];
+    if (freeCareer.some(s => s.toLowerCase() === nameLower)) {
       careerBonus = 1;
     }
     
     let specBonus = 0;
-    if ((this.system.creation?.freeSpecializationSkills || []).some(s => s.toLowerCase() === nameLower)) {
+    const freeSpec = this.system.creation?.ledger?.freeSpecializationSkills || this.system.creation?.freeSpecializationSkills || [];
+    if (freeSpec.some(s => s.toLowerCase() === nameLower)) {
       specBonus = 1;
     }
     
@@ -162,17 +168,30 @@ export class SWFFGActor extends Actor {
   calculateSpentSkillXp() {
     if (this.type !== "character") return 0;
     let spent = 0;
-    for (const item of this.items) {
-      if (item.type === "skill") {
-        const val = item.system?.value || 0;
-        const freeRanks = this.getSkillFreeRanks(item);
-        const isCareer = item.system?.career || false;
-        if (val > freeRanks) {
-          // FFG Rules:
-          // Career Skill: rank * 5
-          // Non-career Skill: (rank * 5) + 5
-          for (let r = freeRanks + 1; r <= val; r++) {
+    const isCreationMode = this.system.creation?.isCreationMode === true;
+    
+    if (isCreationMode) {
+      const upgrades = this.system.creation?.ledger?.upgrades?.skills || {};
+      for (const [sNameLower, upgradeVal] of Object.entries(upgrades)) {
+        if (upgradeVal > 0 && this.derivedSkills?.[sNameLower]) {
+          const freeRanks = this.derivedSkills[sNameLower].freeRanks;
+          const isCareer = this.derivedSkills[sNameLower].career;
+          const finalRank = freeRanks + upgradeVal;
+          for (let r = freeRanks + 1; r <= finalRank; r++) {
             spent += isCareer ? (r * 5) : ((r * 5) + 5);
+          }
+        }
+      }
+    } else {
+      for (const item of this.items) {
+        if (item.type === "skill") {
+          const val = item.system?.value || 0;
+          const freeRanks = this.getSkillFreeRanks(item);
+          const isCareer = item.system?.career || false;
+          if (val > freeRanks) {
+            for (let r = freeRanks + 1; r <= val; r++) {
+              spent += isCareer ? (r * 5) : ((r * 5) + 5);
+            }
           }
         }
       }
@@ -189,11 +208,18 @@ export class SWFFGActor extends Actor {
   async buyAttribute(attributeName) {
     if (this.type !== "character") return;
     const isGM = game.user?.isGM || false;
+    const isCreationMode = this.system.creation?.isCreationMode === true;
 
+    // Get current raw value of the attribute
     const currentRawChars = this._source.system.characteristics || {};
     const baseChars = this.system.creation?.baseCharacteristics || {};
     const baseVal = baseChars[attributeName] !== undefined ? baseChars[attributeName] : 2;
-    const currentRawValue = currentRawChars[attributeName]?.value !== undefined ? currentRawChars[attributeName].value : baseVal;
+    
+    // In creation mode, the value comes from species base + ledger upgrades
+    const species = this.system.creation?.speciesSnapshot;
+    const speciesBaseVal = species ? (species.characteristics?.[attributeName]?.value ?? species.characteristics?.[attributeName] ?? 2) : 2;
+    const currentUpgrades = this.system.creation?.ledger?.upgrades?.characteristics?.[attributeName] || 0;
+    const currentRawValue = isCreationMode ? (speciesBaseVal + currentUpgrades) : (currentRawChars[attributeName]?.value !== undefined ? currentRawChars[attributeName].value : baseVal);
 
     const cost = (currentRawValue + 1) * 10;
     const currentAvailable = this.system.xp?.available || 0;
@@ -201,7 +227,7 @@ export class SWFFGActor extends Actor {
     const isSandbox = this.system.creation?.sandboxMode || false;
 
     if (!isSandbox) {
-      if (!this.system.creation?.isCreationMode) {
+      if (!isCreationMode) {
         if (!isGM) {
           ui.notifications?.error("Attribute können nach der Charaktererstellung nicht mehr mit XP gesteigert werden!");
           return;
@@ -215,63 +241,90 @@ export class SWFFGActor extends Actor {
         ui.notifications?.warn(`Das Spezies-Limit für Attribute (${this.maxAttributeXpAllowed} XP) wurde erreicht!`);
         return;
       }
-      if (this.system.creation?.isCreationMode && currentRawValue >= 5) {
+      if (!isGM && isCreationMode && currentRawValue >= 5) {
         ui.notifications?.warn(`Während der Charaktererstellung dürfen Attribute nicht über Wert 5 gesteigert werden!`);
         return;
       }
     }
 
-    // Force an update to available XP so it records in _preUpdate logs
-    const newAvailable = Math.max(0, currentAvailable - cost);
-    await this.update({
-      [`system.characteristics.${attributeName}.value`]: currentRawValue + 1,
-      "system.xp.available": newAvailable
-    }, {
-      xpLogDescription: `Attribut gesteigert: ${attributeName.toUpperCase()} von ${currentRawValue} auf ${currentRawValue + 1} (-${cost} XP)`
-    });
-    ui.notifications?.info(`${attributeName.toUpperCase()} auf ${currentRawValue + 1} gesteigert für ${cost} XP.`);
+    if (isCreationMode) {
+      // Creation Mode: Update ledger upgrades. Suppress log.
+      await this.update({
+        [`system.creation.ledger.upgrades.characteristics.${attributeName}`]: currentUpgrades + 1
+      });
+      ui.notifications?.info(`${attributeName.toUpperCase()} auf ${currentRawValue + 1} gesteigert.`);
+    } else {
+      // In-game/GM override: Update standard attribute field in database. Perform log.
+      const newAvailable = Math.max(0, currentAvailable - cost);
+      await this.update({
+        [`system.characteristics.${attributeName}.value`]: currentRawValue + 1,
+        "system.xp.available": newAvailable
+      }, {
+        xpLogDescription: `Attribut gesteigert: ${attributeName.toUpperCase()} von ${currentRawValue} auf ${currentRawValue + 1} (-${cost} XP)`
+      });
+      ui.notifications?.info(`${attributeName.toUpperCase()} auf ${currentRawValue + 1} gesteigert für ${cost} XP.`);
+    }
   }
 
   async decreaseAttribute(attributeName) {
     if (this.type !== "character") return;
     const isGM = game.user?.isGM || false;
+    const isCreationMode = this.system.creation?.isCreationMode === true;
 
     const currentRawChars = this._source.system.characteristics || {};
     const baseChars = this.system.creation?.baseCharacteristics || {};
     const baseVal = baseChars[attributeName] !== undefined ? baseChars[attributeName] : 2;
-    const currentRawValue = currentRawChars[attributeName]?.value !== undefined ? currentRawChars[attributeName].value : baseVal;
 
-    if (currentRawValue <= baseVal) {
-      ui.notifications?.warn(`Kann ${attributeName.toUpperCase()} nicht unter den Basiswert von ${baseVal} senken!`);
-      return;
+    const species = this.system.creation?.speciesSnapshot;
+    const speciesBaseVal = species ? (species.characteristics?.[attributeName]?.value ?? species.characteristics?.[attributeName] ?? 2) : 2;
+    const currentUpgrades = this.system.creation?.ledger?.upgrades?.characteristics?.[attributeName] || 0;
+    const currentRawValue = isCreationMode ? (speciesBaseVal + currentUpgrades) : (currentRawChars[attributeName]?.value !== undefined ? currentRawChars[attributeName].value : baseVal);
+
+    if (isCreationMode) {
+      if (currentUpgrades <= 0) {
+        ui.notifications?.warn(`Kann ${attributeName.toUpperCase()} nicht unter den Basiswert von ${speciesBaseVal} senken!`);
+        return;
+      }
+      await this.update({
+        [`system.creation.ledger.upgrades.characteristics.${attributeName}`]: currentUpgrades - 1
+      });
+      ui.notifications?.info(`${attributeName.toUpperCase()} auf ${currentRawValue - 1} gesenkt.`);
+    } else {
+      if (currentRawValue <= baseVal) {
+        ui.notifications?.warn(`Kann ${attributeName.toUpperCase()} nicht unter den Basiswert von ${baseVal} senken!`);
+        return;
+      }
+      if (!isGM) {
+        ui.notifications?.error("Attribute können nach der Charaktererstellung nicht mehr verändert werden!");
+        return;
+      }
+      const refund = currentRawValue * 10;
+      const currentAvailable = this.system.xp?.available || 0;
+      const newAvailable = currentAvailable + refund;
+
+      await this.update({
+        [`system.characteristics.${attributeName}.value`]: currentRawValue - 1,
+        "system.xp.available": newAvailable
+      }, {
+        xpLogDescription: `Attribut gesenkt: ${attributeName.toUpperCase()} von ${currentRawValue} auf ${currentRawValue - 1} (+${refund} XP erstattet)`
+      });
+      ui.notifications?.info(`${attributeName.toUpperCase()} auf ${currentRawValue - 1} gesenkt. ${refund} XP erstattet.`);
     }
-
-    if (!isGM && !this.system.creation?.isCreationMode) {
-      ui.notifications?.error("Attribute können nach der Charaktererstellung nicht mehr verändert werden!");
-      return;
-    }
-
-    const refund = currentRawValue * 10;
-    const currentAvailable = this.system.xp?.available || 0;
-    const newAvailable = currentAvailable + refund;
-
-    await this.update({
-      [`system.characteristics.${attributeName}.value`]: currentRawValue - 1,
-      "system.xp.available": newAvailable
-    }, {
-      xpLogDescription: `Attribut gesenkt: ${attributeName.toUpperCase()} von ${currentRawValue} auf ${currentRawValue - 1} (+${refund} XP erstattet)`
-    });
-    ui.notifications?.info(`${attributeName.toUpperCase()} auf ${currentRawValue - 1} gesenkt. ${refund} XP erstattet.`);
   }
 
   async buySkillRank(skillName, skillChar, skillCat) {
     if (this.type !== "character") return;
     const isGM = game.user?.isGM || false;
+    const isCreationMode = this.system.creation?.isCreationMode === true;
 
-    // Find the skill item if it exists
+    // Make sure skill item exists
     const skillItem = this.items.find(i => i.type === "skill" && i.name.toLowerCase() === skillName.toLowerCase());
-    const currentRank = skillItem?.system?.value || 0;
-    const isCareer = skillItem?.system?.career || false;
+    
+    // In creation mode, the base rank is the free starting ranks, upgraded ranks are in the ledger
+    const freeRanks = this.derivedSkills?.[skillName.toLowerCase()]?.freeRanks || 0;
+    const currentUpgrades = this.system.creation?.ledger?.upgrades?.skills?.[skillName] || 0;
+    const currentRank = isCreationMode ? (freeRanks + currentUpgrades) : (skillItem?.system?.value || 0);
+    const isCareer = isCreationMode ? (this.derivedSkills?.[skillName.toLowerCase()]?.career || false) : (skillItem?.system?.career || false);
 
     const nextRank = currentRank + 1;
     const cost = isCareer ? (nextRank * 5) : ((nextRank * 5) + 5);
@@ -280,7 +333,7 @@ export class SWFFGActor extends Actor {
     const isSandbox = this.system.creation?.sandboxMode || false;
 
     if (!isSandbox) {
-      if (!this.system.creation?.isCreationMode) {
+      if (!isCreationMode) {
         if (!isGM) {
           ui.notifications?.error("Fertigkeiten können nach der Charaktererstellung hier nicht gesteigert werden!");
           return;
@@ -290,64 +343,93 @@ export class SWFFGActor extends Actor {
         ui.notifications?.warn(`Nicht genug XP vorhanden! (Kosten: ${cost} XP, Verfügbar: ${this.totalAvailableXp} XP)`);
         return;
       }
-      if (this.system.creation?.isCreationMode && currentRank >= 2) {
+      if (!isGM && isCreationMode && currentRank >= 2) {
         ui.notifications?.warn(`Während der Charaktererstellung dürfen Fertigkeiten nicht über Rang 2 gesteigert werden!`);
         return;
       }
     }
 
-    const newAvailable = Math.max(0, currentAvailable - cost);
-    // Perform update of available XP and item values to log correctly
-    await this.update({
-      "system.xp.available": newAvailable
-    }, {
-      xpLogDescription: `Rang erworben: ${skillName} von ${currentRank} auf ${nextRank} (-${cost} XP)`
-    });
-
-    if (skillItem) {
-      await skillItem.update({ "system.value": nextRank });
+    if (isCreationMode) {
+      // Creation Mode: Ensure item exists first
+      if (!skillItem) {
+        await this.createEmbeddedDocuments("Item", [{
+          name: skillName,
+          type: "skill",
+          system: { value: 0, characteristic: skillChar, category: skillCat, career: false, freeRanks: 0 }
+        }]);
+      }
+      // Update ledger upgrade in DB. Suppress log.
+      await this.update({
+        [`system.creation.ledger.upgrades.skills.${skillName}`]: currentUpgrades + 1
+      });
+      ui.notifications?.info(`Rang ${nextRank} in ${skillName} erworben.`);
     } else {
-      await this.createEmbeddedDocuments("Item", [{
-        name: skillName,
-        type: "skill",
-        system: { value: 1, characteristic: skillChar, category: skillCat, career: false }
-      }]);
+      // In-game: Update item value and actor xp available. Perform log.
+      const newAvailable = Math.max(0, currentAvailable - cost);
+      await this.update({
+        "system.xp.available": newAvailable
+      }, {
+        xpLogDescription: `Rang erworben: ${skillName} von ${currentRank} auf ${nextRank} (-${cost} XP)`
+      });
+
+      if (skillItem) {
+        await skillItem.update({ "system.value": nextRank });
+      } else {
+        await this.createEmbeddedDocuments("Item", [{
+          name: skillName,
+          type: "skill",
+          system: { value: 1, characteristic: skillChar, category: skillCat, career: false }
+        }]);
+      }
+      ui.notifications?.info(`Rang ${nextRank} in ${skillName} gekauft für ${cost} XP.`);
     }
-    ui.notifications?.info(`Rang ${nextRank} in ${skillName} gekauft für ${cost} XP.`);
   }
 
   async decreaseSkillRank(skillName) {
     if (this.type !== "character") return;
     const isGM = game.user?.isGM || false;
+    const isCreationMode = this.system.creation?.isCreationMode === true;
 
     const skillItem = this.items.find(i => i.type === "skill" && i.name.toLowerCase() === skillName.toLowerCase());
-    const currentRank = skillItem?.system?.value || 0;
+    
+    const freeRanks = this.derivedSkills?.[skillName.toLowerCase()]?.freeRanks || 0;
+    const currentUpgrades = this.system.creation?.ledger?.upgrades?.skills?.[skillName] || 0;
+    const currentRank = isCreationMode ? (freeRanks + currentUpgrades) : (skillItem?.system?.value || 0);
 
-    const freeRanks = this.getSkillFreeRanks(skillItem);
+    if (isCreationMode) {
+      if (currentUpgrades <= 0) {
+        ui.notifications?.warn(`Kann ${skillName} nicht unter den Startwert von ${freeRanks} senken!`);
+        return;
+      }
+      await this.update({
+        [`system.creation.ledger.upgrades.skills.${skillName}`]: currentUpgrades - 1
+      });
+      ui.notifications?.info(`Rang ${currentRank - 1} in ${skillName} verringert.`);
+    } else {
+      if (currentRank <= freeRanks) {
+        ui.notifications?.warn(`Kann ${skillName} nicht unter den Startwert von ${freeRanks} senken!`);
+        return;
+      }
+      if (!isGM) {
+        ui.notifications?.error("Fertigkeiten können nach der Charaktererstellung hier nicht verändert werden!");
+        return;
+      }
+      const isCareer = skillItem?.system?.career || false;
+      const refund = isCareer ? (currentRank * 5) : ((currentRank * 5) + 5);
+      const currentAvailable = this.system.xp?.available || 0;
+      const newAvailable = currentAvailable + refund;
 
-    if (currentRank <= freeRanks) {
-      ui.notifications?.warn(`Kann ${skillName} nicht unter den Startwert von ${freeRanks} senken!`);
-      return;
+      await this.update({
+        "system.xp.available": newAvailable
+      }, {
+        xpLogDescription: `Rang zurückgesetzt: ${skillName} von ${currentRank} auf ${currentRank - 1} (+${refund} XP erstattet)`
+      });
+
+      if (skillItem) {
+        await skillItem.update({ "system.value": currentRank - 1 });
+      }
+      ui.notifications?.info(`Rang ${currentRank} in ${skillName} zurückgesetzt. ${refund} XP erstattet.`);
     }
-
-    if (!isGM && !this.system.creation?.isCreationMode) {
-      ui.notifications?.error("Fertigkeiten können nach der Charaktererstellung hier nicht verändert werden!");
-      return;
-    }
-
-    const isCareer = skillItem?.system?.career || false;
-    const refund = isCareer ? (currentRank * 5) : ((currentRank * 5) + 5);
-    const currentAvailable = this.system.xp?.available || 0;
-    const newAvailable = currentAvailable + refund;
-
-    await this.update({
-      "system.xp.available": newAvailable
-    }, {
-      xpLogDescription: `Rang zurückgesetzt: ${skillName} von ${currentRank} auf ${currentRank - 1} (+${refund} XP erstattet)`
-    });
-
-    await skillItem.update({ "system.value": currentRank - 1 });
-    ui.notifications?.info(`Rang ${currentRank} in ${skillName} zurückgesetzt. ${refund} XP erstattet.`);
   }
 
   async toggleSandboxMode() {
@@ -376,7 +458,7 @@ export class SWFFGActor extends Actor {
       await this.deleteEmbeddedDocuments("Item", itemsToDelete);
     }
 
-    // Reset skill items back to value 0, freeRanks 0, career false
+    // Reset skill items back to value 0, freeRanks 0, career false in database
     const skillUpdates = [];
     for (const item of this.items) {
       if (item.type === "skill") {
@@ -420,26 +502,50 @@ export class SWFFGActor extends Actor {
       "system.xp.available": 0,
       "system.xp.total": 0,
       "system.xp.earned": 0,
-      "system.xp.log": []
+      "system.xp.log": [],
+      
+      // Clean up snapshots and ledger
+      "system.creation.speciesSnapshot": null,
+      "system.creation.careerSnapshot": null,
+      "system.creation.specializationSnapshot": null,
+      "system.creation.ledger": {
+        speciesSkillChoice: "",
+        freeCareerSkills: [],
+        freeSpecializationSkills: [],
+        upgrades: {
+          characteristics: { brawn: 0, agility: 0, intellect: 0, cunning: 0, willpower: 0, presence: 0 },
+          skills: {},
+          talents: [],
+          specializations: []
+        }
+      }
     };
 
     await this.update(updates, {
       xpLogDescription: "Charakter vollständig zurückgesetzt (Full-Reset auf Standardwerte)"
     });
     
-    await this.recalculateCareerSkills();
     ui.notifications?.info("Charakter erfolgreich auf Standardwerte zurückgesetzt.");
   }
 
   async lockCreation() {
     if (this.type !== "character") return;
+    
+    // 1. Verify validations
+    const validation = this.system.creation?.validation;
+    const isGM = game.user?.isGM || false;
+    if (!validation?.lockAllowed && !isGM) {
+      ui.notifications?.error("Charaktererstellung kann nicht gesperrt werden. Nicht alle Bedingungen sind erfüllt.");
+      return;
+    }
 
     const timestamp = new Date().toLocaleString("de-DE");
     const userName = game.user?.name || game.users.get(game.userId)?.name || "Unbekannt";
     const logEntries = [];
 
     // Start tracking available XP starting from the total baseline
-    let currentLogAvailable = (this.system.creation?.startingXp || 0) + this.dutyXp + (this.system.xp?.earned || 0);
+    const startingXp = this.system.creation?.startingXp || 0;
+    let currentLogAvailable = startingXp + this.dutyXp + (this.system.xp?.earned || 0);
     const totalXp = currentLogAvailable;
 
     const addLogEntry = (desc, cost) => {
@@ -458,11 +564,20 @@ export class SWFFGActor extends Actor {
       });
     };
 
-    // 1. Attribute net upgrades
+    // Gather derived values before we clear ledger
+    const derivedBrawn = this.system.characteristics.brawn.value;
+    const derivedAgility = this.system.characteristics.agility.value;
+    const derivedIntellect = this.system.characteristics.intellect.value;
+    const derivedCunning = this.system.characteristics.cunning.value;
+    const derivedWillpower = this.system.characteristics.willpower.value;
+    const derivedPresence = this.system.characteristics.presence.value;
+
     const baseChars = this.system.creation?.baseCharacteristics || { brawn: 2, agility: 2, intellect: 2, cunning: 2, willpower: 2, presence: 2 };
+
+    // 1. Attribute net upgrades logging
     for (const char of ["brawn", "agility", "intellect", "cunning", "willpower", "presence"]) {
       const baseVal = baseChars[char] ?? 2;
-      const currentVal = this._source.system.characteristics?.[char]?.value ?? baseVal;
+      const currentVal = this.system.characteristics[char].value;
       if (currentVal > baseVal) {
         let cost = 0;
         for (let v = baseVal + 1; v <= currentVal; v++) {
@@ -472,23 +587,22 @@ export class SWFFGActor extends Actor {
       }
     }
 
-    // 2. Skill net upgrades
+    // 2. Skill net upgrades logging
     for (const item of this.items) {
       if (item.type === "skill") {
-        const val = item.system.value || 0;
-        const freeRanks = this.getSkillFreeRanks(item);
-        if (val > freeRanks) {
-          const isCareer = item.system.career || false;
+        const derived = this.derivedSkills?.[item.name.toLowerCase()];
+        if (derived && derived.value > derived.freeRanks) {
+          const isCareer = derived.career;
           let cost = 0;
-          for (let r = freeRanks + 1; r <= val; r++) {
+          for (let r = derived.freeRanks + 1; r <= derived.value; r++) {
             cost += isCareer ? (r * 5) : ((r * 5) + 5);
           }
-          addLogEntry(`Rang erworben: ${item.name} von ${freeRanks} auf ${val} (-${cost} XP)`, cost);
+          addLogEntry(`Rang erworben: ${item.name} von ${derived.freeRanks} auf ${derived.value} (-${cost} XP)`, cost);
         }
       }
     }
 
-    // 3. Specialization net upgrades
+    // 3. Specialization net upgrades logging
     const specs = this.items.filter(item => item.type === "specialization");
     const regularSpecs = specs.filter(s => {
       const cls = s.system?.classification || "career";
@@ -522,7 +636,7 @@ export class SWFFGActor extends Actor {
       addLogEntry(`Spezialisierungsbaum erworben: ${spec.name} (-${cost} XP)`, cost);
     }
 
-    // 4. Talent net upgrades
+    // 4. Talent net upgrades logging
     for (const item of this.items) {
       if (item.type === "talent") {
         const specName = item.system?.specialization?.toLowerCase() || "";
@@ -553,7 +667,6 @@ export class SWFFGActor extends Actor {
       });
     }
 
-    // Append to existing log
     const finalLog = Array.from(this.system.xp?.log || []);
     finalLog.push(...logEntries);
     if (finalLog.length > 50) {
@@ -564,12 +677,13 @@ export class SWFFGActor extends Actor {
     const skillUpdates = [];
     for (const item of this.items) {
       if (item.type === "skill") {
-        const derivedFreeRanks = this.getSkillFreeRanks(item);
-        if (item.system.freeRanks !== derivedFreeRanks || item.system.value < derivedFreeRanks) {
+        const derived = this.derivedSkills?.[item.name.toLowerCase()];
+        if (derived) {
           skillUpdates.push({
             _id: item.id,
-            "system.freeRanks": derivedFreeRanks,
-            "system.value": Math.max(item.system.value || 0, derivedFreeRanks)
+            "system.freeRanks": derived.freeRanks,
+            "system.value": derived.value,
+            "system.career": derived.career
           });
         }
       }
@@ -578,11 +692,44 @@ export class SWFFGActor extends Actor {
       await this.updateEmbeddedDocuments("Item", skillUpdates);
     }
 
-    // Update the actor document locking creation mode and updating the xp log array
+    // Prepare character base characteristics update
+    const finalCharacteristics = {
+      "system.characteristics.brawn.value": derivedBrawn,
+      "system.characteristics.agility.value": derivedAgility,
+      "system.characteristics.intellect.value": derivedIntellect,
+      "system.characteristics.cunning.value": derivedCunning,
+      "system.characteristics.willpower.value": derivedWillpower,
+      "system.characteristics.presence.value": derivedPresence
+    };
+
+    // Commit the actor updates: lock creation mode, set characteristics, clean snapshots/ledger, and write final log
     await this.update({
+      ...finalCharacteristics,
+      "system.stats.wounds.base": this.system.stats.wounds.base,
+      "system.stats.strain.base": this.system.stats.strain.base,
+      "system.stats.wounds.max": this.system.stats.wounds.max,
+      "system.stats.strain.max": this.system.stats.strain.max,
       "system.creation.isCreationMode": false,
       "system.creation.sandboxMode": false,
-      "system.xp.log": finalLog
+      "system.xp.available": this.system.xp.available,
+      "system.xp.total": this.system.xp.total,
+      "system.xp.log": finalLog,
+      
+      // Clean up snapshots and ledger fields from the database
+      "system.creation.speciesSnapshot": null,
+      "system.creation.careerSnapshot": null,
+      "system.creation.specializationSnapshot": null,
+      "system.creation.ledger": {
+        speciesSkillChoice: "",
+        freeCareerSkills: [],
+        freeSpecializationSkills: [],
+        upgrades: {
+          characteristics: { brawn: 0, agility: 0, intellect: 0, cunning: 0, willpower: 0, presence: 0 },
+          skills: {},
+          talents: [],
+          specializations: []
+        }
+      }
     });
 
     ui.notifications?.info("Charaktererstellung abgeschlossen. Bogen gesperrt.");
@@ -593,12 +740,298 @@ export class SWFFGActor extends Actor {
     const actorData = this;
     const system = actorData.system;
 
-    if (this.type === "character") {
-      system.xp.available = this.totalAvailableXp;
-      system.xp.total = (system.creation?.startingXp || 0) + this.dutyXp + (system.xp?.earned || 0);
+    if (this.type !== "character") {
+      super.prepareDerivedData();
+      return;
     }
 
-    // Loop items to find relevant passive talents (Grit, Toughened, Enduring, Force Rating)
+    const isCreationMode = system.creation?.isCreationMode === true;
+    const isSandbox = system.creation?.sandboxMode === true;
+
+    const parseSkillsList = (input) => {
+      if (!input) return [];
+      if (Array.isArray(input)) return input.map(s => s.trim().toLowerCase()).filter(s => s);
+      if (typeof input === "string") return input.split(",").map(s => s.trim().toLowerCase()).filter(s => s);
+      return [];
+    };
+
+    // 1. Initialize Baseline
+    let brawn = 2;
+    let agility = 2;
+    let intellect = 2;
+    let cunning = 2;
+    let willpower = 2;
+    let presence = 2;
+
+    let baseWounds = 10;
+    let baseStrain = 10;
+
+    let startingXp = 0;
+
+    const derivedSkills = {};
+    for (const skill of DEFAULT_SKILLS) {
+      derivedSkills[skill.name.toLowerCase()] = {
+        name: skill.name,
+        value: 0,
+        career: false,
+        freeRanks: 0,
+        characteristic: skill.characteristic,
+        category: skill.category
+      };
+    }
+
+    if (!isCreationMode) {
+      // Read final committed characteristics from DB
+      brawn = system.characteristics?.brawn?.value ?? 2;
+      agility = system.characteristics?.agility?.value ?? 2;
+      intellect = system.characteristics?.intellect?.value ?? 2;
+      cunning = system.characteristics?.cunning?.value ?? 2;
+      willpower = system.characteristics?.willpower?.value ?? 2;
+      presence = system.characteristics?.presence?.value ?? 2;
+
+      baseWounds = system.stats?.wounds?.base ?? 10;
+      baseStrain = system.stats?.strain?.base ?? 10;
+
+      startingXp = system.creation?.startingXp ?? 0;
+
+      // Read final committed skills from DB items
+      for (const item of this.items) {
+        if (item.type === "skill") {
+          const nameKey = item.name.toLowerCase();
+          if (derivedSkills[nameKey]) {
+            derivedSkills[nameKey].value = item._source?.system?.value ?? item.system?.value ?? 0;
+            derivedSkills[nameKey].freeRanks = item._source?.system?.freeRanks ?? item.system?.freeRanks ?? 0;
+            derivedSkills[nameKey].career = item._source?.system?.career ?? item.system?.career ?? false;
+          } else {
+            derivedSkills[nameKey] = {
+              name: item.name,
+              value: item._source?.system?.value ?? item.system?.value ?? 0,
+              freeRanks: item._source?.system?.freeRanks ?? item.system?.freeRanks ?? 0,
+              career: item._source?.system?.career ?? item.system?.career ?? false,
+              characteristic: item.system?.characteristic || "intellect",
+              category: item.system?.category || "General"
+            };
+          }
+        }
+      }
+    } else {
+      // creationMode === true
+      // 2. Apply Species Snapshot
+      const species = system.creation?.speciesSnapshot;
+      if (species) {
+        brawn = species.characteristics?.brawn?.value ?? species.characteristics?.brawn ?? 2;
+        agility = species.characteristics?.agility?.value ?? species.characteristics?.agility ?? 2;
+        intellect = species.characteristics?.intellect?.value ?? species.characteristics?.intellect ?? 2;
+        cunning = species.characteristics?.cunning?.value ?? species.characteristics?.cunning ?? 2;
+        willpower = species.characteristics?.willpower?.value ?? species.characteristics?.willpower ?? 2;
+        presence = species.characteristics?.presence?.value ?? species.characteristics?.presence ?? 2;
+
+        baseWounds = species.wounds?.base ?? species.wounds ?? 10;
+        baseStrain = species.strain?.base ?? species.strain ?? 10;
+
+        startingXp = species.xp ?? 0;
+
+        // Apply species starting skills (e.g. Charm:1)
+        const speciesSkillsStr = species.modifiers?.skills || species.skills || "";
+        if (speciesSkillsStr) {
+          const skillsParts = speciesSkillsStr.split(",");
+          for (const part of skillsParts) {
+            const trimmed = part.trim();
+            if (!trimmed) continue;
+            const [sName, sValStr] = trimmed.split(":");
+            const sNameLower = sName.trim().toLowerCase();
+            const sVal = sValStr ? parseInt(sValStr.trim()) : 1;
+            if (derivedSkills[sNameLower]) {
+              derivedSkills[sNameLower].freeRanks += sVal;
+            }
+          }
+        }
+
+        // Choice-based species starting skill selection
+        const choice = system.creation?.ledger?.speciesSkillChoice || system.creation?.speciesSkillChoice;
+        if (choice) {
+          const choiceLower = choice.trim().toLowerCase();
+          if (derivedSkills[choiceLower]) {
+            derivedSkills[choiceLower].freeRanks += 1;
+          }
+        }
+      }
+
+      // 3. Apply Career Snapshot
+      const career = system.creation?.careerSnapshot;
+      if (career) {
+        const careerSkillsList = parseSkillsList(career.careerSkills || career.system?.careerSkills);
+        for (const sName of careerSkillsList) {
+          if (derivedSkills[sName]) {
+            derivedSkills[sName].career = true;
+          }
+        }
+
+        const freeCareerSkills = system.creation?.ledger?.freeCareerSkills || system.creation?.freeCareerSkills || [];
+        for (const sName of freeCareerSkills) {
+          const sNameLower = sName.toLowerCase();
+          if (derivedSkills[sNameLower]) {
+            derivedSkills[sNameLower].freeRanks += 1;
+          }
+        }
+      }
+
+      // 4. Apply Specialization Snapshot
+      const spec = system.creation?.specializationSnapshot;
+      if (spec) {
+        const specSkillsList = parseSkillsList(spec.careerSkills || spec.system?.careerSkills);
+        for (const sName of specSkillsList) {
+          if (derivedSkills[sName]) {
+            derivedSkills[sName].career = true;
+          }
+        }
+
+        const freeSpecSkills = system.creation?.ledger?.freeSpecializationSkills || system.creation?.freeSpecializationSkills || [];
+        for (const sName of freeSpecSkills) {
+          const sNameLower = sName.toLowerCase();
+          if (derivedSkills[sNameLower]) {
+            derivedSkills[sNameLower].freeRanks += 1;
+          }
+        }
+      }
+
+      // Mark career skills from any specialization items currently on the actor
+      for (const item of this.items) {
+        if (item.type === "specialization") {
+          const specSkillsList = parseSkillsList(item.system?.careerSkills);
+          for (const sName of specSkillsList) {
+            if (derivedSkills[sName]) {
+              derivedSkills[sName].career = true;
+            }
+          }
+        }
+      }
+    }
+
+    // 5. Clamping Rule
+    for (const sNameLower in derivedSkills) {
+      derivedSkills[sNameLower].freeRanks = Math.min(2, derivedSkills[sNameLower].freeRanks);
+      if (isCreationMode) {
+        derivedSkills[sNameLower].value = derivedSkills[sNameLower].freeRanks;
+      }
+    }
+
+    // 6. Apply XP Purchases (Ledger Upgrades)
+    let spentAttributeXp = 0;
+    const charNames = ["brawn", "agility", "intellect", "cunning", "willpower", "presence"];
+
+    if (isCreationMode) {
+      const baseChars = { brawn, agility, intellect, cunning, willpower, presence };
+      const upgrades = system.creation?.ledger?.upgrades?.characteristics || {};
+      for (const charName of charNames) {
+        const baseVal = baseChars[charName];
+        const upgradeVal = upgrades[charName] || 0;
+        const finalVal = baseVal + upgradeVal;
+        
+        if (upgradeVal > 0) {
+          for (let v = baseVal + 1; v <= finalVal; v++) {
+            spentAttributeXp += v * 10;
+          }
+        }
+        
+        if (charName === "brawn") brawn = finalVal;
+        else if (charName === "agility") agility = finalVal;
+        else if (charName === "intellect") intellect = finalVal;
+        else if (charName === "cunning") cunning = finalVal;
+        else if (charName === "willpower") willpower = finalVal;
+        else if (charName === "presence") presence = finalVal;
+      }
+    } else {
+      // In-game attribute XP calculation
+      const baseChars = system.creation?.baseCharacteristics || {};
+      for (const charName of charNames) {
+        const baseVal = baseChars[charName] !== undefined ? baseChars[charName] : 2;
+        const finalVal = system.characteristics?.[charName]?.value ?? baseVal;
+        if (finalVal > baseVal) {
+          for (let v = baseVal + 1; v <= finalVal; v++) {
+            spentAttributeXp += v * 10;
+          }
+        }
+      }
+    }
+
+    // Now calculate spent skill XP
+    let spentSkillXp = 0;
+    if (isCreationMode) {
+      const skillUpgrades = system.creation?.ledger?.upgrades?.skills || {};
+      for (const [sNameLower, upgradeVal] of Object.entries(skillUpgrades)) {
+        if (upgradeVal > 0 && derivedSkills[sNameLower]) {
+          const freeRanks = derivedSkills[sNameLower].freeRanks;
+          const isCareer = derivedSkills[sNameLower].career;
+          const finalRank = freeRanks + upgradeVal;
+          
+          for (let r = freeRanks + 1; r <= finalRank; r++) {
+            spentSkillXp += isCareer ? (r * 5) : ((r * 5) + 5);
+          }
+          derivedSkills[sNameLower].value = finalRank;
+        }
+      }
+    } else {
+      for (const key in derivedSkills) {
+        const skill = derivedSkills[key];
+        const freeRanks = skill.freeRanks;
+        const finalRank = skill.value;
+        const isCareer = skill.career;
+        if (finalRank > freeRanks) {
+          for (let r = freeRanks + 1; r <= finalRank; r++) {
+            spentSkillXp += isCareer ? (r * 5) : ((r * 5) + 5);
+          }
+        }
+      }
+    }
+
+    const spentTalentXp = this.calculateSpentTalentXp();
+    const spentSpecializationXp = this.calculateSpentSpecializationXp();
+
+    const totalSpentXp = spentAttributeXp + spentSkillXp + spentTalentXp + spentSpecializationXp;
+    const totalXp = startingXp + this.dutyXp + (system.xp?.earned || 0);
+    const availableXp = totalXp - totalSpentXp;
+
+    // Set derived attributes
+    system.characteristics.brawn.value = brawn;
+    system.characteristics.agility.value = agility;
+    system.characteristics.intellect.value = intellect;
+    system.characteristics.cunning.value = cunning;
+    system.characteristics.willpower.value = willpower;
+    system.characteristics.presence.value = presence;
+
+    system.xp.available = availableXp;
+    system.xp.total = totalXp;
+
+    // Expose derivedSkills on actor
+    this.derivedSkills = derivedSkills;
+
+    // Expose validation flags on actor system
+    const freeCareerSkills = system.creation?.ledger?.freeCareerSkills || system.creation?.freeCareerSkills || [];
+    const freeSpecSkills = system.creation?.ledger?.freeSpecializationSkills || system.creation?.freeSpecializationSkills || [];
+    const hasSpecies = !!system.biography?.species;
+    const hasCareer = !!system.biography?.career;
+    const hasSpec = this.items.some(i => i.type === "specialization");
+    const xpValid = availableXp >= 0;
+    const skillsValid = freeCareerSkills.length === 4 && freeSpecSkills.length === 2;
+    const attributesValid = spentAttributeXp <= (this.maxAttributeXpAllowed || 0);
+    const lockAllowed = hasSpecies && hasCareer && hasSpec && skillsValid && xpValid && attributesValid;
+
+    system.creation.validation = {
+      xpValid,
+      skillsValid,
+      attributesValid,
+      lockAllowed,
+      missing: {
+        species: !hasSpecies,
+        career: !hasCareer,
+        specialization: !hasSpec,
+        freeCareerCount: freeCareerSkills.length,
+        freeSpecCount: freeSpecSkills.length
+      }
+    };
+
+    // Passive talents & item modifiers processing
     let gritRanks = 0;
     let toughenedRanks = 0;
     let enduringRanks = 0;
@@ -619,15 +1052,12 @@ export class SWFFGActor extends Actor {
       }
     }
 
-    // Determine initial force rating from specializations that unlock force user status
     let baseForceRating = 0;
     for (const item of this.items) {
       if (item.type === "specialization") {
-        // Exile, Initiate, etc. might grant base force rating
         if (item.system.classification === "force-power" || item.system.classification === "force-user") {
           baseForceRating = Math.max(baseForceRating, 1);
         }
-        // Check for specific classifications or custom settings in the specialization
         if (item.system.careerSkills?.toLowerCase().includes("force") || item.name.toLowerCase().includes("force")) {
           baseForceRating = Math.max(baseForceRating, 1);
         }
@@ -642,7 +1072,6 @@ export class SWFFGActor extends Actor {
       }
     }
 
-    // Loop items to find equipped item modifiers (cybernetics, mods, etc.)
     let inventoryWoundsMod = 0;
     let inventoryStrainMod = 0;
     let inventorySoakMod = 0;
@@ -659,14 +1088,12 @@ export class SWFFGActor extends Actor {
 
     for (const item of this.items) {
       if (item.system?.equipped) {
-        // Base modifiers of the item itself
         if (item.system.modifiers) {
           inventoryWoundsMod += item.system.modifiers.wounds || 0;
           inventoryStrainMod += item.system.modifiers.strain || 0;
           inventorySoakMod += item.system.modifiers.soak || 0;
           maxEncumbranceBonus += item.system.modifiers.encumbrance || 0;
 
-          // Parse characteristic modifiers (e.g. "brawn:1, agility:-1")
           const charModStr = item.system.modifiers.characteristics || "";
           if (charModStr) {
             const parts = charModStr.split(",");
@@ -682,11 +1109,9 @@ export class SWFFGActor extends Actor {
           }
         }
 
-        // Modifiers from installed attachments on equipped weapons and armor
         if (item.system.attachments && Array.isArray(item.system.attachments)) {
           for (const att of item.system.attachments) {
             const attSystem = att.system || {};
-            // Base modifiers of the attachment
             if (attSystem.baseModifiers) {
               inventoryWoundsMod += attSystem.baseModifiers.wounds || 0;
               inventoryStrainMod += attSystem.baseModifiers.strain || 0;
@@ -708,7 +1133,6 @@ export class SWFFGActor extends Actor {
               }
             }
 
-            // Unlocked mods of the attachment
             const activeMods = (attSystem.mods || []).filter(m => m.active);
             for (const mod of activeMods) {
               if (mod.type === "stat") {
@@ -728,7 +1152,6 @@ export class SWFFGActor extends Actor {
       }
     }
 
-    // Apply characteristic modifiers, clamping values between 1 and 6
     for (const [charName, modVal] of Object.entries(characteristicMods)) {
       if (modVal !== 0 && system.characteristics[charName]) {
         const baseVal = system.characteristics[charName].value || 1;
@@ -736,13 +1159,10 @@ export class SWFFGActor extends Actor {
       }
     }
 
-    // Default calculations for Soak, defense, wounds, strain
-    // Soak = Brawn + soak from armor/items
     let armorSoak = 0;
     let armorMeleeDefence = 0;
     let armorRangedDefence = 0;
 
-    // Loop items to find equipped armor
     for (const item of this.items) {
       if (item.type === "armor" && item.system.equipped) {
         armorSoak += (item.derived?.soak ?? item.system.soak) || 0;
@@ -751,15 +1171,10 @@ export class SWFFGActor extends Actor {
       }
     }
 
-    // Resolve base thresholds (fallback to current max minus talent/item bonuses for legacy actors)
-    const baseWounds = system.stats.wounds.base || (system.stats.wounds.max - (toughenedRanks * 2) - inventoryWoundsMod) || 10;
-    const baseStrain = system.stats.strain.base || (system.stats.strain.max - gritRanks - inventoryStrainMod) || 10;
+    // Set base wounds/strain
+    if (!system.stats.wounds.base || isCreationMode) system.stats.wounds.base = baseWounds;
+    if (!system.stats.strain.base || isCreationMode) system.stats.strain.base = baseStrain;
 
-    // If base wasn't set, persist it so it shows up in the UI properly
-    if (!system.stats.wounds.base) system.stats.wounds.base = baseWounds;
-    if (!system.stats.strain.base) system.stats.strain.base = baseStrain;
-
-    // Derive final values
     system.stats.wounds.max = baseWounds + (toughenedRanks * 2) + inventoryWoundsMod;
     system.stats.strain.max = baseStrain + gritRanks + inventoryStrainMod;
     system.stats.soak.value = (system.characteristics.brawn.value || 0) + armorSoak + enduringRanks + inventorySoakMod;
@@ -767,7 +1182,6 @@ export class SWFFGActor extends Actor {
     system.stats.defence.melee = armorMeleeDefence;
     system.stats.defence.ranged = armorRangedDefence;
 
-    // Calculate carried encumbrance
     let carriedEncumbrance = 0;
     for (const item of this.items) {
       if (item.type === "weapon" || item.type === "armor" || item.type === "gear") {
@@ -786,12 +1200,15 @@ export class SWFFGActor extends Actor {
       max: 5 + (system.characteristics.brawn.value || 0) + maxEncumbranceBonus
     };
 
-    if (this.type === "character") {
-      for (const item of this.items) {
-        if (item.type === "skill") {
-          const derivedFreeRanks = this.getSkillFreeRanks(item);
-          item.system.freeRanks = derivedFreeRanks;
-          item.system.value = Math.max(item.system.value || 0, derivedFreeRanks);
+    // Update in-memory skill items on the actor
+    for (const item of this.items) {
+      if (item.type === "skill") {
+        const nameLower = item.name.toLowerCase();
+        const derived = derivedSkills[nameLower];
+        if (derived) {
+          item.system.freeRanks = derived.freeRanks;
+          item.system.value = derived.value;
+          item.system.career = derived.career;
         }
       }
     }

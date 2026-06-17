@@ -1,7 +1,7 @@
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
 
-const DEFAULT_SKILLS = [
+export const DEFAULT_SKILLS = [
   { name: "Astrogation", characteristic: "intellect", category: "General" },
   { name: "Athletics", characteristic: "brawn", category: "General" },
   { name: "Charm", characteristic: "presence", category: "General" },
@@ -237,7 +237,8 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     const has2FreeSpecSkills = freeSpecCount === 2;
     const hasNonNegativeXp = this.actor.totalAvailableXp >= 0;
 
-    const canLockCreation = hasSpecies && hasCareer && hasSpec && has4FreeCareerSkills && has2FreeSpecSkills && hasNonNegativeXp;
+    const isGM = game.user?.isGM || false;
+    const canLockCreation = isGM || (hasSpecies && hasCareer && hasSpec && has4FreeCareerSkills && has2FreeSpecSkills && hasNonNegativeXp);
 
     const missingRequirements = [];
     if (!hasSpecies) missingRequirements.push("Spezies fehlt");
@@ -823,23 +824,40 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
             const amount = parseInt(html.find("#award-xp-amount").val() || 0);
             const reason = html.find("#award-xp-reason").val().trim() || "Manuelle XP-Zuweisung";
 
+            const isCreation = this.actor.system.creation?.isCreationMode === true;
+            const dutyXp = this.actor.dutyXp || 0;
+            const currentStarting = this.actor.system.creation?.startingXp || 0;
+            const currentEarned = this.actor.system.xp?.earned || 0;
             const currentAvail = this.actor.system.xp.available || 0;
             const currentTotal = this.actor.system.xp.total || 0;
+            const spent = currentTotal - currentAvail;
 
             if (mode === "set") {
-              await this.actor.update({
-                "system.xp.available": amount,
+              const updates = {
+                "system.xp.available": Math.max(0, amount - spent),
                 "system.xp.total": amount
-              }, {
+              };
+              if (isCreation) {
+                updates["system.creation.startingXp"] = Math.max(0, amount - dutyXp);
+              } else {
+                updates["system.xp.earned"] = Math.max(0, amount - currentStarting - dutyXp);
+              }
+              await this.actor.update(updates, {
                 xpLogDescription: `XP absolut gesetzt auf ${amount} (${reason})`
               });
               ui.notifications.info(`XP erfolgreich auf ${amount} gesetzt.`);
             } else {
               if (amount === 0) return;
-              await this.actor.update({
+              const updates = {
                 "system.xp.available": Math.max(0, currentAvail + amount),
                 "system.xp.total": Math.max(0, currentTotal + amount)
-              }, {
+              };
+              if (isCreation) {
+                updates["system.creation.startingXp"] = Math.max(0, currentStarting + amount);
+              } else {
+                updates["system.xp.earned"] = Math.max(0, currentEarned + amount);
+              }
+              await this.actor.update(updates, {
                 xpLogDescription: reason
               });
               ui.notifications.info(`${amount > 0 ? "Erfolgreich vergeben:" : "Erfolgreich abgezogen:"} ${Math.abs(amount)} XP.`);
@@ -1010,39 +1028,9 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     const strainBase = speciesData.system.strain?.base ?? (typeof speciesData.system.strain === "number" ? speciesData.system.strain : 10);
     const xpTotal = speciesData.system.xp ?? 100;
 
-    const updates = {
-      "system.biography.species": speciesData.name,
-      "system.biography.specialAbilities": speciesData.system.specialAbilities || "",
-      "system.characteristics.brawn.value": br,
-      "system.characteristics.agility.value": ag,
-      "system.characteristics.intellect.value": it,
-      "system.characteristics.cunning.value": cu,
-      "system.characteristics.willpower.value": wl,
-      "system.characteristics.presence.value": pr,
-      "system.creation.startingXp": xpTotal,
-      "system.creation.baseCharacteristics": {
-        brawn: br,
-        agility: ag,
-        intellect: it,
-        cunning: cu,
-        willpower: wl,
-        presence: pr
-      },
-      "system.stats.wounds.base": woundsBase + br,
-      "system.stats.strain.base": strainBase + wl,
-      "system.stats.wounds.max": woundsBase + br,
-      "system.stats.strain.max": strainBase + wl,
-      "system.xp.total": xpTotal,
-      "system.xp.available": xpTotal
-    };
-
-    const skillList = DEFAULT_SKILLS;
-
-    // Use specialAbilities from Oggdude imported species data if available
     let specialAbilitiesText = speciesData.system.specialAbilities || "";
-
-    // Check for hardcoded species features (like Twi'lek Charm & heat resistance)
     let skillMods = speciesData.system.modifiers?.skills || "";
+
     if (speciesData.name.toLowerCase() === "twi'lek") {
       if (!skillMods.toLowerCase().includes("charm")) {
         skillMods = skillMods ? `${skillMods},Charm:1` : "Charm:1";
@@ -1052,43 +1040,53 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       }
     }
 
-    if (specialAbilitiesText) {
-      updates["system.biography.specialAbilities"] = specialAbilitiesText;
-    }
+    const speciesSnapshot = {
+      name: speciesData.name,
+      characteristics: { brawn: br, agility: ag, intellect: it, cunning: cu, willpower: wl, presence: pr },
+      wounds: woundsBase,
+      strain: strainBase,
+      xp: xpTotal,
+      modifiers: { skills: skillMods },
+      specialAbilities: specialAbilitiesText
+    };
 
+    const updates = {
+      "system.biography.species": speciesData.name,
+      "system.biography.specialAbilities": specialAbilitiesText,
+      "system.creation.speciesSnapshot": speciesSnapshot,
+      "system.creation.ledger.speciesSkillChoice": "",
+      "system.creation.startingXp": xpTotal,
+      "system.creation.baseCharacteristics": {
+        brawn: br, agility: ag, intellect: it, cunning: cu, willpower: wl, presence: pr
+      },
+      "system.xp.total": xpTotal,
+      "system.xp.available": xpTotal
+    };
+
+    // Ensure skill items exist for the species starting skills, with value 0
     const itemsToCreate = [];
-    const itemsToUpdate = [];
     const currentSkills = this.actor.items.filter(i => i.type === "skill");
 
     if (skillMods) {
       const parts = skillMods.split(",");
       for (const part of parts) {
-        const [skillName, valStr] = part.split(":").map(p => p.trim());
-        if (skillName && valStr) {
-          const val = parseInt(valStr);
-          if (!isNaN(val)) {
-            const existing = currentSkills.find(s => s.name.toLowerCase() === skillName.toLowerCase());
-            if (existing) {
-              itemsToUpdate.push({
-                _id: existing.id,
-                "system.freeRanks": val,
-                "system.value": Math.max(existing.system.value, val)
+        const [skillName] = part.split(":").map(p => p.trim());
+        if (skillName) {
+          const existing = currentSkills.find(s => s.name.toLowerCase() === skillName.toLowerCase());
+          if (!existing) {
+            const defSkill = DEFAULT_SKILLS.find(s => s.name.toLowerCase() === skillName.toLowerCase());
+            if (defSkill) {
+              itemsToCreate.push({
+                name: defSkill.name,
+                type: "skill",
+                system: {
+                  value: 0,
+                  freeRanks: 0,
+                  characteristic: defSkill.characteristic,
+                  category: defSkill.category,
+                  career: false
+                }
               });
-            } else {
-              const defSkill = skillList.find(s => s.name.toLowerCase() === skillName.toLowerCase());
-              if (defSkill) {
-                itemsToCreate.push({
-                  name: defSkill.name,
-                  type: "skill",
-                  system: {
-                    value: val,
-                    freeRanks: val,
-                    characteristic: defSkill.characteristic,
-                    category: defSkill.category,
-                    career: false
-                  }
-                });
-              }
             }
           }
         }
@@ -1098,41 +1096,35 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     if (itemsToCreate.length > 0) {
       await this.actor.createEmbeddedDocuments("Item", itemsToCreate);
     }
-    if (itemsToUpdate.length > 0) {
-      await this.actor.updateEmbeddedDocuments("Item", itemsToUpdate);
-    }
 
     return this.actor.update(updates);
   }
 
   async _onDropCareer(careerData) {
     const skillListStr = careerData.system.careerSkills || "";
-    const careerSkills = skillListStr.split(",").map(s => s.trim().toLowerCase());
+    const careerSkills = skillListStr.split(",").map(s => s.trim().toLowerCase()).filter(s => s);
+
+    const careerSnapshot = {
+      name: careerData.name,
+      careerSkills: careerSkills
+    };
 
     const currentSkills = this.actor.items.filter(i => i.type === "skill");
-    
-    const defaultList = DEFAULT_SKILLS;
-
     const itemsToCreate = [];
-    const itemsToUpdate = [];
 
-    for (const dSkill of defaultList) {
-      const isCareerSkill = careerSkills.includes(dSkill.name.toLowerCase());
-      const existing = currentSkills.find(s => s.name.toLowerCase() === dSkill.name.toLowerCase());
-
-      if (existing) {
-        itemsToUpdate.push({
-          _id: existing.id,
-          "system.career": isCareerSkill
-        });
-      } else {
-        if (isCareerSkill) {
+    // Ensure all career skills exist on the actor as items with value 0
+    for (const sName of careerSkills) {
+      const existing = currentSkills.find(s => s.name.toLowerCase() === sName);
+      if (!existing) {
+        const dSkill = DEFAULT_SKILLS.find(s => s.name.toLowerCase() === sName);
+        if (dSkill) {
           itemsToCreate.push({
             name: dSkill.name,
             type: "skill",
             system: {
               value: 0,
-              career: true,
+              freeRanks: 0,
+              career: false,
               characteristic: dSkill.characteristic,
               category: dSkill.category
             }
@@ -1144,27 +1136,26 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     if (itemsToCreate.length > 0) {
       await this.actor.createEmbeddedDocuments("Item", itemsToCreate);
     }
-    if (itemsToUpdate.length > 0) {
-      await this.actor.updateEmbeddedDocuments("Item", itemsToUpdate);
-    }
 
     return this.actor.update({
       "system.biography.career": careerData.name,
-      "system.creation.careerSkills": careerSkills,
-      "system.creation.freeCareerSkills": []
+      "system.creation.careerSnapshot": careerSnapshot,
+      "system.creation.freeCareerSkills": [],
+      "system.creation.ledger.freeCareerSkills": []
     });
   }
 
   async _onDropSpecialization(specData) {
     const skillListStr = specData.system.careerSkills || "";
-    const careerSkills = skillListStr.split(",").map(s => s.trim().toLowerCase());
+    const careerSkills = skillListStr.split(",").map(s => s.trim().toLowerCase()).filter(s => s);
+
+    const specSnapshot = {
+      name: specData.name,
+      careerSkills: careerSkills
+    };
 
     const currentSkills = this.actor.items.filter(i => i.type === "skill");
-    
-    const defaultList = DEFAULT_SKILLS;
-
     const itemsToCreate = [];
-    const itemsToUpdate = [];
 
     // Create the specialization item on the actor if they do not have it
     const hasSpec = this.actor.items.some(i => i.type === "specialization" && i.name.toLowerCase() === specData.name.toLowerCase());
@@ -1176,46 +1167,37 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       itemsToCreate.push(specData);
     }
 
-    for (const dSkill of defaultList) {
-      const isCareerSkill = careerSkills.includes(dSkill.name.toLowerCase());
-      if (!isCareerSkill) continue;
-
-      const existing = currentSkills.find(s => s.name.toLowerCase() === dSkill.name.toLowerCase());
-
-      if (existing) {
-        if (!existing.system.career) {
-          itemsToUpdate.push({
-            _id: existing.id,
-            "system.career": true
+    // Ensure spec career skills exist on the actor
+    for (const sName of careerSkills) {
+      const existing = currentSkills.find(s => s.name.toLowerCase() === sName);
+      if (!existing) {
+        const dSkill = DEFAULT_SKILLS.find(s => s.name.toLowerCase() === sName);
+        if (dSkill) {
+          itemsToCreate.push({
+            name: dSkill.name,
+            type: "skill",
+            system: {
+              value: 0,
+              freeRanks: 0,
+              career: false,
+              characteristic: dSkill.characteristic,
+              category: dSkill.category
+            }
           });
         }
-      } else {
-        itemsToCreate.push({
-          name: dSkill.name,
-          type: "skill",
-          system: {
-            value: 0,
-            career: true,
-            characteristic: dSkill.characteristic,
-            category: dSkill.category
-          }
-        });
       }
     }
 
-    const hasAnySpec = this.actor.items.some(i => i.type === "specialization");
     if (itemsToCreate.length > 0) {
       await this.actor.createEmbeddedDocuments("Item", itemsToCreate);
     }
-    if (itemsToUpdate.length > 0) {
-      await this.actor.updateEmbeddedDocuments("Item", itemsToUpdate);
-    }
 
-    const updates = { "system.biography.specialization": specData.name };
-    if (!hasAnySpec) {
-      updates["system.creation.specializationSkills"] = careerSkills;
-      updates["system.creation.freeSpecializationSkills"] = [];
-    }
+    const updates = { 
+      "system.biography.specialization": specData.name,
+      "system.creation.specializationSnapshot": specSnapshot,
+      "system.creation.freeSpecializationSkills": [],
+      "system.creation.ledger.freeSpecializationSkills": []
+    };
     return this.actor.update(updates);
   }
 
@@ -1256,15 +1238,15 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     const updates = {};
     if (isStartingSpec) {
       updates["system.biography.specialization"] = "";
-      updates["system.creation.specializationSkills"] = [];
+      updates["system.creation.specializationSnapshot"] = null;
       updates["system.creation.freeSpecializationSkills"] = [];
+      updates["system.creation.ledger.freeSpecializationSkills"] = [];
     }
 
     await this.actor.deleteEmbeddedDocuments("Item", [itemId]);
     if (Object.keys(updates).length > 0) {
       await this.actor.update(updates);
     }
-    await this.actor.recalculateCareerSkills();
     this.render();
   }
 
@@ -1275,13 +1257,15 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     const updates = {
       "system.biography.species": "",
       "system.biography.specialAbilities": "",
-      "system.characteristics.brawn.value": 2,
-      "system.characteristics.agility.value": 2,
-      "system.characteristics.intellect.value": 2,
-      "system.characteristics.cunning.value": 2,
-      "system.characteristics.willpower.value": 2,
-      "system.characteristics.presence.value": 2,
+      "system.creation.speciesSnapshot": null,
+      "system.creation.ledger.speciesSkillChoice": "",
+      "system.creation.ledger.upgrades.characteristics": {
+        brawn: 0, agility: 0, intellect: 0, cunning: 0, willpower: 0, presence: 0
+      },
+      "system.creation.ledger.upgrades.skills": {},
       "system.creation.startingXp": 0,
+      "system.xp.total": 0,
+      "system.xp.available": 0,
       "system.creation.baseCharacteristics": {
         brawn: 2,
         agility: 2,
@@ -1293,28 +1277,8 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       "system.stats.wounds.base": 10,
       "system.stats.strain.base": 10,
       "system.stats.wounds.max": 10,
-      "system.stats.strain.max": 10,
-      "system.xp.total": 0,
-      "system.xp.available": 0
+      "system.stats.strain.max": 10
     };
-
-    // Revert species starting skill bonuses: radically reset value and freeRanks to 0
-    const currentSkills = this.actor.items.filter(i => i.type === "skill");
-    const skillUpdates = [];
-    for (const skill of currentSkills) {
-      const free = skill._source?.system?.freeRanks || skill.system.freeRanks || 0;
-      if (free > 0) {
-        skillUpdates.push({
-          _id: skill.id,
-          "system.freeRanks": 0,
-          "system.value": 0
-        });
-      }
-    }
-
-    if (skillUpdates.length > 0) {
-      await this.actor.updateEmbeddedDocuments("Item", skillUpdates);
-    }
 
     await this.actor.update(updates);
     this.render();
@@ -1326,10 +1290,10 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 
     await this.actor.update({
       "system.biography.career": "",
-      "system.creation.careerSkills": [],
-      "system.creation.freeCareerSkills": []
+      "system.creation.careerSnapshot": null,
+      "system.creation.freeCareerSkills": [],
+      "system.creation.ledger.freeCareerSkills": []
     });
-    await this.actor.recalculateCareerSkills();
     this.render();
   }
 
