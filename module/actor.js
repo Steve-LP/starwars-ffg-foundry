@@ -233,15 +233,15 @@ export class SWFFGActor extends Actor {
           return;
         }
       }
-      if (!isGM && this.totalAvailableXp < cost) {
+      if (this.totalAvailableXp < cost) {
         ui.notifications?.warn(`Nicht genug XP vorhanden! (Kosten: ${cost} XP, Verfügbar: ${this.totalAvailableXp} XP)`);
         return;
       }
-      if (!isGM && this.currentAttributeXpSpent + cost > this.maxAttributeXpAllowed) {
+      if (this.currentAttributeXpSpent + cost > this.maxAttributeXpAllowed) {
         ui.notifications?.warn(`Das Spezies-Limit für Attribute (${this.maxAttributeXpAllowed} XP) wurde erreicht!`);
         return;
       }
-      if (!isGM && isCreationMode && currentRawValue >= 5) {
+      if (isCreationMode && currentRawValue >= 5) {
         ui.notifications?.warn(`Während der Charaktererstellung dürfen Attribute nicht über Wert 5 gesteigert werden!`);
         return;
       }
@@ -339,11 +339,11 @@ export class SWFFGActor extends Actor {
           return;
         }
       }
-      if (!isGM && this.totalAvailableXp < cost) {
+      if (this.totalAvailableXp < cost) {
         ui.notifications?.warn(`Nicht genug XP vorhanden! (Kosten: ${cost} XP, Verfügbar: ${this.totalAvailableXp} XP)`);
         return;
       }
-      if (!isGM && isCreationMode && currentRank >= 2) {
+      if (isCreationMode && currentRank >= 2) {
         ui.notifications?.warn(`Während der Charaktererstellung dürfen Fertigkeiten nicht über Rang 2 gesteigert werden!`);
         return;
       }

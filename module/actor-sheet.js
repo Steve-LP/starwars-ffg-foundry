@@ -254,7 +254,7 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     context.missingRequirementsText = missingRequirements.join(", ");
     context.freeCareerLimitReached = freeCareerCount >= 4;
     context.freeSpecLimitReached = freeSpecCount >= 2;
-    context.showCareerToggles = isGM || isSandbox;
+    context.showCareerToggles = isSandbox;
 
     return context;
   }
