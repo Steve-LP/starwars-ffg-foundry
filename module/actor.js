@@ -22,23 +22,45 @@ export class SWFFGActor extends Actor {
 
   get currentAttributeXpSpent() {
     if (this.type !== "character") return 0;
-    let totalCost = 0;
-    const characteristics = ["brawn", "agility", "intellect", "cunning", "willpower", "presence"];
+    const isCreationMode = this.system.creation?.isCreationMode === true;
     
-    const currentChars = this._source.system.characteristics || {};
-    const baseChars = this.system.creation?.baseCharacteristics || {};
-    
-    for (const charName of characteristics) {
-      const baseVal = baseChars[charName] !== undefined ? baseChars[charName] : 2;
-      const currentVal = currentChars[charName]?.value !== undefined ? currentChars[charName].value : baseVal;
+    if (isCreationMode) {
+      let totalCost = 0;
+      const characteristics = ["brawn", "agility", "intellect", "cunning", "willpower", "presence"];
+      const species = this.system.creation?.speciesSnapshot;
+      const baseChars = this.system.creation?.baseCharacteristics || {};
+      const upgrades = this.system.creation?.ledger?.upgrades?.characteristics || {};
       
-      if (currentVal > baseVal) {
-        for (let v = baseVal + 1; v <= currentVal; v++) {
-          totalCost += v * 10;
+      for (const charName of characteristics) {
+        const speciesBaseVal = species ? (species.characteristics?.[charName]?.value ?? species.characteristics?.[charName] ?? 2) : (baseChars[charName] ?? 2);
+        const upgradeVal = upgrades[charName] || 0;
+        const finalVal = speciesBaseVal + upgradeVal;
+        
+        if (upgradeVal > 0) {
+          for (let v = speciesBaseVal + 1; v <= finalVal; v++) {
+            totalCost += v * 10;
+          }
         }
       }
+      return totalCost;
+    } else {
+      let totalCost = 0;
+      const characteristics = ["brawn", "agility", "intellect", "cunning", "willpower", "presence"];
+      const currentChars = this._source.system.characteristics || {};
+      const baseChars = this.system.creation?.baseCharacteristics || {};
+      
+      for (const charName of characteristics) {
+        const baseVal = baseChars[charName] !== undefined ? baseChars[charName] : 2;
+        const currentVal = currentChars[charName]?.value !== undefined ? currentChars[charName].value : baseVal;
+        
+        if (currentVal > baseVal) {
+          for (let v = baseVal + 1; v <= currentVal; v++) {
+            totalCost += v * 10;
+          }
+        }
+      }
+      return totalCost;
     }
-    return totalCost;
   }
 
   calculateSpentTalentXp() {
