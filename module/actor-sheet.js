@@ -328,10 +328,15 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       const yellowCount = Math.max(0, Math.min(charValue, value));
 
       const creation = this.actor.system.creation || {};
-      const isCareerSource = (creation.careerSkills || []).some(s => s.toLowerCase() === nameLower);
-      const isSpecSource = (creation.specializationSkills || []).some(s => s.toLowerCase() === nameLower);
-      const freeCareerSelected = (creation.freeCareerSkills || []).some(s => s.toLowerCase() === nameLower);
-      const freeSpecSelected = (creation.freeSpecializationSkills || []).some(s => s.toLowerCase() === nameLower);
+      const careerSkills = creation.careerSnapshot?.careerSkills || creation.careerSkills || [];
+      const specSkills = creation.specializationSnapshot?.careerSkills || creation.specializationSkills || [];
+      const freeCareer = creation.ledger?.freeCareerSkills || creation.freeCareerSkills || [];
+      const freeSpec = creation.ledger?.freeSpecializationSkills || creation.freeSpecializationSkills || [];
+
+      const isCareerSource = careerSkills.some(s => s.toLowerCase() === nameLower);
+      const isSpecSource = specSkills.some(s => s.toLowerCase() === nameLower);
+      const freeCareerSelected = freeCareer.some(s => s.toLowerCase() === nameLower);
+      const freeSpecSelected = freeSpec.some(s => s.toLowerCase() === nameLower);
 
       const isCareer = actorSkill?.system.career || isCareerSource || isSpecSource;
       const freeRanks = this.actor.getSkillFreeRanks(actorSkill || { name: skill.name, system: { freeRanks: 0 } });
@@ -386,10 +391,15 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       const yellowCount = Math.max(0, Math.min(charValue, value));
 
       const creation = this.actor.system.creation || {};
-      const isCareerSource = (creation.careerSkills || []).some(s => s.toLowerCase() === skillNameLower);
-      const isSpecSource = (creation.specializationSkills || []).some(s => s.toLowerCase() === skillNameLower);
-      const freeCareerSelected = (creation.freeCareerSkills || []).some(s => s.toLowerCase() === skillNameLower);
-      const freeSpecSelected = (creation.freeSpecializationSkills || []).some(s => s.toLowerCase() === skillNameLower);
+      const careerSkills = creation.careerSnapshot?.careerSkills || creation.careerSkills || [];
+      const specSkills = creation.specializationSnapshot?.careerSkills || creation.specializationSkills || [];
+      const freeCareer = creation.ledger?.freeCareerSkills || creation.freeCareerSkills || [];
+      const freeSpec = creation.ledger?.freeSpecializationSkills || creation.freeSpecializationSkills || [];
+
+      const isCareerSource = careerSkills.some(s => s.toLowerCase() === skillNameLower);
+      const isSpecSource = specSkills.some(s => s.toLowerCase() === skillNameLower);
+      const freeCareerSelected = freeCareer.some(s => s.toLowerCase() === skillNameLower);
+      const freeSpecSelected = freeSpec.some(s => s.toLowerCase() === skillNameLower);
 
       const isCareer = actorSkill.system.career || isCareerSource || isSpecSource;
       const freeRanks = this.actor.getSkillFreeRanks(actorSkill);
@@ -539,7 +549,7 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
         event.preventDefault();
         const skillName = event.currentTarget.dataset.name;
         const checked = event.currentTarget.checked;
-        const currentArray = Array.from(this.actor.system.creation?.freeCareerSkills || []);
+        const currentArray = Array.from(this.actor.system.creation?.ledger?.freeCareerSkills || this.actor.system.creation?.freeCareerSkills || []);
         if (checked) {
           if (currentArray.length >= 4) {
             event.currentTarget.checked = false;
@@ -553,14 +563,17 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
           const idx = currentArray.indexOf(skillName);
           if (idx > -1) currentArray.splice(idx, 1);
         }
-        await this.actor.update({ "system.creation.freeCareerSkills": currentArray });
+        await this.actor.update({
+          "system.creation.freeCareerSkills": currentArray,
+          "system.creation.ledger.freeCareerSkills": currentArray
+        });
       });
 
       html.find(".free-spec-toggle").change(async (event) => {
         event.preventDefault();
         const skillName = event.currentTarget.dataset.name;
         const checked = event.currentTarget.checked;
-        const currentArray = Array.from(this.actor.system.creation?.freeSpecializationSkills || []);
+        const currentArray = Array.from(this.actor.system.creation?.ledger?.freeSpecializationSkills || this.actor.system.creation?.freeSpecializationSkills || []);
         if (checked) {
           if (currentArray.length >= 2) {
             event.currentTarget.checked = false;
@@ -574,7 +587,10 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
           const idx = currentArray.indexOf(skillName);
           if (idx > -1) currentArray.splice(idx, 1);
         }
-        await this.actor.update({ "system.creation.freeSpecializationSkills": currentArray });
+        await this.actor.update({
+          "system.creation.freeSpecializationSkills": currentArray,
+          "system.creation.ledger.freeSpecializationSkills": currentArray
+        });
       });
     }
   }
