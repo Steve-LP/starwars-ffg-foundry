@@ -224,7 +224,12 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       };
     }
 
-    context.xpSpentInfo = `${actorData.currentAttributeXpSpent || 0} / ${actorData.maxAttributeXpAllowed || 0} XP`;
+    const creationSpent = (actorData.currentAttributeXpSpent || 0) +
+                          (actorData.calculateSpentTalentXp() || 0) +
+                          (actorData.calculateSpentSpecializationXp() || 0) +
+                          (actorData.calculateSpentSkillXp() || 0);
+    const creationBudget = (actorData.system.creation?.startingXp || 0) + (actorData.dutyXp || 0);
+    context.xpSpentInfo = `${creationSpent} / ${creationBudget} XP (Attribute: ${actorData.currentAttributeXpSpent || 0} / ${actorData.maxAttributeXpAllowed || 0} XP)`;
 
     const creation = actorData.system.creation || {};
     const freeCareerCount = (creation.freeCareerSkills || []).length;
