@@ -172,7 +172,8 @@ export class SWFFGActor extends Actor {
     
     if (isCreationMode) {
       const upgrades = this.system.creation?.ledger?.upgrades?.skills || {};
-      for (const [sNameLower, upgradeVal] of Object.entries(upgrades)) {
+      for (const [key, upgradeVal] of Object.entries(upgrades)) {
+        const sNameLower = key.toLowerCase();
         if (upgradeVal > 0 && this.derivedSkills?.[sNameLower]) {
           const freeRanks = this.derivedSkills[sNameLower].freeRanks;
           const isCareer = this.derivedSkills[sNameLower].career;
@@ -959,7 +960,8 @@ export class SWFFGActor extends Actor {
     let spentSkillXp = 0;
     if (isCreationMode) {
       const skillUpgrades = system.creation?.ledger?.upgrades?.skills || {};
-      for (const [sNameLower, upgradeVal] of Object.entries(skillUpgrades)) {
+      for (const [key, upgradeVal] of Object.entries(skillUpgrades)) {
+        const sNameLower = key.toLowerCase();
         if (upgradeVal > 0 && derivedSkills[sNameLower]) {
           const freeRanks = derivedSkills[sNameLower].freeRanks;
           const isCareer = derivedSkills[sNameLower].career;
