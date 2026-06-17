@@ -454,11 +454,63 @@
     // 13. Career & Specialization Removal and XP Refund Tests
     console.log("SWFFG TEST | Starting Career & Specialization Removal and XP Refund tests...");
 
-    // Setup: reset starting XP to 100, clear career/specialization, and reset characteristics to 1 to restore XP
+    // Clean up all existing items to reset active talents/specializations/skills
+    const itemsToDelete = actor.items.map(i => i.id);
+    if (itemsToDelete.length > 0) {
+      await actor.deleteEmbeddedDocuments("Item", itemsToDelete);
+    }
+
+    // Pre-create all default skills so they exist for career tests
+    const defaultList = [
+      { name: "Astrogation", characteristic: "intellect", category: "General" },
+      { name: "Athletics", characteristic: "brawn", category: "General" },
+      { name: "Charm", characteristic: "presence", category: "General" },
+      { name: "Coercion", characteristic: "willpower", category: "General" },
+      { name: "Computers", characteristic: "intellect", category: "General" },
+      { name: "Cool", characteristic: "presence", category: "General" },
+      { name: "Coordination", characteristic: "agility", category: "General" },
+      { name: "Deception", characteristic: "cunning", category: "General" },
+      { name: "Discipline", characteristic: "willpower", category: "General" },
+      { name: "Leadership", characteristic: "presence", category: "General" },
+      { name: "Mechanics", characteristic: "intellect", category: "General" },
+      { name: "Medicine", characteristic: "intellect", category: "General" },
+      { name: "Negotiation", characteristic: "presence", category: "General" },
+      { name: "Perception", characteristic: "cunning", category: "General" },
+      { name: "Piloting (Planetary)", characteristic: "agility", category: "General" },
+      { name: "Piloting (Space)", characteristic: "agility", category: "General" },
+      { name: "Resilience", characteristic: "brawn", category: "General" },
+      { name: "Skulduggery", characteristic: "cunning", category: "General" },
+      { name: "Stealth", characteristic: "agility", category: "General" },
+      { name: "Streetwise", characteristic: "cunning", category: "General" },
+      { name: "Survival", characteristic: "cunning", category: "General" },
+      { name: "Vigilance", characteristic: "willpower", category: "General" },
+      { name: "Brawl", characteristic: "brawn", category: "Combat" },
+      { name: "Gunnery", characteristic: "agility", category: "Combat" },
+      { name: "Melee", characteristic: "brawn", category: "Combat" },
+      { name: "Ranged (Light)", characteristic: "agility", category: "Combat" },
+      { name: "Ranged (Heavy)", characteristic: "agility", category: "Combat" }
+    ];
+    await actor.createEmbeddedDocuments("Item", defaultList.map(s => ({
+      name: s.name,
+      type: "skill",
+      system: {
+        value: 0,
+        freeRanks: 0,
+        characteristic: s.characteristic,
+        category: s.category,
+        career: false
+      }
+    })));
+
+    // Setup: reset starting XP to 100, clear career/specialization, reset earned XP to 0, and reset characteristics to 1
     await actor.update({
       "system.creation.startingXp": 100,
+      "system.creation.baseGroupDutyXp": 0,
+      "system.creation.doubleDuty": false,
+      "system.xp.earned": 0,
       "system.creation.isCreationMode": true,
       "system.biography.career": "",
+      "system.biography.specialization": "",
       "system.characteristics.brawn.value": 1,
       "system.characteristics.agility.value": 1,
       "system.characteristics.intellect.value": 1,
@@ -469,7 +521,7 @@
         brawn: 1, agility: 1, intellect: 1, cunning: 1, willpower: 1, presence: 1
       }
     });
-    
+
     // Ensure available XP in database matches totalAvailableXp (100)
     await actor.update({ "system.xp.available": actor.totalAvailableXp });
     const initialXp = actor.system.xp.available;
@@ -498,6 +550,7 @@
     assert(actor.system.xp.available === 85, "XP correctly deducted: 85 available");
 
     // Now delete the Specialization tree
+    await actor.update({ "system.creation.isCreationMode": false });
     await actor.deleteEmbeddedDocuments("Item", [refundSpecTree[0].id]);
     await actor.recalculateCareerSkills();
 
@@ -510,6 +563,9 @@
     const lastLogEntry = actor.system.xp.log[actor.system.xp.log.length - 1];
     assert(lastLogEntry.change === "+15", "XP log recorded +15 refund");
     assert(lastLogEntry.description.includes("erstattet durch Zurücksetzen"), "XP log description mentions refund/reset");
+
+    // Restore isCreationMode to true
+    await actor.update({ "system.creation.isCreationMode": true });
 
     // Test Career Removal Refund
     const careerPack = game.packs.get("starwars-ffg-scratch.careers");
@@ -548,6 +604,167 @@
         }
       }
     }
+
+    // ==========================================
+    // SECTION 14: CHARACTER CREATION & LOGGING
+    // ==========================================
+    console.log("SWFFG TEST | Starting Section 14: Watertight Character Creation & XP Logging...");
+    
+    // Set character creation mode back to true
+    await actor.update({
+      "system.creation.isCreationMode": true,
+      "system.creation.sandboxMode": false,
+      "system.biography.species": "",
+      "system.biography.career": "",
+      "system.biography.specialization": "",
+      "system.creation.startingXp": 100,
+      "system.xp.available": 100,
+      "system.xp.total": 100,
+      "system.xp.log": [],
+      "system.characteristics.brawn.value": 2,
+      "system.creation.baseCharacteristics": {
+        brawn: 2, agility: 2, intellect: 2, cunning: 2, willpower: 2, presence: 2
+      }
+    });
+
+    const testSheet = new SWFFGActorSheet({ document: actor });
+
+    // Mock Species Drop: Twi'lek (grants 1 rank in Charm)
+    const mockSpeciesData = {
+      name: "Twi'lek",
+      type: "species",
+      system: {
+        characteristics: {
+          brawn: { value: 2 },
+          agility: { value: 2 },
+          intellect: { value: 2 },
+          cunning: { value: 2 },
+          willpower: { value: 2 },
+          presence: { value: 2 }
+        },
+        wounds: 10,
+        strain: 10,
+        xp: 100,
+        modifiers: {
+          skills: "Charm:1"
+        }
+      }
+    };
+    await testSheet._onDropSpecies(mockSpeciesData);
+
+    let testCharm = actor.items.find(i => i.name.toLowerCase() === "charm");
+    assert(testCharm.system.freeRanks === 1, "Twi'lek drop set Charm free ranks to 1");
+    assert(testCharm.system.value === 1, "Charm starts at rank 1");
+
+    // Buy another rank of Charm (costs 15 XP since career is false)
+    await actor.buySkillRank("Charm", "presence", "General");
+    assert(testCharm.system.value === 2, "Charm upgraded to rank 2");
+    assert(actor.system.xp.available === 85, "Charm upgrade cost 15 XP (available: 85)");
+
+    // Simulate Removing Species (reverse logic test)
+    // Stub global confirm to bypass browser dialogs
+    const oldConfirm = window.confirm;
+    window.confirm = () => true;
+    try {
+      await testSheet._onRemoveSpecies();
+    } finally {
+      window.confirm = oldConfirm;
+    }
+
+    // Verify Charm is radically reset to 0, and XP is fully refunded
+    testCharm = actor.items.find(i => i.name.toLowerCase() === "charm");
+    assert(testCharm.system.freeRanks === 0, "Charm free ranks reset to 0 after species removal");
+    assert(testCharm.system.value === 0, "Charm value radically reset to 0 after species removal");
+    assert(actor.system.xp.available === 0, "XP available reset to 0 since species XP (100) is gone");
+
+    // Now set starting XP again to 100, and restore species biography
+    await actor.update({
+      "system.biography.species": "Twi'lek",
+      "system.creation.startingXp": 100,
+      "system.xp.available": 100,
+      "system.xp.total": 100
+    });
+
+    // Mock Career drop
+    const mockCareerSkills = ["athletics", "charm", "coercion", "computers"];
+    await actor.update({
+      "system.biography.career": "Soldier",
+      "system.creation.careerSkills": mockCareerSkills,
+      "system.creation.freeCareerSkills": []
+    });
+    await actor.recalculateCareerSkills();
+
+    const testAthletics = actor.items.find(i => i.name.toLowerCase() === "athletics");
+    assert(testAthletics.system.career === true, "Athletics is career skill");
+
+    // Select 4 free career skills
+    await actor.update({
+      "system.creation.freeCareerSkills": ["athletics", "charm", "coercion", "computers"]
+    });
+
+    assert(actor.getSkillFreeRanks(testAthletics) === 1, "Athletics gets 1 free rank from selection");
+    assert(testAthletics.system.value === 1, "Athletics value derived dynamically is at least 1");
+
+    // Mock starting Specialization drop
+    const mockSpecSkills = ["athletics", "brawl"];
+    await actor.createEmbeddedDocuments("Item", [{
+      name: "Commando",
+      type: "specialization",
+      system: { classification: "career", careerSkills: "athletics,brawl" }
+    }]);
+    await actor.update({
+      "system.biography.specialization": "Commando",
+      "system.creation.specializationSkills": mockSpecSkills,
+      "system.creation.freeSpecializationSkills": []
+    });
+
+    // Select 2 free spec skills (athletics, brawl)
+    await actor.update({
+      "system.creation.freeSpecializationSkills": ["athletics", "brawl"]
+    });
+
+    // Check overlap clamping: Athletics is chosen in both free career and free spec
+    assert(actor.getSkillFreeRanks(testAthletics) === 2, "Athletics gets 2 free ranks from overlapping career & spec");
+    assert(testAthletics.system.value === 2, "Athletics derived rank is 2");
+
+    // Check clamp limit 2: what if we also add a species bonus to athletics?
+    await testAthletics.update({ "system.freeRanks": 1 });
+    assert(actor.getSkillFreeRanks(testAthletics) === 2, "Athletics free ranks clamped to max 2 despite species + career + spec");
+
+    // Verify XP Log is suppressed during creation mode edits
+    const logLengthBefore = actor.system.xp.log.length;
+    await actor.buyAttribute("brawn");
+    // Buy a rank in Brawl (Brawl has 1 free rank from spec, so this buys rank 2 for 10 XP since it's career)
+    await actor.buySkillRank("Brawl", "brawn", "Combat");
+    assert(actor.system.xp.log.length === logLengthBefore, "XP log remains unchanged after attribute and skill purchases in creation mode");
+
+    // Verify lock validation in context preparation
+    let ctx = await testSheet._prepareContext({});
+    assert(ctx.canLockCreation === true, "Creation can be locked because all conditions are met");
+
+    // Incomplete spec choice makes locking invalid
+    await actor.update({ "system.creation.freeSpecializationSkills": ["athletics"] });
+    ctx = await testSheet._prepareContext({});
+    assert(ctx.canLockCreation === false, "Creation cannot be locked if specialization choices are incomplete");
+    assert(ctx.missingRequirementsText.includes("Spezialisierungs-Fertigkeiten"), "Missing requirements lists spec skills");
+
+    // Restore choice
+    await actor.update({ "system.creation.freeSpecializationSkills": ["athletics", "brawl"] });
+
+    // Lock character creation
+    await actor.lockCreation();
+    assert(actor.system.creation.isCreationMode === false, "isCreationMode is set to false");
+
+    // Verify exactly two new log entries are created (one for Brawn, one for Brawl)
+    assert(actor.system.xp.log.length === logLengthBefore + 2, "Exactly two log entries created upon locking (Brawn & Brawl)");
+    const lockLog1 = actor.system.xp.log[actor.system.xp.log.length - 2];
+    const lockLog2 = actor.system.xp.log[actor.system.xp.log.length - 1];
+    assert(lockLog1.description.includes("Attribut gesteigert: BRAWN"), "First log entry lists Brawn upgrade");
+    assert(lockLog2.description.includes("Rang erworben: Brawl"), "Second log entry lists Brawl upgrade");
+
+    // Verify post-creation edits ARE logged
+    await actor.update({ "system.xp.total": 200, "system.xp.available": 170 });
+    assert(actor.system.xp.log.length === logLengthBefore + 3, "Updates post-creation are logged individually");
 
   } catch (error) {
     console.error("SWFFG TEST | Test suite encountered an error:", error);

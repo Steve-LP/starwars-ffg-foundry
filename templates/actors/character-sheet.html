@@ -16,7 +16,7 @@
         <i class="fas fa-undo"></i> Reset
       </button>
 
-      <button type="button" class="lock-creation-btn"><i class="fas fa-lock"></i> Charakter sperren</button>
+      <button type="button" class="lock-creation-btn" {{#unless canLockCreation}}disabled title="Fehlende Anforderungen: {{missingRequirementsText}}" style="opacity: 0.5; cursor: not-allowed;"{{/unless}}><i class="fas fa-lock"></i> Charakter sperren</button>
     </div>
   </div>
   {{/if}}
@@ -218,6 +218,10 @@
       <div class="skills-list">
         <div class="skills-header row">
           <span class="col-career">Career</span>
+          {{#if isCreationMode}}
+          <span class="col-free-career" title="Free Career Skill Rank (Choose 4)">Free Car.</span>
+          <span class="col-free-spec" title="Free Specialization Skill Rank (Choose 2)">Free Spec.</span>
+          {{/if}}
           <span class="col-name">Skill</span>
           <span class="col-char">Characteristic</span>
           <span class="col-rank">Rank</span>
@@ -228,6 +232,22 @@
           <span class="col-career">
             <input type="checkbox" class="career-toggle" data-item-id="{{skill.id}}" data-name="{{skill.name}}" data-characteristic="{{skill.characteristic}}" data-category="{{skill.category}}" {{checked skill.career}} />
           </span>
+          {{#if ../isCreationMode}}
+          <span class="col-free-career">
+            {{#if skill.isCareerSource}}
+            <input type="checkbox" class="free-career-toggle" data-name="{{skill.name}}" {{checked skill.freeCareerSelected}} {{#unless skill.freeCareerSelected}}{{#if ../freeCareerLimitReached}}disabled title="Limit von 4 erreicht" style="opacity:0.5; cursor: not-allowed;"{{/if}}{{/unless}} />
+            {{else}}
+            -
+            {{/if}}
+          </span>
+          <span class="col-free-spec">
+            {{#if skill.isSpecSource}}
+            <input type="checkbox" class="free-spec-toggle" data-name="{{skill.name}}" {{checked skill.freeSpecSelected}} {{#unless skill.freeSpecSelected}}{{#if ../freeSpecLimitReached}}disabled title="Limit von 2 erreicht" style="opacity:0.5; cursor: not-allowed;"{{/if}}{{/unless}} />
+            {{else}}
+            -
+            {{/if}}
+          </span>
+          {{/if}}
           <span class="col-name">{{skill.name}}</span>
           <span class="col-char">{{capitalize skill.characteristic}}</span>
           <span class="col-rank">

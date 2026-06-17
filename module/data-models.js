@@ -72,7 +72,11 @@ export class CharacterData extends BaseActorData {
           cunning: new fields.NumberField({ initial: 2, min: 1, max: 6 }),
           willpower: new fields.NumberField({ initial: 2, min: 1, max: 6 }),
           presence: new fields.NumberField({ initial: 2, min: 1, max: 6 })
-        })
+        }),
+        freeCareerSkills: new fields.ArrayField(new fields.StringField(), { initial: [] }),
+        freeSpecializationSkills: new fields.ArrayField(new fields.StringField(), { initial: [] }),
+        careerSkills: new fields.ArrayField(new fields.StringField(), { initial: [] }),
+        specializationSkills: new fields.ArrayField(new fields.StringField(), { initial: [] })
       }),
       xp: new fields.SchemaField({
         total: new fields.NumberField({ initial: 0 }),

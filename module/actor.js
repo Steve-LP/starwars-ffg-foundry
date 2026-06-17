@@ -140,13 +140,32 @@ export class SWFFGActor extends Actor {
     return this.totalAvailableXp >= cost;
   }
 
+  getSkillFreeRanks(item) {
+    if (!item) return 0;
+    if (this.type !== "character") return item.system.freeRanks || 0;
+    const nameLower = item.name.toLowerCase();
+    const baseFreeRanks = item._source?.system?.freeRanks || 0;
+    
+    let careerBonus = 0;
+    if ((this.system.creation?.freeCareerSkills || []).some(s => s.toLowerCase() === nameLower)) {
+      careerBonus = 1;
+    }
+    
+    let specBonus = 0;
+    if ((this.system.creation?.freeSpecializationSkills || []).some(s => s.toLowerCase() === nameLower)) {
+      specBonus = 1;
+    }
+    
+    return Math.min(2, baseFreeRanks + careerBonus + specBonus);
+  }
+
   calculateSpentSkillXp() {
     if (this.type !== "character") return 0;
     let spent = 0;
     for (const item of this.items) {
       if (item.type === "skill") {
         const val = item.system?.value || 0;
-        const freeRanks = item.system?.freeRanks || 0;
+        const freeRanks = this.getSkillFreeRanks(item);
         const isCareer = item.system?.career || false;
         if (val > freeRanks) {
           // FFG Rules:
@@ -181,17 +200,23 @@ export class SWFFGActor extends Actor {
 
     const isSandbox = this.system.creation?.sandboxMode || false;
 
-    if (!isGM && !isSandbox) {
+    if (!isSandbox) {
       if (!this.system.creation?.isCreationMode) {
-        ui.notifications?.error("Attribute können nach der Charaktererstellung nicht mehr mit XP gesteigert werden!");
-        return;
+        if (!isGM) {
+          ui.notifications?.error("Attribute können nach der Charaktererstellung nicht mehr mit XP gesteigert werden!");
+          return;
+        }
       }
-      if (this.totalAvailableXp < cost) {
+      if (!isGM && this.totalAvailableXp < cost) {
         ui.notifications?.warn(`Nicht genug XP vorhanden! (Kosten: ${cost} XP, Verfügbar: ${this.totalAvailableXp} XP)`);
         return;
       }
-      if (this.currentAttributeXpSpent + cost > this.maxAttributeXpAllowed) {
+      if (!isGM && this.currentAttributeXpSpent + cost > this.maxAttributeXpAllowed) {
         ui.notifications?.warn(`Das Spezies-Limit für Attribute (${this.maxAttributeXpAllowed} XP) wurde erreicht!`);
+        return;
+      }
+      if (this.system.creation?.isCreationMode && currentRawValue >= 5) {
+        ui.notifications?.warn(`Während der Charaktererstellung dürfen Attribute nicht über Wert 5 gesteigert werden!`);
         return;
       }
     }
@@ -254,16 +279,18 @@ export class SWFFGActor extends Actor {
 
     const isSandbox = this.system.creation?.sandboxMode || false;
 
-    if (!isGM && !isSandbox) {
+    if (!isSandbox) {
       if (!this.system.creation?.isCreationMode) {
-        ui.notifications?.error("Fertigkeiten können nach der Charaktererstellung hier nicht gesteigert werden!");
-        return;
+        if (!isGM) {
+          ui.notifications?.error("Fertigkeiten können nach der Charaktererstellung hier nicht gesteigert werden!");
+          return;
+        }
       }
-      if (this.totalAvailableXp < cost) {
+      if (!isGM && this.totalAvailableXp < cost) {
         ui.notifications?.warn(`Nicht genug XP vorhanden! (Kosten: ${cost} XP, Verfügbar: ${this.totalAvailableXp} XP)`);
         return;
       }
-      if (currentRank >= 2) {
+      if (this.system.creation?.isCreationMode && currentRank >= 2) {
         ui.notifications?.warn(`Während der Charaktererstellung dürfen Fertigkeiten nicht über Rang 2 gesteigert werden!`);
         return;
       }
@@ -296,7 +323,7 @@ export class SWFFGActor extends Actor {
     const skillItem = this.items.find(i => i.type === "skill" && i.name.toLowerCase() === skillName.toLowerCase());
     const currentRank = skillItem?.system?.value || 0;
 
-    const freeRanks = skillItem?.system?.freeRanks || 0;
+    const freeRanks = this.getSkillFreeRanks(skillItem);
 
     if (currentRank <= freeRanks) {
       ui.notifications?.warn(`Kann ${skillName} nicht unter den Startwert von ${freeRanks} senken!`);
@@ -402,12 +429,158 @@ export class SWFFGActor extends Actor {
 
   async lockCreation() {
     if (this.type !== "character") return;
+
+    const timestamp = new Date().toLocaleString("de-DE");
+    const userName = game.user?.name || game.users.get(game.userId)?.name || "Unbekannt";
+    const logEntries = [];
+
+    // Start tracking available XP starting from the total baseline
+    let currentLogAvailable = (this.system.creation?.startingXp || 0) + this.dutyXp + (this.system.xp?.earned || 0);
+    const totalXp = currentLogAvailable;
+
+    const addLogEntry = (desc, cost) => {
+      const prevAvailable = currentLogAvailable;
+      currentLogAvailable -= cost;
+      logEntries.push({
+        timestamp,
+        user: userName,
+        change: `-${cost}`,
+        positive: false,
+        description: desc,
+        prevAvailable: prevAvailable,
+        prevTotal: totalXp,
+        available: currentLogAvailable,
+        total: totalXp
+      });
+    };
+
+    // 1. Attribute net upgrades
+    const baseChars = this.system.creation?.baseCharacteristics || { brawn: 2, agility: 2, intellect: 2, cunning: 2, willpower: 2, presence: 2 };
+    for (const char of ["brawn", "agility", "intellect", "cunning", "willpower", "presence"]) {
+      const baseVal = baseChars[char] ?? 2;
+      const currentVal = this._source.system.characteristics?.[char]?.value ?? baseVal;
+      if (currentVal > baseVal) {
+        let cost = 0;
+        for (let v = baseVal + 1; v <= currentVal; v++) {
+          cost += v * 10;
+        }
+        addLogEntry(`Attribut gesteigert: ${char.toUpperCase()} von ${baseVal} auf ${currentVal} (-${cost} XP)`, cost);
+      }
+    }
+
+    // 2. Skill net upgrades
+    for (const item of this.items) {
+      if (item.type === "skill") {
+        const val = item.system.value || 0;
+        const freeRanks = this.getSkillFreeRanks(item);
+        if (val > freeRanks) {
+          const isCareer = item.system.career || false;
+          let cost = 0;
+          for (let r = freeRanks + 1; r <= val; r++) {
+            cost += isCareer ? (r * 5) : ((r * 5) + 5);
+          }
+          addLogEntry(`Rang erworben: ${item.name} von ${freeRanks} auf ${val} (-${cost} XP)`, cost);
+        }
+      }
+    }
+
+    // 3. Specialization net upgrades
+    const specs = this.items.filter(item => item.type === "specialization");
+    const regularSpecs = specs.filter(s => {
+      const cls = s.system?.classification || "career";
+      return ["career", "non-career", "universal"].includes(cls);
+    });
+    for (let i = 1; i < regularSpecs.length; i++) {
+      const spec = regularSpecs[i];
+      let cost = 0;
+      if (spec.system?.customXpCost !== null && spec.system?.customXpCost !== undefined) {
+        cost = spec.system.customXpCost;
+      } else {
+        cost = (i + 1) * 10;
+        if (spec.system?.classification === "non-career") {
+          cost += 10;
+        }
+      }
+      addLogEntry(`Spezialisierung erworben: ${spec.name} (-${cost} XP)`, cost);
+    }
+    const nonRegularSpecs = specs.filter(s => {
+      const cls = s.system?.classification;
+      return ["force-power", "signature-ability"].includes(cls);
+    });
+    for (const spec of nonRegularSpecs) {
+      let cost = 0;
+      if (spec.system?.customXpCost !== null && spec.system?.customXpCost !== undefined) {
+        cost = spec.system.customXpCost;
+      } else {
+        const cls = spec.system.classification;
+        cost = (cls === "signature-ability") ? 30 : 10;
+      }
+      addLogEntry(`Spezialisierungsbaum erworben: ${spec.name} (-${cost} XP)`, cost);
+    }
+
+    // 4. Talent net upgrades
+    for (const item of this.items) {
+      if (item.type === "talent") {
+        const specName = item.system?.specialization?.toLowerCase() || "";
+        const parentSpec = this.items.find(s => s.type === "specialization" && s.name.toLowerCase() === specName);
+        const isSignatureAbility = parentSpec?.system?.classification === "signature-ability";
+        const row = item.system?.row;
+        let cost = 0;
+        if (row !== undefined && row !== null) {
+          cost = isSignatureAbility ? ((row <= 1) ? 10 : 15) : ((row + 1) * 5);
+        } else {
+          cost = (item.system?.tier || 1) * 5;
+        }
+        addLogEntry(`Talent erworben: ${item.name} (-${cost} XP)`, cost);
+      }
+    }
+
+    if (logEntries.length === 0) {
+      logEntries.push({
+        timestamp,
+        user: userName,
+        change: "0",
+        positive: false,
+        description: "Charaktererstellung abgeschlossen (Bogen gesperrt)",
+        prevAvailable: currentLogAvailable,
+        prevTotal: totalXp,
+        available: currentLogAvailable,
+        total: totalXp
+      });
+    }
+
+    // Append to existing log
+    const finalLog = Array.from(this.system.xp?.log || []);
+    finalLog.push(...logEntries);
+    if (finalLog.length > 50) {
+      finalLog.splice(0, finalLog.length - 50);
+    }
+
+    // Commit the derived freeRanks and value to the DB items permanently
+    const skillUpdates = [];
+    for (const item of this.items) {
+      if (item.type === "skill") {
+        const derivedFreeRanks = this.getSkillFreeRanks(item);
+        if (item.system.freeRanks !== derivedFreeRanks || item.system.value < derivedFreeRanks) {
+          skillUpdates.push({
+            _id: item.id,
+            "system.freeRanks": derivedFreeRanks,
+            "system.value": Math.max(item.system.value || 0, derivedFreeRanks)
+          });
+        }
+      }
+    }
+    if (skillUpdates.length > 0) {
+      await this.updateEmbeddedDocuments("Item", skillUpdates);
+    }
+
+    // Update the actor document locking creation mode and updating the xp log array
     await this.update({
       "system.creation.isCreationMode": false,
-      "system.creation.sandboxMode": false
-    }, {
-      xpLogDescription: "Erstellungsphase abgeschlossen (Bogen gesperrt)"
+      "system.creation.sandboxMode": false,
+      "system.xp.log": finalLog
     });
+
     ui.notifications?.info("Charaktererstellung abgeschlossen. Bogen gesperrt.");
   }
 
@@ -608,6 +781,16 @@ export class SWFFGActor extends Actor {
       value: carriedEncumbrance,
       max: 5 + (system.characteristics.brawn.value || 0) + maxEncumbranceBonus
     };
+
+    if (this.type === "character") {
+      for (const item of this.items) {
+        if (item.type === "skill") {
+          const derivedFreeRanks = this.getSkillFreeRanks(item);
+          item.system.freeRanks = derivedFreeRanks;
+          item.system.value = Math.max(item.system.value || 0, derivedFreeRanks);
+        }
+      }
+    }
   }
 
   /**
@@ -663,8 +846,8 @@ export class SWFFGActor extends Actor {
     }
 
     if (changedXpAvailable !== undefined || changedXpTotal !== undefined) {
-      const currentAvailable = this.system.xp?.available ?? 0;
-      const currentTotal = this.system.xp?.total ?? 0;
+      const currentAvailable = this._source.system.xp?.available ?? 0;
+      const currentTotal = this._source.system.xp?.total ?? 0;
       
       const newAvailable = changedXpAvailable !== undefined ? Number(changedXpAvailable) : currentAvailable;
       const newTotal = changedXpTotal !== undefined ? Number(changedXpTotal) : currentTotal;
@@ -673,49 +856,53 @@ export class SWFFGActor extends Actor {
       const diffTotal = newTotal - currentTotal;
       
       if (diffAvailable !== 0 || diffTotal !== 0) {
-        const timestamp = new Date().toLocaleString("de-DE");
-        const userName = game.users.get(user)?.name || game.user?.name || "Unbekannt";
-        
-        let desc = "";
-        let changeVal = 0;
-        
-        if (diffAvailable !== 0 && diffTotal !== 0 && diffAvailable === diffTotal) {
-          desc = "XP erhalten (Zuweisung durch GM/System)";
-          changeVal = diffAvailable;
-        } else if (diffAvailable !== 0) {
-          desc = diffAvailable > 0 ? "XP erstattet / korrigiert" : "XP ausgegeben / korrigiert";
-          changeVal = diffAvailable;
-        } else if (diffTotal !== 0) {
-          desc = "Maximales XP angepasst";
-          changeVal = diffTotal;
-        }
-        
-        if (options.xpLogDescription) {
-          desc = options.xpLogDescription;
-        }
-        
-        const currentLog = Array.from(this.system.xp?.log || []);
-        currentLog.push({
-          timestamp,
-          user: userName,
-          change: changeVal > 0 ? `+${changeVal}` : `${changeVal}`,
-          positive: changeVal > 0,
-          description: desc,
-          prevAvailable: currentAvailable,
-          prevTotal: currentTotal,
-          available: newAvailable,
-          total: newTotal
-        });
-        
-        // Keep last 50 entries to avoid bloating
-        if (currentLog.length > 50) currentLog.shift();
-        
-        if (changed["system.xp.available"] !== undefined || changed["system.xp.total"] !== undefined) {
-          changed["system.xp.log"] = currentLog;
-        } else {
-          if (!changed.system) changed.system = {};
-          if (!changed.system.xp) changed.system.xp = {};
-          changed.system.xp.log = currentLog;
+        const isCreation = this.system.creation?.isCreationMode === true;
+        const isLocking = (changed.system?.creation?.isCreationMode === false) || (changed["system.creation.isCreationMode"] === false);
+        if (!isCreation || isLocking) {
+          const timestamp = new Date().toLocaleString("de-DE");
+          const userName = game.users.get(user)?.name || game.user?.name || "Unbekannt";
+          
+          let desc = "";
+          let changeVal = 0;
+          
+          if (diffAvailable !== 0 && diffTotal !== 0 && diffAvailable === diffTotal) {
+            desc = "XP erhalten (Zuweisung durch GM/System)";
+            changeVal = diffAvailable;
+          } else if (diffAvailable !== 0) {
+            desc = diffAvailable > 0 ? "XP erstattet / korrigiert" : "XP ausgegeben / korrigiert";
+            changeVal = diffAvailable;
+          } else if (diffTotal !== 0) {
+            desc = "Maximales XP angepasst";
+            changeVal = diffTotal;
+          }
+          
+          if (options.xpLogDescription) {
+            desc = options.xpLogDescription;
+          }
+          
+          const currentLog = Array.from(this.system.xp?.log || []);
+          currentLog.push({
+            timestamp,
+            user: userName,
+            change: changeVal > 0 ? `+${changeVal}` : `${changeVal}`,
+            positive: changeVal > 0,
+            description: desc,
+            prevAvailable: currentAvailable,
+            prevTotal: currentTotal,
+            available: newAvailable,
+            total: newTotal
+          });
+          
+          // Keep last 50 entries to avoid bloating
+          if (currentLog.length > 50) currentLog.shift();
+          
+          if (changed["system.xp.available"] !== undefined || changed["system.xp.total"] !== undefined) {
+            changed["system.xp.log"] = currentLog;
+          } else {
+            if (!changed.system) changed.system = {};
+            if (!changed.system.xp) changed.system.xp = {};
+            changed.system.xp.log = currentLog;
+          }
         }
       }
     }
@@ -739,8 +926,13 @@ export class SWFFGActor extends Actor {
       }
     }
 
-    // 2. Add career skills from base career
-    if (careerName) {
+    // 2. Add career skills from base career (using cache if available)
+    const cachedCareerSkills = this.system.creation?.careerSkills || [];
+    if (cachedCareerSkills.length > 0) {
+      for (const s of cachedCareerSkills) {
+        if (s) activeCareerSkills.add(s.toLowerCase());
+      }
+    } else if (careerName) {
       const careerPack = game.packs.get("starwars-ffg-scratch.careers");
       const careerIndex = careerPack ? await careerPack.getIndex({ fields: ["system.careerSkills"] }) : [];
       const careerDoc = careerIndex.find(c => c.name.toLowerCase() === careerName.toLowerCase());
@@ -771,7 +963,7 @@ export class SWFFGActor extends Actor {
       let newValue = skill.system.value;
 
       if (wasCareer && !isStillCareer) {
-        newValue = skill.system.freeRanks || 0;
+        newValue = this.getSkillFreeRanks(skill);
       }
 
       if (skill.system.career !== isStillCareer || skill.system.value !== newValue) {
@@ -783,7 +975,7 @@ export class SWFFGActor extends Actor {
       }
     }
 
-    const prevAvailable = this.system.xp?.available || 0;
+    const prevAvailable = this._source.system.xp?.available || 0;
 
     if (updates.length > 0) {
       await this.updateEmbeddedDocuments("Item", updates);

@@ -907,6 +907,16 @@
   flex: 0 0 50px;
   text-align: center;
 }
+.col-free-career {
+  flex: 0 0 70px;
+  text-align: center;
+  font-size: 11px;
+}
+.col-free-spec {
+  flex: 0 0 70px;
+  text-align: center;
+  font-size: 11px;
+}
 .skill-row {
   color: var(--sw-text-main) !important;
 }

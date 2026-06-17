@@ -169,9 +169,15 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       const currentVal = char.value || 0;
       const baseVal = baseChars[key] !== undefined ? baseChars[key] : 2;
       const cost = (currentVal + 1) * 10;
-      const canAfford = context.isGM || (
-        availableXp >= cost && 
-        ((actorData.currentAttributeXpSpent || 0) + cost <= (actorData.maxAttributeXpAllowed || 0))
+      const isSandbox = actorData.system.creation?.sandboxMode || false;
+      const canUpgrade = !actorData.system.creation?.isCreationMode || currentVal < 5;
+      const canAfford = isSandbox || (
+        canUpgrade && (
+          context.isGM || (
+            availableXp >= cost && 
+            ((actorData.currentAttributeXpSpent || 0) + cost <= (actorData.maxAttributeXpAllowed || 0))
+          )
+        )
       );
       const isDecreasable = currentVal > baseVal;
       context.characteristics[key] = {
@@ -183,6 +189,32 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     }
 
     context.xpSpentInfo = `${actorData.currentAttributeXpSpent || 0} / ${actorData.maxAttributeXpAllowed || 0} XP`;
+
+    const creation = actorData.system.creation || {};
+    const freeCareerCount = (creation.freeCareerSkills || []).length;
+    const freeSpecCount = (creation.freeSpecializationSkills || []).length;
+
+    const hasSpecies = !!actorData.system.biography?.species;
+    const hasCareer = !!actorData.system.biography?.career;
+    const hasSpec = this.actor.items.some(i => i.type === "specialization");
+    const has4FreeCareerSkills = freeCareerCount === 4;
+    const has2FreeSpecSkills = freeSpecCount === 2;
+    const hasNonNegativeXp = this.actor.totalAvailableXp >= 0;
+
+    const canLockCreation = hasSpecies && hasCareer && hasSpec && has4FreeCareerSkills && has2FreeSpecSkills && hasNonNegativeXp;
+
+    const missingRequirements = [];
+    if (!hasSpecies) missingRequirements.push("Spezies fehlt");
+    if (!hasCareer) missingRequirements.push("Karriere fehlt");
+    if (!hasSpec) missingRequirements.push("Spezialisierung fehlt");
+    if (!has4FreeCareerSkills) missingRequirements.push(`Karriere-Fertigkeiten (${freeCareerCount}/4 gewählt)`);
+    if (!has2FreeSpecSkills) missingRequirements.push(`Spezialisierungs-Fertigkeiten (${freeSpecCount}/2 gewählt)`);
+    if (!hasNonNegativeXp) missingRequirements.push("XP im Minus");
+
+    context.canLockCreation = canLockCreation;
+    context.missingRequirementsText = missingRequirements.join(", ");
+    context.freeCareerLimitReached = freeCareerCount >= 4;
+    context.freeSpecLimitReached = freeSpecCount >= 2;
 
     return context;
   }
@@ -285,14 +317,24 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       const greenCount = Math.max(0, Math.abs(charValue - value));
       const yellowCount = Math.max(0, Math.min(charValue, value));
 
-      const isCareer = actorSkill?.system.career || false;
-      const freeRanks = actorSkill?.system.freeRanks || 0;
+      const nameLower = skill.name.toLowerCase();
+      const creation = this.actor.system.creation || {};
+      const isCareerSource = (creation.careerSkills || []).some(s => s.toLowerCase() === nameLower);
+      const isSpecSource = (creation.specializationSkills || []).some(s => s.toLowerCase() === nameLower);
+      const freeCareerSelected = (creation.freeCareerSkills || []).some(s => s.toLowerCase() === nameLower);
+      const freeSpecSelected = (creation.freeSpecializationSkills || []).some(s => s.toLowerCase() === nameLower);
+
+      const isCareer = actorSkill?.system.career || isCareerSource || isSpecSource;
+      const freeRanks = this.actor.getSkillFreeRanks(actorSkill || { name: skill.name, system: { freeRanks: 0 } });
       const nextRank = baseRank + 1;
       const cost = isCareer ? (nextRank * 5) : ((nextRank * 5) + 5);
       const isGM = game.user?.isGM || false;
-      const canAfford = isGM || (
-        this.actor.totalAvailableXp >= cost &&
-        baseRank < 2
+      const isSandbox = this.actor.system.creation?.sandboxMode || false;
+      const canUpgrade = !this.actor.system.creation?.isCreationMode || baseRank < 2;
+      const canAfford = isSandbox || (
+        canUpgrade && (
+          isGM || this.actor.totalAvailableXp >= cost
+        )
       );
       const isDecreasable = baseRank > freeRanks;
 
@@ -308,6 +350,10 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
         cost: cost,
         canAfford: canAfford,
         isDecreasable: isDecreasable,
+        isCareerSource: isCareerSource,
+        isSpecSource: isSpecSource,
+        freeCareerSelected: freeCareerSelected,
+        freeSpecSelected: freeSpecSelected,
         dice: {
           green: Array(greenCount).fill(true),
           yellow: Array(yellowCount).fill(true)
@@ -420,6 +466,48 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
         if (skillName) {
           await this.actor.decreaseSkillRank(skillName);
         }
+      });
+
+      html.find(".free-career-toggle").change(async (event) => {
+        event.preventDefault();
+        const skillName = event.currentTarget.dataset.name;
+        const checked = event.currentTarget.checked;
+        const currentArray = Array.from(this.actor.system.creation?.freeCareerSkills || []);
+        if (checked) {
+          if (currentArray.length >= 4) {
+            event.currentTarget.checked = false;
+            ui.notifications?.warn("Du kannst maximal 4 freie Karriere-Fertigkeiten auswählen!");
+            return;
+          }
+          if (!currentArray.includes(skillName)) {
+            currentArray.push(skillName);
+          }
+        } else {
+          const idx = currentArray.indexOf(skillName);
+          if (idx > -1) currentArray.splice(idx, 1);
+        }
+        await this.actor.update({ "system.creation.freeCareerSkills": currentArray });
+      });
+
+      html.find(".free-spec-toggle").change(async (event) => {
+        event.preventDefault();
+        const skillName = event.currentTarget.dataset.name;
+        const checked = event.currentTarget.checked;
+        const currentArray = Array.from(this.actor.system.creation?.freeSpecializationSkills || []);
+        if (checked) {
+          if (currentArray.length >= 2) {
+            event.currentTarget.checked = false;
+            ui.notifications?.warn("Du kannst maximal 2 freie Spezialisierungs-Fertigkeiten auswählen!");
+            return;
+          }
+          if (!currentArray.includes(skillName)) {
+            currentArray.push(skillName);
+          }
+        } else {
+          const idx = currentArray.indexOf(skillName);
+          if (idx > -1) currentArray.splice(idx, 1);
+        }
+        await this.actor.update({ "system.creation.freeSpecializationSkills": currentArray });
       });
     }
   }
@@ -1050,7 +1138,11 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       await this.actor.updateEmbeddedDocuments("Item", itemsToUpdate);
     }
 
-    return this.actor.update({ "system.biography.career": careerData.name });
+    return this.actor.update({
+      "system.biography.career": careerData.name,
+      "system.creation.careerSkills": careerSkills,
+      "system.creation.freeCareerSkills": []
+    });
   }
 
   async _onDropSpecialization(specData) {
@@ -1129,6 +1221,7 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       }
     }
 
+    const hasAnySpec = this.actor.items.some(i => i.type === "specialization");
     if (itemsToCreate.length > 0) {
       await this.actor.createEmbeddedDocuments("Item", itemsToCreate);
     }
@@ -1136,7 +1229,12 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       await this.actor.updateEmbeddedDocuments("Item", itemsToUpdate);
     }
 
-    return this.actor.update({ "system.biography.specialization": specData.name });
+    const updates = { "system.biography.specialization": specData.name };
+    if (!hasAnySpec) {
+      updates["system.creation.specializationSkills"] = careerSkills;
+      updates["system.creation.freeSpecializationSkills"] = [];
+    }
+    return this.actor.update(updates);
   }
 
   _onOpenCompendium(event) {
@@ -1172,9 +1270,18 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     const confirmRemove = confirm(`Do you want to remove the specialization ${item.name}? This will update your career skills.`);
     if (!confirmRemove) return;
 
-    const remainingSpecs = this.actor.items.filter(i => i.type === "specialization" && i.id !== itemId);
-    const careerName = this.actor.system.biography.career;
+    const isStartingSpec = this.actor.system.biography.specialization === item.name;
+    const updates = {};
+    if (isStartingSpec) {
+      updates["system.biography.specialization"] = "";
+      updates["system.creation.specializationSkills"] = [];
+      updates["system.creation.freeSpecializationSkills"] = [];
+    }
+
     await this.actor.deleteEmbeddedDocuments("Item", [itemId]);
+    if (Object.keys(updates).length > 0) {
+      await this.actor.update(updates);
+    }
     await this.actor.recalculateCareerSkills();
     this.render();
   }
@@ -1209,16 +1316,16 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       "system.xp.available": 0
     };
 
-    // Revert species starting skill bonuses
+    // Revert species starting skill bonuses: radically reset value and freeRanks to 0
     const currentSkills = this.actor.items.filter(i => i.type === "skill");
     const skillUpdates = [];
     for (const skill of currentSkills) {
-      const free = skill.system.freeRanks || 0;
+      const free = skill._source?.system?.freeRanks || skill.system.freeRanks || 0;
       if (free > 0) {
         skillUpdates.push({
           _id: skill.id,
           "system.freeRanks": 0,
-          "system.value": Math.max(0, (skill.system.value || 0) - free)
+          "system.value": 0
         });
       }
     }
@@ -1235,7 +1342,11 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     const confirmRemove = confirm("Do you want to remove your Career? This will also update your career skills.");
     if (!confirmRemove) return;
 
-    await this.actor.update({ "system.biography.career": "" });
+    await this.actor.update({
+      "system.biography.career": "",
+      "system.creation.careerSkills": [],
+      "system.creation.freeCareerSkills": []
+    });
     await this.actor.recalculateCareerSkills();
     this.render();
   }
