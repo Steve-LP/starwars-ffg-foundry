@@ -100,6 +100,10 @@ The UI must allow fluid upgrading and downgrading of all selections, refunding s
 * **Skill Floors:**
   * Free ranks granted by Species, Career, or Specialization choices act as the absolute floor for that skill.
   * The UI must only allow downgrading on ranks that were *actively bought with XP*. Free choices cannot be downgraded to harvest XP.
+* **Species Removal (Reverse Logic):**
+  * When a species is removed from the sheet, all core attributes are reset back to the default **2**s, and starting XP is reset to 0.
+  * All skills that received free starting ranks from the species are radically reset to rank **0** (value = 0, freeRanks = 0).
+  * If the player had purchased additional ranks for these species-granted skills (e.g., upgrading a species-granted rank 1 skill to rank 2), all purchased ranks are deleted and the spent XP is fully refunded to their wallet.
 * **Specialization Floors:**
   * The primary starting specialization (purchased for 0 XP) cannot be deleted unless a replacement starting tree is designated.
   * Secondary purchased trees can be deleted, instantly refunding their full purchase cost (including any Out-of-Career penalties) back into the active ledger.
