@@ -248,10 +248,13 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     if (!has2FreeSpecSkills) missingRequirements.push(`Spezialisierungs-Fertigkeiten (${freeSpecCount}/2 gewählt)`);
     if (!hasNonNegativeXp) missingRequirements.push("XP im Minus");
 
+    const isSandbox = actorData.system.creation?.sandboxMode || false;
+
     context.canLockCreation = canLockCreation;
     context.missingRequirementsText = missingRequirements.join(", ");
     context.freeCareerLimitReached = freeCareerCount >= 4;
     context.freeSpecLimitReached = freeSpecCount >= 2;
+    context.showCareerToggles = isGM || isSandbox;
 
     return context;
   }
@@ -766,6 +769,13 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
   }
 
   async _onCareerToggle(event) {
+    const isGM = game.user?.isGM || false;
+    const isSandbox = this.actor.system.creation?.sandboxMode || false;
+    if (!isGM && !isSandbox) {
+      ui.notifications?.warn("Nur der Spielleiter oder der Sandbox-Modus dürfen Karriere-Status manuell ändern!");
+      return;
+    }
+
     const element = event.currentTarget;
     const itemId = element.dataset.itemId;
     const isCareer = element.checked;

@@ -230,7 +230,15 @@
         {{#each skills as |skill id|}}
         <div class="skill-row row item {{#if skill.career}}career-skill{{/if}}" data-item-id="{{skill.id}}">
           <span class="col-career">
+            {{#if ../showCareerToggles}}
             <input type="checkbox" class="career-toggle" data-item-id="{{skill.id}}" data-name="{{skill.name}}" data-characteristic="{{skill.characteristic}}" data-category="{{skill.category}}" {{checked skill.career}} />
+            {{else}}
+            {{#if skill.career}}
+            <i class="fas fa-check-circle" style="color: var(--sw-accent-orange);" title="Karriere-Fertigkeit"></i>
+            {{else}}
+            <span style="opacity: 0.25;">-</span>
+            {{/if}}
+            {{/if}}
           </span>
           {{#if ../isCreationMode}}
           <span class="col-free-career">
