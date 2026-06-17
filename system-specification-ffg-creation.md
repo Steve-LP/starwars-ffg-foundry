@@ -76,7 +76,7 @@ Players spend XP within specialization talent trees, force power trees, or signa
     * Row 5 (Bottom): **25 XP** per talent.
   * **Force Power Tree Cost Structure:**
     * Basic Power (Top block, typically spanning all columns): **10 XP** base cost.
-    * Upgrades (Rows 1–4): Costs are specific to the nodes as marked in the tree, typically in increments of **5 XP, 10 XP, 15 XP, or 20 XP**.
+    * Upgrades: Unlike standard talent trees, the upgrade costs in Force Power trees **are NOT row-dependent**. Instead, each node has a specific cost printed on its card (typically in increments of **5 XP, 10 XP, 15 XP, or 20 XP**).
   * **Prerequisite Rule:** A talent or force upgrade can only be purchased if it connects via an active grid line to a *previously purchased* adjacent or overhead node. Row 1 nodes (or the basic power) are unlocked by default.
 
 * **B. Signature Ability Trees (3 Rows × 4 Columns):**
