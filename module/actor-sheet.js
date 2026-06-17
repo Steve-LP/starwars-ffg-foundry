@@ -1,8 +1,41 @@
-/**
- * Custom Actor Sheet for Star Wars FFG Ruleset using ActorSheetV2
- */
-const { HandlebarsApplicationMixin } = foundry.applications.api;
-const { ActorSheetV2 } = foundry.applications.sheets;
+const DEFAULT_SKILLS = [
+  { name: "Astrogation", characteristic: "intellect", category: "General" },
+  { name: "Athletics", characteristic: "brawn", category: "General" },
+  { name: "Charm", characteristic: "presence", category: "General" },
+  { name: "Coercion", characteristic: "willpower", category: "General" },
+  { name: "Computers", characteristic: "intellect", category: "General" },
+  { name: "Cool", characteristic: "presence", category: "General" },
+  { name: "Coordination", characteristic: "agility", category: "General" },
+  { name: "Core Worlds", characteristic: "intellect", category: "Knowledge" },
+  { name: "Deception", characteristic: "cunning", category: "General" },
+  { name: "Discipline", characteristic: "willpower", category: "General" },
+  { name: "Education", characteristic: "intellect", category: "Knowledge" },
+  { name: "Leadership", characteristic: "presence", category: "General" },
+  { name: "Lore", characteristic: "intellect", category: "Knowledge" },
+  { name: "Mechanics", characteristic: "intellect", category: "General" },
+  { name: "Medicine", characteristic: "intellect", category: "General" },
+  { name: "Negotiation", characteristic: "presence", category: "General" },
+  { name: "Outer Rim", characteristic: "intellect", category: "Knowledge" },
+  { name: "Perception", characteristic: "cunning", category: "General" },
+  { name: "Piloting - Planetary", characteristic: "agility", category: "General" },
+  { name: "Piloting - Space", characteristic: "agility", category: "General" },
+  { name: "Resilience", characteristic: "brawn", category: "General" },
+  { name: "Skulduggery", characteristic: "cunning", category: "General" },
+  { name: "Stealth", characteristic: "agility", category: "General" },
+  { name: "Streetwise", characteristic: "cunning", category: "General" },
+  { name: "Survival", characteristic: "cunning", category: "General" },
+  { name: "Underworld", characteristic: "intellect", category: "Knowledge" },
+  { name: "Vigilance", characteristic: "willpower", category: "General" },
+  { name: "Warfare", characteristic: "intellect", category: "Knowledge" },
+  { name: "Xenology", characteristic: "intellect", category: "Knowledge" },
+  // Combat Skills
+  { name: "Brawl", characteristic: "brawn", category: "Combat" },
+  { name: "Gunnery", characteristic: "agility", category: "Combat" },
+  { name: "Lightsaber", characteristic: "brawn", category: "Combat" },
+  { name: "Melee", characteristic: "brawn", category: "Combat" },
+  { name: "Ranged - Light", characteristic: "agility", category: "Combat" },
+  { name: "Ranged - Heavy", characteristic: "agility", category: "Combat" }
+];
 
 export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
   static DEFAULT_OPTIONS = {
@@ -271,44 +304,17 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       }
     }
 
-    // Default FFG list if none present
-    const defaultList = [
-      { name: "Astrogation", characteristic: "intellect", category: "General" },
-      { name: "Athletics", characteristic: "brawn", category: "General" },
-      { name: "Charm", characteristic: "presence", category: "General" },
-      { name: "Coercion", characteristic: "willpower", category: "General" },
-      { name: "Computers", characteristic: "intellect", category: "General" },
-      { name: "Cool", characteristic: "presence", category: "General" },
-      { name: "Coordination", characteristic: "agility", category: "General" },
-      { name: "Deception", characteristic: "cunning", category: "General" },
-      { name: "Discipline", characteristic: "willpower", category: "General" },
-      { name: "Leadership", characteristic: "presence", category: "General" },
-      { name: "Mechanics", characteristic: "intellect", category: "General" },
-      { name: "Medicine", characteristic: "intellect", category: "General" },
-      { name: "Negotiation", characteristic: "presence", category: "General" },
-      { name: "Perception", characteristic: "cunning", category: "General" },
-      { name: "Piloting (Planetary)", characteristic: "agility", category: "General" },
-      { name: "Piloting (Space)", characteristic: "agility", category: "General" },
-      { name: "Resilience", characteristic: "brawn", category: "General" },
-      { name: "Skulduggery", characteristic: "cunning", category: "General" },
-      { name: "Stealth", characteristic: "agility", category: "General" },
-      { name: "Streetwise", characteristic: "cunning", category: "General" },
-      { name: "Survival", characteristic: "cunning", category: "General" },
-      { name: "Vigilance", characteristic: "willpower", category: "General" },
-      // Combat Skills
-      { name: "Brawl", characteristic: "brawn", category: "Combat" },
-      { name: "Gunnery", characteristic: "agility", category: "Combat" },
-      { name: "Melee", characteristic: "brawn", category: "Combat" },
-      { name: "Ranged (Light)", characteristic: "agility", category: "Combat" },
-      { name: "Ranged (Heavy)", characteristic: "agility", category: "Combat" }
-    ];
-
+    const processedNames = new Set();
     const finalSkills = {};
-    for (const skill of defaultList) {
+
+    for (const skill of DEFAULT_SKILLS) {
+      const nameLower = skill.name.toLowerCase();
+      processedNames.add(nameLower);
+
       // Find matching item in actor items (for rank values)
-      const actorSkill = currentSkills.find(s => s.name.toLowerCase() === skill.name.toLowerCase());
+      const actorSkill = currentSkills.find(s => s.name.toLowerCase() === nameLower);
       const baseRank = Math.max(0, actorSkill?.system.value || 0);
-      const skillMod = skillModifiers[skill.name.toLowerCase()] || 0;
+      const skillMod = skillModifiers[nameLower] || 0;
       const value = Math.max(0, baseRank + skillMod);
 
       const characteristic = skill.characteristic;
@@ -317,7 +323,6 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       const greenCount = Math.max(0, Math.abs(charValue - value));
       const yellowCount = Math.max(0, Math.min(charValue, value));
 
-      const nameLower = skill.name.toLowerCase();
       const creation = this.actor.system.creation || {};
       const isCareerSource = (creation.careerSkills || []).some(s => s.toLowerCase() === nameLower);
       const isSpecSource = (creation.specializationSkills || []).some(s => s.toLowerCase() === nameLower);
@@ -347,6 +352,64 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
         modifier: skillMod,
         career: isCareer,
         id: actorSkill?._id || null,
+        cost: cost,
+        canAfford: canAfford,
+        isDecreasable: isDecreasable,
+        isCareerSource: isCareerSource,
+        isSpecSource: isSpecSource,
+        freeCareerSelected: freeCareerSelected,
+        freeSpecSelected: freeSpecSelected,
+        dice: {
+          green: Array(greenCount).fill(true),
+          yellow: Array(yellowCount).fill(true)
+        }
+      };
+    }
+
+    // Append any custom unmatched skill items on the actor
+    for (const actorSkill of currentSkills) {
+      const skillNameLower = actorSkill.name.toLowerCase();
+      if (processedNames.has(skillNameLower)) continue;
+
+      const baseRank = Math.max(0, actorSkill.system.value || 0);
+      const skillMod = skillModifiers[skillNameLower] || 0;
+      const value = Math.max(0, baseRank + skillMod);
+
+      const characteristic = actorSkill.system.characteristic || "intellect";
+      const charValue = Math.max(0, this.actor.system.characteristics[characteristic]?.value || 0);
+
+      const greenCount = Math.max(0, Math.abs(charValue - value));
+      const yellowCount = Math.max(0, Math.min(charValue, value));
+
+      const creation = this.actor.system.creation || {};
+      const isCareerSource = (creation.careerSkills || []).some(s => s.toLowerCase() === skillNameLower);
+      const isSpecSource = (creation.specializationSkills || []).some(s => s.toLowerCase() === skillNameLower);
+      const freeCareerSelected = (creation.freeCareerSkills || []).some(s => s.toLowerCase() === skillNameLower);
+      const freeSpecSelected = (creation.freeSpecializationSkills || []).some(s => s.toLowerCase() === skillNameLower);
+
+      const isCareer = actorSkill.system.career || isCareerSource || isSpecSource;
+      const freeRanks = this.actor.getSkillFreeRanks(actorSkill);
+      const nextRank = baseRank + 1;
+      const cost = isCareer ? (nextRank * 5) : ((nextRank * 5) + 5);
+      const isGM = game.user?.isGM || false;
+      const isSandbox = this.actor.system.creation?.sandboxMode || false;
+      const canUpgrade = !this.actor.system.creation?.isCreationMode || baseRank < 2;
+      const canAfford = isSandbox || (
+        canUpgrade && (
+          isGM || this.actor.totalAvailableXp >= cost
+        )
+      );
+      const isDecreasable = baseRank > freeRanks;
+
+      finalSkills[actorSkill.name] = {
+        name: actorSkill.name,
+        characteristic: characteristic,
+        category: actorSkill.system.category || "General",
+        baseValue: baseRank,
+        value: value,
+        modifier: skillMod,
+        career: isCareer,
+        id: actorSkill._id,
         cost: cost,
         canAfford: canAfford,
         isDecreasable: isDecreasable,
@@ -970,35 +1033,7 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       "system.xp.available": xpTotal
     };
 
-    const skillList = [
-      { name: "Astrogation", characteristic: "intellect", category: "General" },
-      { name: "Athletics", characteristic: "brawn", category: "General" },
-      { name: "Charm", characteristic: "presence", category: "General" },
-      { name: "Coercion", characteristic: "willpower", category: "General" },
-      { name: "Computers", characteristic: "intellect", category: "General" },
-      { name: "Cool", characteristic: "presence", category: "General" },
-      { name: "Coordination", characteristic: "agility", category: "General" },
-      { name: "Deception", characteristic: "cunning", category: "General" },
-      { name: "Discipline", characteristic: "willpower", category: "General" },
-      { name: "Leadership", characteristic: "presence", category: "General" },
-      { name: "Mechanics", characteristic: "intellect", category: "General" },
-      { name: "Medicine", characteristic: "intellect", category: "General" },
-      { name: "Negotiation", characteristic: "presence", category: "General" },
-      { name: "Perception", characteristic: "cunning", category: "General" },
-      { name: "Piloting (Planetary)", characteristic: "agility", category: "General" },
-      { name: "Piloting (Space)", characteristic: "agility", category: "General" },
-      { name: "Resilience", characteristic: "brawn", category: "General" },
-      { name: "Skulduggery", characteristic: "cunning", category: "General" },
-      { name: "Stealth", characteristic: "agility", category: "General" },
-      { name: "Streetwise", characteristic: "cunning", category: "General" },
-      { name: "Survival", characteristic: "cunning", category: "General" },
-      { name: "Vigilance", characteristic: "willpower", category: "General" },
-      { name: "Brawl", characteristic: "brawn", category: "Combat" },
-      { name: "Gunnery", characteristic: "agility", category: "Combat" },
-      { name: "Melee", characteristic: "brawn", category: "Combat" },
-      { name: "Ranged (Light)", characteristic: "agility", category: "Combat" },
-      { name: "Ranged (Heavy)", characteristic: "agility", category: "Combat" }
-    ];
+    const skillList = DEFAULT_SKILLS;
 
     // Use specialAbilities from Oggdude imported species data if available
     let specialAbilitiesText = speciesData.system.specialAbilities || "";
@@ -1073,35 +1108,7 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 
     const currentSkills = this.actor.items.filter(i => i.type === "skill");
     
-    const defaultList = [
-      { name: "Astrogation", characteristic: "intellect", category: "General" },
-      { name: "Athletics", characteristic: "brawn", category: "General" },
-      { name: "Charm", characteristic: "presence", category: "General" },
-      { name: "Coercion", characteristic: "willpower", category: "General" },
-      { name: "Computers", characteristic: "intellect", category: "General" },
-      { name: "Cool", characteristic: "presence", category: "General" },
-      { name: "Coordination", characteristic: "agility", category: "General" },
-      { name: "Deception", characteristic: "cunning", category: "General" },
-      { name: "Discipline", characteristic: "willpower", category: "General" },
-      { name: "Leadership", characteristic: "presence", category: "General" },
-      { name: "Mechanics", characteristic: "intellect", category: "General" },
-      { name: "Medicine", characteristic: "intellect", category: "General" },
-      { name: "Negotiation", characteristic: "presence", category: "General" },
-      { name: "Perception", characteristic: "cunning", category: "General" },
-      { name: "Piloting (Planetary)", characteristic: "agility", category: "General" },
-      { name: "Piloting (Space)", characteristic: "agility", category: "General" },
-      { name: "Resilience", characteristic: "brawn", category: "General" },
-      { name: "Skulduggery", characteristic: "cunning", category: "General" },
-      { name: "Stealth", characteristic: "agility", category: "General" },
-      { name: "Streetwise", characteristic: "cunning", category: "General" },
-      { name: "Survival", characteristic: "cunning", category: "General" },
-      { name: "Vigilance", characteristic: "willpower", category: "General" },
-      { name: "Brawl", characteristic: "brawn", category: "Combat" },
-      { name: "Gunnery", characteristic: "agility", category: "Combat" },
-      { name: "Melee", characteristic: "brawn", category: "Combat" },
-      { name: "Ranged (Light)", characteristic: "agility", category: "Combat" },
-      { name: "Ranged (Heavy)", characteristic: "agility", category: "Combat" }
-    ];
+    const defaultList = DEFAULT_SKILLS;
 
     const itemsToCreate = [];
     const itemsToUpdate = [];
@@ -1151,35 +1158,7 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 
     const currentSkills = this.actor.items.filter(i => i.type === "skill");
     
-    const defaultList = [
-      { name: "Astrogation", characteristic: "intellect", category: "General" },
-      { name: "Athletics", characteristic: "brawn", category: "General" },
-      { name: "Charm", characteristic: "presence", category: "General" },
-      { name: "Coercion", characteristic: "willpower", category: "General" },
-      { name: "Computers", characteristic: "intellect", category: "General" },
-      { name: "Cool", characteristic: "presence", category: "General" },
-      { name: "Coordination", characteristic: "agility", category: "General" },
-      { name: "Deception", characteristic: "cunning", category: "General" },
-      { name: "Discipline", characteristic: "willpower", category: "General" },
-      { name: "Leadership", characteristic: "presence", category: "General" },
-      { name: "Mechanics", characteristic: "intellect", category: "General" },
-      { name: "Medicine", characteristic: "intellect", category: "General" },
-      { name: "Negotiation", characteristic: "presence", category: "General" },
-      { name: "Perception", characteristic: "cunning", category: "General" },
-      { name: "Piloting (Planetary)", characteristic: "agility", category: "General" },
-      { name: "Piloting (Space)", characteristic: "agility", category: "General" },
-      { name: "Resilience", characteristic: "brawn", category: "General" },
-      { name: "Skulduggery", characteristic: "cunning", category: "General" },
-      { name: "Stealth", characteristic: "agility", category: "General" },
-      { name: "Streetwise", characteristic: "cunning", category: "General" },
-      { name: "Survival", characteristic: "cunning", category: "General" },
-      { name: "Vigilance", characteristic: "willpower", category: "General" },
-      { name: "Brawl", characteristic: "brawn", category: "Combat" },
-      { name: "Gunnery", characteristic: "agility", category: "Combat" },
-      { name: "Melee", characteristic: "brawn", category: "Combat" },
-      { name: "Ranged (Light)", characteristic: "agility", category: "Combat" },
-      { name: "Ranged (Heavy)", characteristic: "agility", category: "Combat" }
-    ];
+    const defaultList = DEFAULT_SKILLS;
 
     const itemsToCreate = [];
     const itemsToUpdate = [];

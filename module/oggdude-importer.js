@@ -117,13 +117,16 @@ export function parseOggdudeSpecies(xmlString) {
     // Map Oggdude skill keys to standard display names
     const skillMap = {
       "ASTRO": "Astrogation", "ATHL": "Athletics", "CHARM": "Charm", "COERC": "Coercion",
-      "COMP": "Computers", "COOL": "Cool", "COORD": "Coordination", "DECEP": "Deception",
-      "DISC": "Discipline", "LEAD": "Leadership", "MECH": "Mechanics", "MED": "Medicine",
-      "NEGOT": "Negotiation", "PERC": "Perception", "PILOTPL": "Piloting (Planetary)",
-      "PILOTSP": "Piloting (Space)", "RESIL": "Resilience", "SKULD": "Skulduggery",
-      "STEAL": "Stealth", "STREET": "Streetwise", "SURV": "Survival", "VIGIL": "Vigilance",
-      "BRAWL": "Brawl", "GUNN": "Gunnery", "MELEE": "Melee", "RANGELT": "Ranged (Light)",
-      "RANGEHV": "Ranged (Heavy)"
+      "COMP": "Computers", "COOL": "Cool", "COORD": "Coordination", "DEC": "Deception",
+      "DECEP": "Deception", "DISC": "Discipline", "LEAD": "Leadership", "MECH": "Mechanics",
+      "MED": "Medicine", "NEG": "Negotiation", "NEGOT": "Negotiation", "PERC": "Perception",
+      "PILOTPL": "Piloting - Planetary", "PILOTSP": "Piloting - Space", "RESIL": "Resilience",
+      "SKUL": "Skulduggery", "SKULD": "Skulduggery", "STEAL": "Stealth", "SW": "Streetwise",
+      "STREET": "Streetwise", "SURV": "Survival", "VIGIL": "Vigilance", "BRAWL": "Brawl",
+      "GUNN": "Gunnery", "MELEE": "Melee", "RANGLT": "Ranged - Light", "RANGELT": "Ranged - Light",
+      "RANGHVY": "Ranged - Heavy", "RANGEHV": "Ranged - Heavy", "CORE": "Core Worlds",
+      "EDU": "Education", "LORE": "Lore", "OUT": "Outer Rim", "UND": "Underworld",
+      "WARF": "Warfare", "XEN": "Xenology", "LTSABER": "Lightsaber", "LIGHTSABER": "Lightsaber"
     };
     const mappedName = skillMap[modKey.toUpperCase()] || modKey;
     skillModList.push(`${mappedName}:${startRank}`);
@@ -142,13 +145,16 @@ export function parseOggdudeSpecies(xmlString) {
         
         const skillMap = {
           "ASTRO": "Astrogation", "ATHL": "Athletics", "CHARM": "Charm", "COERC": "Coercion",
-          "COMP": "Computers", "COOL": "Cool", "COORD": "Coordination", "DECEP": "Deception",
-          "DISC": "Discipline", "LEAD": "Leadership", "MECH": "Mechanics", "MED": "Medicine",
-          "NEGOT": "Negotiation", "PERC": "Perception", "PILOTPL": "Piloting (Planetary)",
-          "PILOTSP": "Piloting (Space)", "RESIL": "Resilience", "SKULD": "Skulduggery",
-          "STEAL": "Stealth", "STREET": "Streetwise", "SURV": "Survival", "VIGIL": "Vigilance",
-          "BRAWL": "Brawl", "GUNN": "Gunnery", "MELEE": "Melee", "RANGELT": "Ranged (Light)",
-          "RANGEHV": "Ranged (Heavy)"
+          "COMP": "Computers", "COOL": "Cool", "COORD": "Coordination", "DEC": "Deception",
+          "DECEP": "Deception", "DISC": "Discipline", "LEAD": "Leadership", "MECH": "Mechanics",
+          "MED": "Medicine", "NEG": "Negotiation", "NEGOT": "Negotiation", "PERC": "Perception",
+          "PILOTPL": "Piloting - Planetary", "PILOTSP": "Piloting - Space", "RESIL": "Resilience",
+          "SKUL": "Skulduggery", "SKULD": "Skulduggery", "STEAL": "Stealth", "SW": "Streetwise",
+          "STREET": "Streetwise", "SURV": "Survival", "VIGIL": "Vigilance", "BRAWL": "Brawl",
+          "GUNN": "Gunnery", "MELEE": "Melee", "RANGLT": "Ranged - Light", "RANGELT": "Ranged - Light",
+          "RANGHVY": "Ranged - Heavy", "RANGEHV": "Ranged - Heavy", "CORE": "Core Worlds",
+          "EDU": "Education", "LORE": "Lore", "OUT": "Outer Rim", "UND": "Underworld",
+          "WARF": "Warfare", "XEN": "Xenology", "LTSABER": "Lightsaber", "LIGHTSABER": "Lightsaber"
         };
         const mappedName = skillMap[modKey.toUpperCase()] || modKey;
         choiceSkills.push(`${mappedName}:${startRank}`);

@@ -50,8 +50,8 @@ async function importSkills() {
       { name: "Medicine", characteristic: "intellect", category: "General" },
       { name: "Negotiation", characteristic: "presence", category: "General" },
       { name: "Perception", characteristic: "cunning", category: "General" },
-      { name: "Piloting-Planetary", characteristic: "agility", category: "General" },
-      { name: "Piloting-Space", characteristic: "agility", category: "General" },
+      { name: "Piloting - Planetary", characteristic: "agility", category: "General" },
+      { name: "Piloting - Space", characteristic: "agility", category: "General" },
       { name: "Resilience", characteristic: "brawn", category: "General" },
       { name: "Skulduggery", characteristic: "cunning", category: "General" },
       { name: "Stealth", characteristic: "agility", category: "General" },
@@ -61,8 +61,16 @@ async function importSkills() {
       { name: "Brawl", characteristic: "brawn", category: "Combat" },
       { name: "Gunnery", characteristic: "agility", category: "Combat" },
       { name: "Melee", characteristic: "brawn", category: "Combat" },
-      { name: "Ranged-Light", characteristic: "agility", category: "Combat" },
-      { name: "Ranged-Heavy", characteristic: "agility", category: "Combat" }
+      { name: "Ranged - Light", characteristic: "agility", category: "Combat" },
+      { name: "Ranged - Heavy", characteristic: "agility", category: "Combat" },
+      { name: "Core Worlds", characteristic: "intellect", category: "Knowledge" },
+      { name: "Education", characteristic: "intellect", category: "Knowledge" },
+      { name: "Lore", characteristic: "intellect", category: "Knowledge" },
+      { name: "Outer Rim", characteristic: "intellect", category: "Knowledge" },
+      { name: "Underworld", characteristic: "intellect", category: "Knowledge" },
+      { name: "Warfare", characteristic: "intellect", category: "Knowledge" },
+      { name: "Xenology", characteristic: "intellect", category: "Knowledge" },
+      { name: "Lightsaber", characteristic: "brawn", category: "Combat" }
     ];
 
     const lines = [];
