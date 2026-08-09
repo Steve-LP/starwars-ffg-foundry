@@ -1893,4 +1893,58 @@ export class SWFFGActor extends Actor {
       this.recalculateCareerSkills();
     }
   }
+
+  /**
+   * Helper function for the Character Builder Dialog to fetch specializations.
+   * Returns curated specializations for a career, plus universal ones.
+   * @param {string} careerKey - The key of the selected career.
+   * @returns {Promise<{careerSpecs: Object[], universalSpecs: Object[], noCurationAvailable: boolean}>}
+   */
+  static async getSpecializationsForCareer(careerKey) {
+    const specsPack = game.packs.get("starwars-ffg-scratch.specializations");
+    const careersPack = game.packs.get("starwars-ffg-scratch.careers");
+    
+    let careerSpecs = [];
+    let universalSpecs = [];
+    let noCurationAvailable = true;
+
+    if (!specsPack) return { careerSpecs, universalSpecs, noCurationAvailable };
+
+    const specDocs = await specsPack.getDocuments();
+
+    // Find the universal specializations
+    for (const spec of specDocs) {
+      if (spec.system.isUniversal) {
+        universalSpecs.push(spec);
+      }
+    }
+
+    // Try to find the career to get its linked specializations
+    if (careerKey && careersPack) {
+      const careerDocs = await careersPack.getDocuments();
+      const career = careerDocs.find(c => (c.system.key || "").toLowerCase() === careerKey.toLowerCase());
+      
+      if (career && career.system.specializations && career.system.specializations.length > 0) {
+        noCurationAvailable = false;
+        const linkedKeys = career.system.specializations.map(k => k.toLowerCase());
+        for (const spec of specDocs) {
+          const sKey = (spec.system.key || "").toLowerCase();
+          if (linkedKeys.includes(sKey)) {
+            careerSpecs.push(spec);
+          }
+        }
+      }
+    }
+
+    // Fallback: If no curation is available, return all non-universal specs as "career specs"
+    if (noCurationAvailable) {
+      careerSpecs = specDocs.filter(s => !s.system.isUniversal);
+    }
+
+    // Sort alphabetically
+    careerSpecs.sort((a, b) => a.name.localeCompare(b.name));
+    universalSpecs.sort((a, b) => a.name.localeCompare(b.name));
+
+    return { careerSpecs, universalSpecs, noCurationAvailable };
+  }
 }
