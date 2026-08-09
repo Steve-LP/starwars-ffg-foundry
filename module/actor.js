@@ -1629,6 +1629,7 @@ export class SWFFGActor extends Actor {
     if (this.type !== "character") return;
     
     // Cascading removes: remove starting specialization since it's tied to the career
+    // MUST BE DONE FIRST to avoid race condition with ledger updates!
     const startingSpecName = this.system.biography?.specialization;
     if (startingSpecName) {
       const startingSpecItem = this.items.find(i => i.type === "specialization" && i.name === startingSpecName);
@@ -1637,12 +1638,36 @@ export class SWFFGActor extends Actor {
       }
     }
 
-    await this.update({
+    // 1. Identify career skills from the career snapshot
+    const careerSnapshot = this.system.creation?.careerSnapshot;
+    let careerSkills = [];
+    if (careerSnapshot && careerSnapshot.careerSkills) {
+      careerSkills = careerSnapshot.careerSkills;
+    }
+
+    // 2. Reset ledger skill upgrades for these career skills
+    const updates = {
       "system.biography.career": "",
       "system.creation.careerSnapshot": null,
       "system.creation.freeCareerSkills": [],
       "system.creation.ledger.freeCareerSkills": []
-    });
+    };
+
+    if (this.system.creation?.ledger?.upgrades?.skills) {
+      const currentSkillUpgrades = foundry.utils.deepClone(this.system.creation.ledger.upgrades.skills);
+      let changed = false;
+      for (const skillName of careerSkills) {
+        if (currentSkillUpgrades[skillName]) {
+          currentSkillUpgrades[skillName] = 0;
+          changed = true;
+        }
+      }
+      if (changed) {
+        updates["system.creation.ledger.upgrades.skills"] = currentSkillUpgrades;
+      }
+    }
+
+    await this.update(updates);
     
     if (shouldRecalculate) await this.recalculateCareerSkills();
   }
@@ -1706,14 +1731,42 @@ export class SWFFGActor extends Actor {
     if (!item) return;
 
     const updates = {};
-    if (isStartingSpec || this.system.biography.specialization === item.name) {
+    
+    // 1. Delete all talents that belong to this specialization
+    const talentIdsToDelete = this.items
+      .filter(i => i.type === "talent" && (i.system.specialization === item.name || i.system.specialization === item.id))
+      .map(i => i.id);
+      
+    // 2. Identify career skills of this specialization
+    let specCareerSkills = [];
+    if (item.system.careerSkills) {
+      specCareerSkills = item.system.careerSkills.split(",").map(s => s.trim().toLowerCase()).filter(s => s);
+    }
+    
+    // 3. Reset ledger skill upgrades for these skills
+    if (this.system.creation?.ledger?.upgrades?.skills) {
+      const currentSkillUpgrades = foundry.utils.deepClone(this.system.creation.ledger.upgrades.skills);
+      let changed = false;
+      for (const skillName of specCareerSkills) {
+        if (currentSkillUpgrades[skillName]) {
+          currentSkillUpgrades[skillName] = 0;
+          changed = true;
+        }
+      }
+      if (changed) {
+        updates["system.creation.ledger.upgrades.skills"] = currentSkillUpgrades;
+      }
+    }
+
+    if (isStartingSpec || this.system.biography?.specialization === item.name) {
       updates["system.biography.specialization"] = "";
       updates["system.creation.specializationSnapshot"] = null;
       updates["system.creation.freeSpecializationSkills"] = [];
       updates["system.creation.ledger.freeSpecializationSkills"] = [];
     }
 
-    await this.deleteEmbeddedDocuments("Item", [itemId]);
+    const idsToDelete = [itemId, ...talentIdsToDelete];
+    await this.deleteEmbeddedDocuments("Item", idsToDelete);
     if (Object.keys(updates).length > 0) {
       await this.update(updates);
     }
