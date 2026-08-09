@@ -43,77 +43,77 @@
     {
       "name": "adversaries",
       "label": "Adversaries (SWA)",
-      "path": "packs/adversaries.db",
+      "path": "packs/adversaries",
       "type": "Actor",
       "system": "starwars-ffg-scratch"
     },
     {
       "name": "skills",
       "label": "Skills (SRD)",
-      "path": "packs/skills.db",
+      "path": "packs/skills",
       "type": "Item",
       "system": "starwars-ffg-scratch"
     },
     {
       "name": "species",
       "label": "Species (SRD)",
-      "path": "packs/species.db",
+      "path": "packs/species",
       "type": "Item",
       "system": "starwars-ffg-scratch"
     },
     {
       "name": "careers",
       "label": "Careers (SRD)",
-      "path": "packs/careers.db",
+      "path": "packs/careers",
       "type": "Item",
       "system": "starwars-ffg-scratch"
     },
     {
       "name": "specializations",
       "label": "Specializations (SRD)",
-      "path": "packs/specializations.db",
+      "path": "packs/specializations",
       "type": "Item",
       "system": "starwars-ffg-scratch"
     },
     {
       "name": "talents",
       "label": "Talents (Oggdude)",
-      "path": "packs/talents.db",
+      "path": "packs/talents",
       "type": "Item",
       "system": "starwars-ffg-scratch"
     },
     {
       "name": "critical-injuries",
       "label": "Critical Injuries Table",
-      "path": "packs/critical-injuries.db",
+      "path": "packs/critical-injuries",
       "type": "RollTable",
       "system": "starwars-ffg-scratch"
     },
     {
       "name": "critical-injuries-vehicles",
       "label": "Vehicle Critical Hits Table",
-      "path": "packs/critical-injuries-vehicles.db",
+      "path": "packs/critical-injuries-vehicles",
       "type": "RollTable",
       "system": "starwars-ffg-scratch"
     },
     {
       "name": "weapons",
       "label": "Weapons (SRD)",
-      "path": "packs/weapons.db",
+      "path": "packs/weapons",
       "type": "Item",
       "system": "starwars-ffg-scratch"
     },
     {
       "name": "armor",
       "label": "Armor (SRD)",
-      "path": "packs/armor.db",
+      "path": "packs/armor",
       "type": "Item",
       "system": "starwars-ffg-scratch"
     },
     {
       "name": "gear",
       "label": "Gear (SRD)",
-      "path": "packs/gear.db",
+      "path": "packs/gear",
       "type": "Item",
       "system": "starwars-ffg-scratch"
     }

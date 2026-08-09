@@ -154,6 +154,7 @@ function compileSpecies() {
         if (optionsSection) {
           const optionRegex = /<Option>([\s\S]*?)<\/Option>/gi;
           let oMatch;
+          let optionIndex = 0;
           while ((oMatch = optionRegex.exec(optionsSection)) !== null) {
             const optionXml = oMatch[1];
             const optName = getTag(optionXml, 'Name');
@@ -161,17 +162,19 @@ function compileSpecies() {
 
             if (choiceName.toLowerCase() === "skills") {
               // Parse choice-based skills
-              const optModsSection = getTag(optionXml, 'SkillModifiers');
-              if (optModsSection) {
-                const optModRegex = /<SkillModifier>([\s\S]*?)<\/SkillModifier>/gi;
-                let omMatch;
-                while ((omMatch = optModRegex.exec(optModsSection)) !== null) {
-                  const omodXml = omMatch[1];
-                  const modKey = getTag(omodXml, 'Key').toUpperCase();
-                  const startRank = parseInt(getTag(omodXml, 'RankStart')) || 1;
-                  const mappedName = skillMap[modKey] || modKey;
-                  if (!skillModList.includes(`${mappedName}:${startRank}`)) {
-                    skillModList.push(`${mappedName}:${startRank}`);
+              if (optionIndex === 0) {
+                const optModsSection = getTag(optionXml, 'SkillModifiers');
+                if (optModsSection) {
+                  const optModRegex = /<SkillModifier>([\s\S]*?)<\/SkillModifier>/gi;
+                  let omMatch;
+                  while ((omMatch = optModRegex.exec(optModsSection)) !== null) {
+                    const omodXml = omMatch[1];
+                    const modKey = getTag(omodXml, 'Key').toUpperCase();
+                    const startRank = parseInt(getTag(omodXml, 'RankStart')) || 1;
+                    const mappedName = skillMap[modKey] || modKey;
+                    if (!skillModList.includes(`${mappedName}:${startRank}`)) {
+                      skillModList.push(`${mappedName}:${startRank}`);
+                    }
                   }
                 }
               }
@@ -179,6 +182,7 @@ function compileSpecies() {
               // Non-skill choice options are special abilities
               specialAbilitiesList.push(`<strong>${optName}</strong>: ${optDesc.trim()}`);
             }
+            optionIndex++;
           }
         }
       }

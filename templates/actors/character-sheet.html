@@ -55,6 +55,15 @@
               {{#if isCreationOrGM}}
               <a class="remove-bio" data-type="species" title="Remove Species"><i class="fas fa-times-circle"></i></a>
               {{/if}}
+              {{#if speciesHasChoice}}
+                <div class="species-choice-wrapper" style="margin-top: 4px; display: block; width: 100%;">
+                  <select name="system.creation.ledger.speciesSkillChoice" {{#if lockFields}}disabled{{/if}} style="font-size: 11px; height: 18px; padding: 0 2px; width: 100%; border: 1px solid #7a7975; border-radius: 3px; background: rgba(0,0,0,0.05); color: #333; cursor: pointer;">
+                    {{#each speciesChoiceOptions}}
+                      <option value="{{this.value}}" {{#if this.selected}}selected{{/if}}>{{this.label}}</option>
+                    {{/each}}
+                  </select>
+                </div>
+              {{/if}}
             {{else}}
               <span class="bio-placeholder">Drop Species</span>
             {{/if}}

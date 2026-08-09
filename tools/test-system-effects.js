@@ -638,7 +638,25 @@
 
     const testSheet = new SWFFGActorSheet({ document: actor });
 
-    // Mock Species Drop: Twi'lek (grants 1 rank in Charm)
+    // Stub DialogV2 to resolve with "Deception"
+    const oldDialog = foundry.applications.api.DialogV2;
+    foundry.applications.api.DialogV2 = class MockDialogV2 {
+      constructor(config) {
+        this.config = config;
+      }
+      render() {
+        setTimeout(() => {
+          this.config.buttons[0].callback(null, null, {
+            element: {
+              find: () => ({ val: () => "Deception" })
+            }
+          });
+        }, 0);
+        return this;
+      }
+    };
+
+    // Mock Species Drop: Twi'lek (grants 1 rank in Charm or Deception, choice is mocked to Deception)
     const mockSpeciesData = {
       name: "Twi'lek",
       type: "species",
@@ -661,9 +679,20 @@
     };
     await testSheet._onDropSpecies(mockSpeciesData);
 
+    // Restore DialogV2
+    foundry.applications.api.DialogV2 = oldDialog;
+
     let testCharm = actor.items.find(i => i.name.toLowerCase() === "charm");
-    assert(testCharm.system.freeRanks === 1, "Twi'lek drop set Charm free ranks to 1");
-    assert(testCharm.system.value === 1, "Charm starts at rank 1");
+    let testDeception = actor.items.find(i => i.name.toLowerCase() === "deception");
+    assert(testCharm.system.freeRanks === 0, "Twi'lek drop set Charm free ranks to 0 when choosing Deception");
+    assert(testDeception.system.freeRanks === 1, "Twi'lek drop set Deception free ranks to 1 when choosing Deception");
+
+    // Change choice to Charm via ledger/prepareData
+    await actor.update({
+      "system.creation.ledger.speciesSkillChoice": "Charm"
+    });
+    assert(testCharm.system.freeRanks === 1, "Ledger choice update changed Charm free ranks to 1");
+    assert(testDeception.system.freeRanks === 0, "Ledger choice update changed Deception free ranks to 0");
 
     // Buy another rank of Charm (costs 15 XP since career is false)
     await actor.buySkillRank("Charm", "presence", "General");

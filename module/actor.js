@@ -1,5 +1,5 @@
 import { rollFFGPool, sendRollToChat } from "./dice.js";
-import { DEFAULT_SKILLS } from "./actor-sheet.js";
+import { DEFAULT_SKILLS, CHOICE_SPECIES, normalizeSpeciesName } from "./actor-sheet.js";
 
 /**
  * Custom Actor class for Star Wars FFG Ruleset
@@ -856,6 +856,10 @@ export class SWFFGActor extends Actor {
 
         // Apply species starting skills (e.g. Charm:1)
         const speciesSkillsStr = species.modifiers?.skills || species.skills || "";
+        const speciesNameNorm = normalizeSpeciesName(species.name);
+        const choiceOptions = CHOICE_SPECIES[speciesNameNorm];
+        const choiceOptionsLower = choiceOptions ? choiceOptions.map(o => o.toLowerCase()) : [];
+
         if (speciesSkillsStr) {
           const skillsParts = speciesSkillsStr.split(",");
           for (const part of skillsParts) {
@@ -864,6 +868,12 @@ export class SWFFGActor extends Actor {
             const [sName, sValStr] = trimmed.split(":");
             const sNameLower = sName.trim().toLowerCase();
             const sVal = sValStr ? parseInt(sValStr.trim()) : 1;
+
+            // If this skill is one of the choice options, skip applying it from default skills
+            if (choiceOptionsLower.includes(sNameLower)) {
+              continue;
+            }
+
             if (derivedSkills[sNameLower]) {
               derivedSkills[sNameLower].freeRanks += sVal;
             }

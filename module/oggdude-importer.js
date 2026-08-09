@@ -136,8 +136,12 @@ export function parseOggdudeSpecies(xmlString) {
   const choices = speciesNode.getElementsByTagName("OptionChoices")[0]?.getElementsByTagName("OptionChoice") || [];
   const choiceSkills = [];
   for (let i = 0; i < choices.length; i++) {
+    const choiceName = choices[i].getElementsByTagName("Name")[0]?.textContent || "";
     const options = choices[i].getElementsByTagName("Option");
     for (let j = 0; j < options.length; j++) {
+      if (choiceName.toLowerCase() === "skills" && j > 0) {
+        continue;
+      }
       const optMods = options[j].getElementsByTagName("SkillModifier");
       for (let k = 0; k < optMods.length; k++) {
         const modKey = optMods[k].getElementsByTagName("Key")[0]?.textContent || "";

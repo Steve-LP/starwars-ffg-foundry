@@ -40,6 +40,18 @@ export const DEFAULT_SKILLS = [
   { name: "Ranged - Heavy", characteristic: "agility", category: "Combat" }
 ];
 
+export const CHOICE_SPECIES = {
+  "twilek": ["Charm", "Deception"],
+  "devaronian": ["Survival", "Deception"],
+  "weequay": ["Resilience", "Athletics"],
+  "klatooinian": ["Brawl", "Ranged - Heavy", "Ranged - Light"]
+};
+
+export function normalizeSpeciesName(name) {
+  if (!name) return "";
+  return name.toLowerCase().replace(/['\s-]/g, "");
+}
+
 export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
   static DEFAULT_OPTIONS = {
     classes: ["starwars-ffg", "sheet", "actor"],
@@ -222,6 +234,24 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
         canAfford: canAfford,
         isDecreasable: isDecreasable
       };
+    }
+
+    // Prepare species starting skill choice options
+    const speciesName = actorData.system.biography?.species || "";
+    const speciesNameNorm = normalizeSpeciesName(speciesName);
+    const choiceOptions = CHOICE_SPECIES[speciesNameNorm];
+    if (choiceOptions && choiceOptions.length > 0) {
+      context.speciesHasChoice = true;
+      const currentChoice = (actorData.system.creation?.ledger?.speciesSkillChoice || "").trim().toLowerCase();
+      context.speciesChoiceOptions = choiceOptions.map(opt => {
+        return {
+          value: opt,
+          label: opt,
+          selected: currentChoice === opt.toLowerCase()
+        };
+      });
+    } else {
+      context.speciesHasChoice = false;
     }
 
     const creationSpent = (actorData.currentAttributeXpSpent || 0) +
@@ -1071,6 +1101,50 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       }
     }
 
+    // Check if species has starting skill choice
+    const speciesNameNorm = normalizeSpeciesName(speciesData.name);
+    const choiceOptions = CHOICE_SPECIES[speciesNameNorm];
+    let chosenSkill = "";
+    if (choiceOptions && choiceOptions.length > 0) {
+      chosenSkill = await new Promise((resolve) => {
+        const optionsHtml = choiceOptions.map(opt => {
+          return `<option value="${opt}">${opt}</option>`;
+        }).join("");
+
+        const content = `
+          <div style="padding: 10px;">
+            <p style="margin-bottom: 12px;">Diese Spezies beginnt mit einem freien Rang in einer der folgenden Fertigkeiten. Bitte wählen Sie eine aus:</p>
+            <div class="form-group">
+              <label style="font-weight: bold; display: block; margin-bottom: 6px;">Fertigkeit:</label>
+              <select id="species-skill-choice-select" style="width: 100%; height: 28px;">
+                ${optionsHtml}
+              </select>
+            </div>
+          </div>
+        `;
+
+        new foundry.applications.api.DialogV2({
+          window: { title: `${speciesData.name} Fertigkeitsauswahl` },
+          content: content,
+          buttons: [
+            {
+              action: "confirm",
+              label: "Bestätigen",
+              default: true,
+              callback: (event, button, dialogInstance) => {
+                const html = $(dialogInstance.element);
+                const selected = html.find("#species-skill-choice-select").val();
+                resolve(selected);
+              }
+            }
+          ],
+          close: () => {
+            resolve(choiceOptions[0]);
+          }
+        }).render(true);
+      });
+    }
+
     const speciesSnapshot = {
       name: speciesData.name,
       characteristics: { brawn: br, agility: ag, intellect: it, cunning: cu, willpower: wl, presence: pr },
@@ -1085,7 +1159,7 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       "system.biography.species": speciesData.name,
       "system.biography.specialAbilities": specialAbilitiesText,
       "system.creation.speciesSnapshot": speciesSnapshot,
-      "system.creation.ledger.speciesSkillChoice": "",
+      "system.creation.ledger.speciesSkillChoice": chosenSkill,
       "system.creation.startingXp": xpTotal,
       "system.creation.baseCharacteristics": {
         brawn: br, agility: ag, intellect: it, cunning: cu, willpower: wl, presence: pr
@@ -1098,28 +1172,36 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     const itemsToCreate = [];
     const currentSkills = this.actor.items.filter(i => i.type === "skill");
 
+    const skillsToEnsure = [];
     if (skillMods) {
       const parts = skillMods.split(",");
       for (const part of parts) {
         const [skillName] = part.split(":").map(p => p.trim());
-        if (skillName) {
-          const existing = currentSkills.find(s => s.name.toLowerCase() === skillName.toLowerCase());
-          if (!existing) {
-            const defSkill = DEFAULT_SKILLS.find(s => s.name.toLowerCase() === skillName.toLowerCase());
-            if (defSkill) {
-              itemsToCreate.push({
-                name: defSkill.name,
-                type: "skill",
-                system: {
-                  value: 0,
-                  freeRanks: 0,
-                  characteristic: defSkill.characteristic,
-                  category: defSkill.category,
-                  career: false
-                }
-              });
+        if (skillName && !skillsToEnsure.includes(skillName.toLowerCase())) {
+          skillsToEnsure.push(skillName.toLowerCase());
+        }
+      }
+    }
+    if (chosenSkill && !skillsToEnsure.includes(chosenSkill.toLowerCase())) {
+      skillsToEnsure.push(chosenSkill.toLowerCase());
+    }
+
+    for (const sNameLower of skillsToEnsure) {
+      const existing = currentSkills.find(s => s.name.toLowerCase() === sNameLower);
+      if (!existing) {
+        const defSkill = DEFAULT_SKILLS.find(s => s.name.toLowerCase() === sNameLower);
+        if (defSkill) {
+          itemsToCreate.push({
+            name: defSkill.name,
+            type: "skill",
+            system: {
+              value: 0,
+              freeRanks: 0,
+              characteristic: defSkill.characteristic,
+              category: defSkill.category,
+              career: false
             }
-          }
+          });
         }
       }
     }
