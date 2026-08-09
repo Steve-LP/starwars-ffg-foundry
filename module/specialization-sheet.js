@@ -252,14 +252,15 @@ export class SWFFGSpecializationSheet extends HandlebarsApplicationMixin(ItemShe
       }
 
       if (talentItem) {
-        await actor.deleteEmbeddedDocuments("Item", [talentItem.id]);
-        const newAvailable = availableXp + cost;
-        await actor.update(
-          { "system.xp.available": newAvailable },
-          { xpLogDescription: `Erstattung von Talent "${name}" (+${cost} XP) aus ${this.document.name}` }
-        );
-        ui.notifications.info(`Refunded ${name}. Regained ${cost} XP.`);
-        this.render();
+        try {
+          await actor.refundTalent(talentItem.id, cost, name, {
+            logDescription: `Erstattung von Talent "${name}" (+${cost} XP) aus ${this.document.name}`
+          });
+          ui.notifications.info(`Refunded ${name}. Regained ${cost} XP.`);
+          this.render();
+        } catch (e) {
+          ui.notifications.warn(e.message);
+        }
       }
     } else {
       // Path validation
@@ -268,37 +269,26 @@ export class SWFFGSpecializationSheet extends HandlebarsApplicationMixin(ItemShe
         return;
       }
 
-      // Purchase talent
-      if (availableXp < cost) {
-        ui.notifications.warn(`Not enough XP to purchase ${name}! (Cost: ${cost} XP, Available: ${availableXp} XP)`);
-        return;
-      }
-
       const confirmBuy = confirm(`Do you want to buy ${name} for ${cost} XP?`);
       if (!confirmBuy) return;
 
-      // Deduct XP and add talent
-      const newAvailable = availableXp - cost;
-      await actor.update(
-        { "system.xp.available": newAvailable },
-        { xpLogDescription: `Kauf von Talent "${name}" (-${cost} XP) aus ${this.document.name}` }
-      );
-      await actor.createEmbeddedDocuments("Item", [{
-        name: name,
-        type: "talent",
-        img: "icons/svg/star.svg",
-        system: {
+      try {
+        await actor.buyTalent({
+          name: name,
           key: key,
           activation: activation,
           description: description,
-          tier: Math.ceil(cost / 5),
           specialization: this.document.name.toLowerCase(),
           row: row,
           col: col
-        }
-      }]);
-      ui.notifications.info(`Purchased ${name} for ${cost} XP.`);
-      this.render();
+        }, cost, {
+          logDescription: `Kauf von Talent "${name}" (-${cost} XP) aus ${this.document.name}`
+        });
+        ui.notifications.info(`Purchased ${name} for ${cost} XP.`);
+        this.render();
+      } catch (e) {
+        ui.notifications.warn(e.message);
+      }
     }
   }
 

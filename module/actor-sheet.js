@@ -587,48 +587,24 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
         event.preventDefault();
         const skillName = event.currentTarget.dataset.name;
         const checked = event.currentTarget.checked;
-        const currentArray = Array.from(this.actor.system.creation?.ledger?.freeCareerSkills || this.actor.system.creation?.freeCareerSkills || []);
-        if (checked) {
-          if (currentArray.length >= 4) {
-            event.currentTarget.checked = false;
-            ui.notifications?.warn("Du kannst maximal 4 freie Karriere-Fertigkeiten auswählen!");
-            return;
-          }
-          if (!currentArray.includes(skillName)) {
-            currentArray.push(skillName);
-          }
-        } else {
-          const idx = currentArray.indexOf(skillName);
-          if (idx > -1) currentArray.splice(idx, 1);
+        try {
+          await this.actor.toggleFreeCareerSkill(skillName, checked);
+        } catch (e) {
+          event.currentTarget.checked = !checked; // revert
+          ui.notifications?.warn(e.message);
         }
-        await this.actor.update({
-          "system.creation.freeCareerSkills": currentArray,
-          "system.creation.ledger.freeCareerSkills": currentArray
-        });
       });
 
       html.find(".free-spec-toggle").change(async (event) => {
         event.preventDefault();
         const skillName = event.currentTarget.dataset.name;
         const checked = event.currentTarget.checked;
-        const currentArray = Array.from(this.actor.system.creation?.ledger?.freeSpecializationSkills || this.actor.system.creation?.freeSpecializationSkills || []);
-        if (checked) {
-          if (currentArray.length >= 2) {
-            event.currentTarget.checked = false;
-            ui.notifications?.warn("Du kannst maximal 2 freie Spezialisierungs-Fertigkeiten auswählen!");
-            return;
-          }
-          if (!currentArray.includes(skillName)) {
-            currentArray.push(skillName);
-          }
-        } else {
-          const idx = currentArray.indexOf(skillName);
-          if (idx > -1) currentArray.splice(idx, 1);
+        try {
+          await this.actor.toggleFreeSpecializationSkill(skillName, checked);
+        } catch (e) {
+          event.currentTarget.checked = !checked; // revert
+          ui.notifications?.warn(e.message);
         }
-        await this.actor.update({
-          "system.creation.freeSpecializationSkills": currentArray,
-          "system.creation.ledger.freeSpecializationSkills": currentArray
-        });
       });
     }
   }
@@ -641,24 +617,23 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     const name = card.dataset.name;
     const activation = card.dataset.activation;
     const description = card.dataset.description;
-
     const isPurchased = card.classList.contains("purchased");
     const availableXp = this.actor.system.xp.available || 0;
 
     if (isPurchased) {
-      // Refund talent
       const confirmRefund = confirm(`Do you want to refund ${name} and regain ${cost} XP?`);
       if (!confirmRefund) return;
 
       const talentItem = this.actor.items.find(t => t.type === "talent" && t.system?.key === key);
       if (talentItem) {
-        await this.actor.deleteEmbeddedDocuments("Item", [talentItem.id]);
-        const newAvailable = availableXp + cost;
-        await this.actor.update({ "system.xp.available": newAvailable });
-        ui.notifications.info(`Refunded ${name}. Regained ${cost} XP.`);
+        try {
+          await this.actor.refundTalent(talentItem.id, cost, name);
+          ui.notifications.info(`Refunded ${name}. Regained ${cost} XP.`);
+        } catch (e) {
+          ui.notifications.warn(e.message);
+        }
       }
     } else {
-      // Purchase talent
       if (availableXp < cost) {
         ui.notifications.warn(`Not enough XP to purchase ${name}! (Cost: ${cost} XP, Available: ${availableXp} XP)`);
         return;
@@ -667,21 +642,16 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       const confirmBuy = confirm(`Do you want to buy ${name} for ${cost} XP?`);
       if (!confirmBuy) return;
 
-      // Deduct XP and add talent
-      const newAvailable = availableXp - cost;
-      await this.actor.update({ "system.xp.available": newAvailable });
-      await this.actor.createEmbeddedDocuments("Item", [{
-        name: name,
-        type: "talent",
-        img: "icons/svg/star-filled.svg",
-        system: {
+      try {
+        await this.actor.buyTalent({
+          name: name,
           key: key,
           activation: activation,
-          description: description,
-          tier: Math.ceil(cost / 5)
-        }
-      }]);
-      ui.notifications.info(`Purchased ${name} for ${cost} XP.`);
+          description: description
+        }, cost);
+      } catch (e) {
+        ui.notifications.warn(e.message);
+      }
     }
   }
 
@@ -1056,262 +1026,28 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     }
 
     if (itemData.type === "species") {
-      return this._onDropSpecies(itemData);
-    }
-    if (itemData.type === "career") {
-      return this._onDropCareer(itemData);
-    }
-    if (itemData.type === "specialization") {
-      return this._onDropSpecialization(itemData);
-    }
-
-    return super._onDrop(event);
-  }
-
-  async _onDropSpecies(speciesData) {
-    const characteristics = speciesData.system.characteristics || {};
-    
-    const getVal = (charObj) => {
-      if (!charObj) return 2;
-      if (charObj.value !== undefined) return charObj.value;
-      if (typeof charObj === "number") return charObj;
-      return 2;
-    };
-
-    const br = getVal(characteristics.brawn);
-    const ag = getVal(characteristics.agility);
-    const it = getVal(characteristics.intellect);
-    const cu = getVal(characteristics.cunning);
-    const wl = getVal(characteristics.willpower);
-    const pr = getVal(characteristics.presence);
-
-    const woundsBase = speciesData.system.wounds?.base ?? (typeof speciesData.system.wounds === "number" ? speciesData.system.wounds : 10);
-    const strainBase = speciesData.system.strain?.base ?? (typeof speciesData.system.strain === "number" ? speciesData.system.strain : 10);
-    const xpTotal = speciesData.system.xp ?? 100;
-
-    let specialAbilitiesText = speciesData.system.specialAbilities || "";
-    let skillMods = speciesData.system.modifiers?.skills || "";
-
-    if (speciesData.name.toLowerCase() === "twi'lek") {
-      if (!skillMods.toLowerCase().includes("charm")) {
-        skillMods = skillMods ? `${skillMods},Charm:1` : "Charm:1";
+      try {
+        await this.actor.applySpecies(itemData);
+      } catch (e) {
+        ui.notifications?.warn(e.message);
       }
-      if (!specialAbilitiesText) {
-        specialAbilitiesText = "Hitzeresistenz: Twi'leks entfernen ein Setback-Dice (Schwarzer Würfel) aus allen Proben aufgrund von heißer oder arider Umgebung.";
+    } else if (itemData.type === "career") {
+      try {
+        await this.actor.applyCareer(itemData);
+      } catch (e) {
+        ui.notifications?.warn(e.message);
       }
-    }
-
-    // Check if species has starting skill choice
-    const speciesNameNorm = normalizeSpeciesName(speciesData.name);
-    const choiceOptions = CHOICE_SPECIES[speciesNameNorm];
-    let chosenSkill = "";
-    if (choiceOptions && choiceOptions.length > 0) {
-      chosenSkill = await new Promise((resolve) => {
-        const optionsHtml = choiceOptions.map(opt => {
-          return `<option value="${opt}">${opt}</option>`;
-        }).join("");
-
-        const content = `
-          <div style="padding: 10px;">
-            <p style="margin-bottom: 12px;">Diese Spezies beginnt mit einem freien Rang in einer der folgenden Fertigkeiten. Bitte wählen Sie eine aus:</p>
-            <div class="form-group">
-              <label style="font-weight: bold; display: block; margin-bottom: 6px;">Fertigkeit:</label>
-              <select id="species-skill-choice-select" style="width: 100%; height: 28px;">
-                ${optionsHtml}
-              </select>
-            </div>
-          </div>
-        `;
-
-        new foundry.applications.api.DialogV2({
-          window: { title: `${speciesData.name} Fertigkeitsauswahl` },
-          content: content,
-          buttons: [
-            {
-              action: "confirm",
-              label: "Bestätigen",
-              default: true,
-              callback: (event, button, dialogInstance) => {
-                const html = $(dialogInstance.element);
-                const selected = html.find("#species-skill-choice-select").val();
-                resolve(selected);
-              }
-            }
-          ],
-          close: () => {
-            resolve(choiceOptions[0]);
-          }
-        }).render(true);
-      });
-    }
-
-    const speciesSnapshot = {
-      name: speciesData.name,
-      characteristics: { brawn: br, agility: ag, intellect: it, cunning: cu, willpower: wl, presence: pr },
-      wounds: woundsBase,
-      strain: strainBase,
-      xp: xpTotal,
-      modifiers: { skills: skillMods },
-      specialAbilities: specialAbilitiesText
-    };
-
-    const updates = {
-      "system.biography.species": speciesData.name,
-      "system.biography.specialAbilities": specialAbilitiesText,
-      "system.creation.speciesSnapshot": speciesSnapshot,
-      "system.creation.ledger.speciesSkillChoice": chosenSkill,
-      "system.creation.startingXp": xpTotal,
-      "system.creation.baseCharacteristics": {
-        brawn: br, agility: ag, intellect: it, cunning: cu, willpower: wl, presence: pr
-      },
-      "system.xp.total": xpTotal,
-      "system.xp.available": xpTotal
-    };
-
-    // Ensure skill items exist for the species starting skills, with value 0
-    const itemsToCreate = [];
-    const currentSkills = this.actor.items.filter(i => i.type === "skill");
-
-    const skillsToEnsure = [];
-    if (skillMods) {
-      const parts = skillMods.split(",");
-      for (const part of parts) {
-        const [skillName] = part.split(":").map(p => p.trim());
-        if (skillName && !skillsToEnsure.includes(skillName.toLowerCase())) {
-          skillsToEnsure.push(skillName.toLowerCase());
-        }
+    } else if (itemData.type === "specialization") {
+      try {
+        await this.actor.applySpecialization(itemData);
+      } catch (e) {
+        ui.notifications?.warn(e.message);
       }
+    } else if (itemData.type === "talent") {
+      await super._onDropItem(event, data);
+    } else {
+      await super._onDropItem(event, data);
     }
-    if (chosenSkill && !skillsToEnsure.includes(chosenSkill.toLowerCase())) {
-      skillsToEnsure.push(chosenSkill.toLowerCase());
-    }
-
-    for (const sNameLower of skillsToEnsure) {
-      const existing = currentSkills.find(s => s.name.toLowerCase() === sNameLower);
-      if (!existing) {
-        const defSkill = DEFAULT_SKILLS.find(s => s.name.toLowerCase() === sNameLower);
-        if (defSkill) {
-          itemsToCreate.push({
-            name: defSkill.name,
-            type: "skill",
-            system: {
-              value: 0,
-              freeRanks: 0,
-              characteristic: defSkill.characteristic,
-              category: defSkill.category,
-              career: false
-            }
-          });
-        }
-      }
-    }
-
-    if (itemsToCreate.length > 0) {
-      await this.actor.createEmbeddedDocuments("Item", itemsToCreate);
-    }
-
-    return this.actor.update(updates);
-  }
-
-  async _onDropCareer(careerData) {
-    const skillListStr = careerData.system.careerSkills || "";
-    const careerSkills = skillListStr.split(",").map(s => s.trim().toLowerCase()).filter(s => s);
-
-    const careerSnapshot = {
-      name: careerData.name,
-      careerSkills: careerSkills
-    };
-
-    const currentSkills = this.actor.items.filter(i => i.type === "skill");
-    const itemsToCreate = [];
-
-    // Ensure all career skills exist on the actor as items with value 0
-    for (const sName of careerSkills) {
-      const existing = currentSkills.find(s => s.name.toLowerCase() === sName);
-      if (!existing) {
-        const dSkill = DEFAULT_SKILLS.find(s => s.name.toLowerCase() === sName);
-        if (dSkill) {
-          itemsToCreate.push({
-            name: dSkill.name,
-            type: "skill",
-            system: {
-              value: 0,
-              freeRanks: 0,
-              career: false,
-              characteristic: dSkill.characteristic,
-              category: dSkill.category
-            }
-          });
-        }
-      }
-    }
-
-    if (itemsToCreate.length > 0) {
-      await this.actor.createEmbeddedDocuments("Item", itemsToCreate);
-    }
-
-    return this.actor.update({
-      "system.biography.career": careerData.name,
-      "system.creation.careerSnapshot": careerSnapshot,
-      "system.creation.freeCareerSkills": [],
-      "system.creation.ledger.freeCareerSkills": []
-    });
-  }
-
-  async _onDropSpecialization(specData) {
-    const skillListStr = specData.system.careerSkills || "";
-    const careerSkills = skillListStr.split(",").map(s => s.trim().toLowerCase()).filter(s => s);
-
-    const specSnapshot = {
-      name: specData.name,
-      careerSkills: careerSkills
-    };
-
-    const currentSkills = this.actor.items.filter(i => i.type === "skill");
-    const itemsToCreate = [];
-
-    // Create the specialization item on the actor if they do not have it
-    const hasSpec = this.actor.items.some(i => i.type === "specialization" && i.name.toLowerCase() === specData.name.toLowerCase());
-    if (!hasSpec) {
-      if (!this.actor.canAffordSpecialization(specData)) {
-        ui.notifications?.warn(`Nicht genug XP vorhanden, um die Spezialisierung "${specData.name}" zu erwerben!`);
-        return;
-      }
-      itemsToCreate.push(specData);
-    }
-
-    // Ensure spec career skills exist on the actor
-    for (const sName of careerSkills) {
-      const existing = currentSkills.find(s => s.name.toLowerCase() === sName);
-      if (!existing) {
-        const dSkill = DEFAULT_SKILLS.find(s => s.name.toLowerCase() === sName);
-        if (dSkill) {
-          itemsToCreate.push({
-            name: dSkill.name,
-            type: "skill",
-            system: {
-              value: 0,
-              freeRanks: 0,
-              career: false,
-              characteristic: dSkill.characteristic,
-              category: dSkill.category
-            }
-          });
-        }
-      }
-    }
-
-    if (itemsToCreate.length > 0) {
-      await this.actor.createEmbeddedDocuments("Item", itemsToCreate);
-    }
-
-    const updates = { 
-      "system.biography.specialization": specData.name,
-      "system.creation.specializationSnapshot": specSnapshot,
-      "system.creation.freeSpecializationSkills": [],
-      "system.creation.ledger.freeSpecializationSkills": []
-    };
-    return this.actor.update(updates);
   }
 
   _onOpenCompendium(event) {
@@ -1348,66 +1084,36 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     if (!confirmRemove) return;
 
     const isStartingSpec = this.actor.system.biography.specialization === item.name;
-    const updates = {};
-    if (isStartingSpec) {
-      updates["system.biography.specialization"] = "";
-      updates["system.creation.specializationSnapshot"] = null;
-      updates["system.creation.freeSpecializationSkills"] = [];
-      updates["system.creation.ledger.freeSpecializationSkills"] = [];
+    try {
+      await this.actor.removeSpecialization(itemId, isStartingSpec);
+      this.render();
+    } catch (e) {
+      ui.notifications?.warn(e.message);
     }
-
-    await this.actor.deleteEmbeddedDocuments("Item", [itemId]);
-    if (Object.keys(updates).length > 0) {
-      await this.actor.update(updates);
-    }
-    this.render();
   }
 
   async _onRemoveSpecies() {
-    const confirmRemove = confirm("Do you want to remove your Species? This will reset starting characteristics, thresholds, and starting skill bonuses back to default.");
+    const confirmRemove = confirm("Do you want to remove your Species? This will reset starting characteristics, thresholds, and starting skill bonuses back to default. It will also remove your Career and Specializations.");
     if (!confirmRemove) return;
 
-    const updates = {
-      "system.biography.species": "",
-      "system.biography.specialAbilities": "",
-      "system.creation.speciesSnapshot": null,
-      "system.creation.ledger.speciesSkillChoice": "",
-      "system.creation.ledger.upgrades.characteristics": {
-        brawn: 0, agility: 0, intellect: 0, cunning: 0, willpower: 0, presence: 0
-      },
-      "system.creation.ledger.upgrades.skills": {},
-      "system.creation.startingXp": 0,
-      "system.xp.total": 0,
-      "system.xp.available": 0,
-      "system.creation.baseCharacteristics": {
-        brawn: 2,
-        agility: 2,
-        intellect: 2,
-        cunning: 2,
-        willpower: 2,
-        presence: 2
-      },
-      "system.stats.wounds.base": 10,
-      "system.stats.strain.base": 10,
-      "system.stats.wounds.max": 10,
-      "system.stats.strain.max": 10
-    };
-
-    await this.actor.update(updates);
-    this.render();
+    try {
+      await this.actor.removeSpecies();
+      this.render();
+    } catch (e) {
+      ui.notifications?.warn(e.message);
+    }
   }
 
   async _onRemoveCareer() {
-    const confirmRemove = confirm("Do you want to remove your Career? This will also update your career skills.");
+    const confirmRemove = confirm("Do you want to remove your Career? This will also update your career skills and remove your starting Specialization.");
     if (!confirmRemove) return;
 
-    await this.actor.update({
-      "system.biography.career": "",
-      "system.creation.careerSnapshot": null,
-      "system.creation.freeCareerSkills": [],
-      "system.creation.ledger.freeCareerSkills": []
-    });
-    this.render();
+    try {
+      await this.actor.removeCareer();
+      this.render();
+    } catch (e) {
+      ui.notifications?.warn(e.message);
+    }
   }
 
 

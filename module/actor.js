@@ -1363,7 +1363,364 @@ export class SWFFGActor extends Actor {
     }
   }
 
+  // --- MVC Logic Methods (Creation / Advancement) ---
+
+  async toggleFreeCareerSkill(skillName, checked) {
+    if (this.type !== "character") return;
+    const currentArray = Array.from(this.system.creation?.ledger?.freeCareerSkills || this.system.creation?.freeCareerSkills || []);
+    if (checked) {
+      if (currentArray.length >= 4) {
+        throw new Error("Du kannst maximal 4 freie Karriere-Fertigkeiten auswählen!");
+      }
+      if (!currentArray.includes(skillName)) currentArray.push(skillName);
+    } else {
+      const idx = currentArray.indexOf(skillName);
+      if (idx > -1) currentArray.splice(idx, 1);
+    }
+    return this.update({
+      "system.creation.freeCareerSkills": currentArray,
+      "system.creation.ledger.freeCareerSkills": currentArray
+    });
+  }
+
+  async toggleFreeSpecializationSkill(skillName, checked) {
+    if (this.type !== "character") return;
+    const currentArray = Array.from(this.system.creation?.ledger?.freeSpecializationSkills || this.system.creation?.freeSpecializationSkills || []);
+    if (checked) {
+      if (currentArray.length >= 2) {
+        throw new Error("Du kannst maximal 2 freie Spezialisierungs-Fertigkeiten auswählen!");
+      }
+      if (!currentArray.includes(skillName)) currentArray.push(skillName);
+    } else {
+      const idx = currentArray.indexOf(skillName);
+      if (idx > -1) currentArray.splice(idx, 1);
+    }
+    return this.update({
+      "system.creation.freeSpecializationSkills": currentArray,
+      "system.creation.ledger.freeSpecializationSkills": currentArray
+    });
+  }
+
+  async buyTalent(talentData, cost, options = {}) {
+    if (this.type !== "character") return;
+    const availableXp = this.system.xp.available || 0;
+    if (availableXp < cost) {
+      throw new Error(`Nicht genug XP, um ${talentData.name} zu kaufen! (Kosten: ${cost} XP, Verfügbar: ${availableXp} XP)`);
+    }
+
+    const newAvailable = availableXp - cost;
+    await this.update(
+      { "system.xp.available": newAvailable },
+      { xpLogDescription: options.logDescription || `Kauf von Talent "${talentData.name}" (-${cost} XP)` }
+    );
+    await this.createEmbeddedDocuments("Item", [{
+      name: talentData.name,
+      type: "talent",
+      img: "icons/svg/star-filled.svg",
+      system: {
+        key: talentData.key,
+        activation: talentData.activation,
+        description: talentData.description,
+        specialization: talentData.specialization || "",
+        row: talentData.row !== undefined ? talentData.row : -1,
+        col: talentData.col !== undefined ? talentData.col : -1
+      }
+    }]);
+  }
+
+  async refundTalent(talentId, cost, name, options = {}) {
+    if (this.type !== "character") return;
+    const talentItem = this.items.get(talentId);
+    if (!talentItem) throw new Error("Talent nicht gefunden.");
+
+    await this.deleteEmbeddedDocuments("Item", [talentId]);
+    const availableXp = this.system.xp.available || 0;
+    const newAvailable = availableXp + cost;
+    await this.update(
+      { "system.xp.available": newAvailable },
+      { xpLogDescription: options.logDescription || `Erstattung von Talent "${name}" (+${cost} XP)` }
+    );
+  }
+
+  async applySpecies(speciesData) {
+    if (this.type !== "character") return;
+    
+    // Determine stats
+    const chars = speciesData.system.characteristics || {};
+    const getVal = (val) => {
+      if (!val) return 2;
+      if (val.value !== undefined) return val.value;
+      if (typeof val === "number") return val;
+      return 2;
+    };
+    const baseChars = {
+      brawn: getVal(chars.brawn),
+      agility: getVal(chars.agility),
+      intellect: getVal(chars.intellect),
+      cunning: getVal(chars.cunning),
+      willpower: getVal(chars.willpower),
+      presence: getVal(chars.presence)
+    };
+
+    const woundsBase = speciesData.system.wounds?.base ?? (typeof speciesData.system.wounds === "number" ? speciesData.system.wounds : 10);
+    const strainBase = speciesData.system.strain?.base ?? (typeof speciesData.system.strain === "number" ? speciesData.system.strain : 10);
+    const xpTotal = speciesData.system.xp ?? 100;
+    let specialAbilitiesText = speciesData.system.specialAbilities || "";
+    let skillMods = speciesData.system.modifiers?.skills || "";
+
+    // Specific logic for species like Twi'lek is handled during prep or manually. 
+    // Here we strictly follow the data provided.
+    const speciesSnapshot = {
+      name: speciesData.name,
+      characteristics: baseChars,
+      wounds: woundsBase,
+      strain: strainBase,
+      xp: xpTotal,
+      modifiers: { skills: skillMods },
+      specialAbilities: specialAbilitiesText
+    };
+
+    const updates = {
+      "system.biography.species": speciesData.name,
+      "system.biography.specialAbilities": specialAbilitiesText,
+      "system.creation.speciesSnapshot": speciesSnapshot,
+      "system.creation.startingXp": xpTotal,
+      "system.creation.baseCharacteristics": baseChars,
+      "system.xp.total": xpTotal,
+      "system.xp.available": xpTotal,
+      "system.stats.wounds.base": woundsBase + baseChars.brawn,
+      "system.stats.wounds.max": woundsBase + baseChars.brawn,
+      "system.stats.strain.base": strainBase + baseChars.willpower,
+      "system.stats.strain.max": strainBase + baseChars.willpower
+    };
+
+    // Skills
+    const currentSkills = this.items.filter(i => i.type === "skill");
+    const skillsToEnsure = [];
+
+    if (skillMods) {
+      const parts = skillMods.split(",");
+      for (const part of parts) {
+        const [skillName] = part.split(":").map(p => p.trim());
+        if (skillName && !skillsToEnsure.includes(skillName.toLowerCase())) {
+          skillsToEnsure.push(skillName.toLowerCase());
+        }
+      }
+    }
+    
+    const itemsToCreate = [];
+    const itemsToUpdate = [];
+
+    // In V14 we want to make sure the actor actually owns the skills provided by the species.
+    for (const sNameLower of skillsToEnsure) {
+      const existing = currentSkills.find(s => s.name.toLowerCase() === sNameLower);
+      if (existing) {
+        // If skill exists, we update its freeRanks directly on the item so it persists
+        const currentRanks = existing.system.freeRanks || 0;
+        itemsToUpdate.push({
+          _id: existing.id,
+          "system.freeRanks": currentRanks + 1
+        });
+      } else {
+        // Find in default skills to get characteristic and category
+        const defSkill = DEFAULT_SKILLS.find(s => s.name.toLowerCase() === sNameLower);
+        if (defSkill) {
+          itemsToCreate.push({
+            name: defSkill.name,
+            type: "skill",
+            system: {
+              value: 0,
+              freeRanks: 1,
+              career: false,
+              characteristic: defSkill.characteristic,
+              category: defSkill.category
+            }
+          });
+        }
+      }
+    }
+
+    if (itemsToCreate.length > 0) {
+      await this.createEmbeddedDocuments("Item", itemsToCreate);
+    }
+    if (itemsToUpdate.length > 0) {
+      await this.updateEmbeddedDocuments("Item", itemsToUpdate);
+    }
+
+    await this.update(updates);
+  }
+
+  async removeSpecies() {
+    if (this.type !== "character") return;
+    
+    // Cascading removes
+    await this.removeCareer(false); // remove career but don't recalculate immediately
+    
+    const updates = {
+      "system.biography.species": "",
+      "system.biography.specialAbilities": "",
+      "system.creation.speciesSnapshot": null,
+      "system.creation.ledger.speciesSkillChoice": "",
+      "system.creation.ledger.upgrades.characteristics": {
+        brawn: 0, agility: 0, intellect: 0, cunning: 0, willpower: 0, presence: 0
+      },
+      "system.creation.ledger.upgrades.skills": {},
+      "system.creation.startingXp": 0,
+      "system.xp.total": 0,
+      "system.xp.available": 0,
+      "system.creation.baseCharacteristics": {
+        brawn: 2, agility: 2, intellect: 2, cunning: 2, willpower: 2, presence: 2
+      },
+      "system.stats.wounds.base": 10,
+      "system.stats.strain.base": 10,
+      "system.stats.wounds.max": 10,
+      "system.stats.strain.max": 10
+    };
+    await this.update(updates);
+  }
+
+  async applyCareer(careerData) {
+    if (this.type !== "character") return;
+    const skillListStr = careerData.system.careerSkills || "";
+    const careerSkills = skillListStr.split(",").map(s => s.trim().toLowerCase()).filter(s => s);
+
+    const careerSnapshot = {
+      name: careerData.name,
+      careerSkills: careerSkills
+    };
+
+    const currentSkills = this.items.filter(i => i.type === "skill");
+    const itemsToCreate = [];
+
+    // Ensure all career skills exist on the actor as items with value 0
+    for (const sName of careerSkills) {
+      const existing = currentSkills.find(s => s.name.toLowerCase() === sName);
+      if (!existing) {
+        const dSkill = DEFAULT_SKILLS.find(s => s.name.toLowerCase() === sName);
+        if (dSkill) {
+          itemsToCreate.push({
+            name: dSkill.name,
+            type: "skill",
+            system: {
+              value: 0,
+              freeRanks: 0,
+              career: false,
+              characteristic: dSkill.characteristic,
+              category: dSkill.category
+            }
+          });
+        }
+      }
+    }
+
+    if (itemsToCreate.length > 0) {
+      await this.createEmbeddedDocuments("Item", itemsToCreate);
+    }
+
+    await this.update({
+      "system.biography.career": careerData.name,
+      "system.creation.careerSnapshot": careerSnapshot,
+      "system.creation.freeCareerSkills": [],
+      "system.creation.ledger.freeCareerSkills": []
+    });
+  }
+
+  async removeCareer(shouldRecalculate = true) {
+    if (this.type !== "character") return;
+    
+    // Cascading removes: remove starting specialization since it's tied to the career
+    const startingSpecName = this.system.biography?.specialization;
+    if (startingSpecName) {
+      const startingSpecItem = this.items.find(i => i.type === "specialization" && i.name === startingSpecName);
+      if (startingSpecItem) {
+        await this.removeSpecialization(startingSpecItem.id, true);
+      }
+    }
+
+    await this.update({
+      "system.biography.career": "",
+      "system.creation.careerSnapshot": null,
+      "system.creation.freeCareerSkills": [],
+      "system.creation.ledger.freeCareerSkills": []
+    });
+    
+    if (shouldRecalculate) await this.recalculateCareerSkills();
+  }
+
+  async applySpecialization(specData) {
+    if (this.type !== "character") return;
+    const hasSpec = this.items.some(i => i.type === "specialization" && i.name.toLowerCase() === specData.name.toLowerCase());
+    if (!hasSpec) {
+      if (!this.canAffordSpecialization(specData)) {
+        throw new Error(`Nicht genug XP vorhanden, um die Spezialisierung "${specData.name}" zu erwerben!`);
+      }
+      await this.createEmbeddedDocuments("Item", [specData]);
+    }
+
+    const skillListStr = specData.system.careerSkills || "";
+    const careerSkills = skillListStr.split(",").map(s => s.trim().toLowerCase()).filter(s => s);
+    const specSnapshot = {
+      name: specData.name,
+      careerSkills: careerSkills
+    };
+
+    const currentSkills = this.items.filter(i => i.type === "skill");
+    const itemsToCreate = [];
+
+    // Ensure all career skills exist on the actor as items with value 0
+    for (const sName of careerSkills) {
+      const existing = currentSkills.find(s => s.name.toLowerCase() === sName);
+      if (!existing) {
+        const dSkill = DEFAULT_SKILLS.find(s => s.name.toLowerCase() === sName);
+        if (dSkill) {
+          itemsToCreate.push({
+            name: dSkill.name,
+            type: "skill",
+            system: {
+              value: 0,
+              freeRanks: 0,
+              career: false,
+              characteristic: dSkill.characteristic,
+              category: dSkill.category
+            }
+          });
+        }
+      }
+    }
+
+    if (itemsToCreate.length > 0) {
+      await this.createEmbeddedDocuments("Item", itemsToCreate);
+    }
+
+    await this.update({ 
+      "system.biography.specialization": specData.name,
+      "system.creation.specializationSnapshot": specSnapshot,
+      "system.creation.freeSpecializationSkills": [],
+      "system.creation.ledger.freeSpecializationSkills": []
+    });
+  }
+
+  async removeSpecialization(itemId, isStartingSpec) {
+    if (this.type !== "character") return;
+    const item = this.items.get(itemId);
+    if (!item) return;
+
+    const updates = {};
+    if (isStartingSpec || this.system.biography.specialization === item.name) {
+      updates["system.biography.specialization"] = "";
+      updates["system.creation.specializationSnapshot"] = null;
+      updates["system.creation.freeSpecializationSkills"] = [];
+      updates["system.creation.ledger.freeSpecializationSkills"] = [];
+    }
+
+    await this.deleteEmbeddedDocuments("Item", [itemId]);
+    if (Object.keys(updates).length > 0) {
+      await this.update(updates);
+    }
+  }
+
   /**
+
    * Recalculates career skills for the character based on current specs, base career, and talents.
    */
   async recalculateCareerSkills() {
