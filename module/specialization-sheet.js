@@ -3,6 +3,7 @@
  */
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
+import { TalentTreeUtils } from "./utils/talent-tree.js";
 
 export class SWFFGSpecializationSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
   constructor(options={}) {
@@ -78,114 +79,7 @@ export class SWFFGSpecializationSheet extends HandlebarsApplicationMixin(ItemShe
     }
 
     if (rows && Array.isArray(rows)) {
-      const encounteredKeys = {};
-      
-      // Pass 1: Resolve all talents and their purchased state
-      const talentGrid = rows.map((row, rIdx) => {
-        return row.talents.map((talentKey, colIdx) => {
-          const refTalent = talentsIndex.find(t => t.system?.key === talentKey);
-          
-          // Track occurrences of keys for legacy fallback
-          encounteredKeys[talentKey] = (encounteredKeys[talentKey] || 0) + 1;
-          const occurrenceIndex = encounteredKeys[talentKey];
-
-          // 1. Check for exact node match (specialization name, row, col)
-          let isPurchased = actor ? actor.items.some(t => 
-            t.type === "talent" && 
-            t.system?.key === talentKey && 
-            t.system?.specialization === this.document.name.toLowerCase() && 
-            t.system?.row === rIdx && 
-            t.system?.col === colIdx
-          ) : false;
-
-          // 2. Legacy Fallback (for older talent items that don't have row/col metadata)
-          if (!isPurchased && actor) {
-            const totalOwned = actor.items.filter(t => t.type === "talent" && t.system?.key === talentKey).length;
-            // Subtract any talents that are already explicitly mapped to other specific cells
-            const mappedToOthers = actor.items.filter(t => 
-              t.type === "talent" && 
-              t.system?.key === talentKey && 
-              t.system?.specialization === this.document.name.toLowerCase() && 
-              (t.system?.row !== rIdx || t.system?.col !== colIdx)
-            ).length;
-
-            isPurchased = (totalOwned - mappedToOthers) >= 1;
-          }
-
-          return {
-            key: talentKey,
-            name: refTalent ? refTalent.name : talentKey.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' '),
-            description: refTalent ? refTalent.system.description : "No description available.",
-            activation: refTalent ? refTalent.system.activation : "Passive",
-            ranked: refTalent ? refTalent.system.ranked : false,
-            purchased: isPurchased,
-            directions: row.directions[colIdx] || { up: false, down: false, left: false, right: false },
-            row: rIdx,
-            col: colIdx
-          };
-        });
-      });
-
-      // Pass 2: Calculate reachability for each cell in the 2D grid using BFS propagation
-      // Initialize all to unreachable except row 0 which is always reachable
-      for (let r = 0; r < talentGrid.length; r++) {
-        for (let c = 0; c < talentGrid[r].length; c++) {
-          talentGrid[r][c].reachable = (r === 0);
-        }
-      }
-
-      const queue = [];
-      const visited = new Set();
-      const keyOf = (r, c) => `${r},${c}`;
-
-      // Start the BFS with all Row 0 nodes
-      if (talentGrid.length > 0) {
-        for (let c = 0; c < talentGrid[0].length; c++) {
-          queue.push({ r: 0, c: c });
-        }
-      }
-
-      while (queue.length > 0) {
-        const { r, c } = queue.shift();
-        const key = keyOf(r, c);
-        if (visited.has(key)) continue;
-        visited.add(key);
-
-        const cell = talentGrid[r][c];
-        cell.reachable = true;
-
-        // If this cell is purchased, propagate reachability to connected neighbors
-        if (cell.purchased) {
-          const neighbors = [
-            { dr: -1, dc: 0, dirSelf: "up", dirOther: "down" },
-            { dr: 1, dc: 0, dirSelf: "down", dirOther: "up" },
-            { dr: 0, dc: -1, dirSelf: "left", dirOther: "right" },
-            { dr: 0, dc: 1, dirSelf: "right", dirOther: "left" }
-          ];
-
-          for (const { dr, dc, dirSelf, dirOther } of neighbors) {
-            const nr = r + dr;
-            const nc = c + dc;
-            if (nr >= 0 && nr < talentGrid.length && nc >= 0 && nc < talentGrid[nr].length) {
-              const neighbor = talentGrid[nr][nc];
-              if (cell.directions[dirSelf] && neighbor.directions[dirOther]) {
-                const neighborKey = keyOf(nr, nc);
-                if (!visited.has(neighborKey)) {
-                  queue.push({ r: nr, c: nc });
-                }
-              }
-            }
-          }
-        }
-      }
-
-      context.talentRows = rows.map((row, rIdx) => {
-        return {
-          index: row.index,
-          cost: row.cost,
-          talents: talentGrid[rIdx]
-        };
-      });
+      context.talentRows = TalentTreeUtils.buildGrid(this.document.name, rows, talentsIndex, actor);
     } else {
       console.warn("SpecializationSheet | talentRows was empty or not an array!");
       context.talentRows = [];
@@ -252,14 +146,14 @@ export class SWFFGSpecializationSheet extends HandlebarsApplicationMixin(ItemShe
       }
 
       if (talentItem) {
-        try {
-          await actor.refundTalent(talentItem.id, cost, name, {
-            logDescription: `Erstattung von Talent "${name}" (+${cost} XP) aus ${this.document.name}`
-          });
-          ui.notifications.info(`Refunded ${name}. Regained ${cost} XP.`);
+        const result = await actor.refundTalent(talentItem.id, cost, name, {
+          logDescription: `Erstattung von Talent "${name}" (+${cost} XP) aus ${this.document.name}`
+        });
+        if (result && !result.success) {
+          ui.notifications.warn(result.message);
+        } else {
+          if (result && result.message) ui.notifications.info(result.message);
           this.render();
-        } catch (e) {
-          ui.notifications.warn(e.message);
         }
       }
     } else {
@@ -272,22 +166,23 @@ export class SWFFGSpecializationSheet extends HandlebarsApplicationMixin(ItemShe
       const confirmBuy = confirm(`Do you want to buy ${name} for ${cost} XP?`);
       if (!confirmBuy) return;
 
-      try {
-        await actor.buyTalent({
-          name: name,
-          key: key,
-          activation: activation,
-          description: description,
-          specialization: this.document.name.toLowerCase(),
-          row: row,
-          col: col
-        }, cost, {
-          logDescription: `Kauf von Talent "${name}" (-${cost} XP) aus ${this.document.name}`
-        });
-        ui.notifications.info(`Purchased ${name} for ${cost} XP.`);
+      const result = await actor.buyTalent({
+        name: name,
+        key: key,
+        activation: activation,
+        description: description,
+        specialization: this.document.name.toLowerCase(),
+        row: row,
+        col: col
+      }, cost, {
+        logDescription: `Kauf von Talent "${name}" (-${cost} XP) aus ${this.document.name}`
+      });
+      
+      if (result && !result.success) {
+        ui.notifications.warn(result.message);
+      } else {
+        if (result && result.message) ui.notifications.info(result.message);
         this.render();
-      } catch (e) {
-        ui.notifications.warn(e.message);
       }
     }
   }
@@ -301,121 +196,6 @@ export class SWFFGSpecializationSheet extends HandlebarsApplicationMixin(ItemShe
    */
   _validateRefund(targetRow, targetCol) {
     const actor = this.document.actor;
-    if (!actor) return true;
-
-    let rows = this.document.system.talentRows;
-    if (typeof rows === "string") {
-      try { rows = JSON.parse(rows); } catch (e) { rows = []; }
-    }
-    if (!rows || !Array.isArray(rows)) return true;
-
-    // 1. Build the simulated grid (pretend the target cell is NOT purchased)
-    const talentGrid = rows.map((row, rIdx) => {
-      return row.talents.map((talentKey, colIdx) => {
-        // Is it purchased?
-        let isPurchased = actor.items.some(t => 
-          t.type === "talent" && 
-          t.system?.key === talentKey && 
-          t.system?.specialization === this.document.name.toLowerCase() && 
-          t.system?.row === rIdx && 
-          t.system?.col === colIdx
-        );
-        
-        // Legacy fallback
-        if (!isPurchased) {
-          const totalOwned = actor.items.filter(t => t.type === "talent" && t.system?.key === talentKey).length;
-          const mappedToOthers = actor.items.filter(t => 
-            t.type === "talent" && 
-            t.system?.key === talentKey && 
-            t.system?.specialization === this.document.name.toLowerCase() && 
-            (t.system?.row !== rIdx || t.system?.col !== colIdx)
-          ).length;
-          isPurchased = (totalOwned - mappedToOthers) >= 1;
-        }
-
-        // Simulate refund: if this is the target cell, mark it as NOT purchased
-        if (rIdx === targetRow && colIdx === targetCol) {
-          isPurchased = false;
-        }
-
-        return {
-          purchased: isPurchased,
-          directions: row.directions[colIdx] || { up: false, down: false, left: false, right: false }
-        };
-      });
-    });
-
-    // 2. Run BFS reachability propagation on the simulated grid
-    for (let r = 0; r < talentGrid.length; r++) {
-      for (let c = 0; c < talentGrid[r].length; c++) {
-        talentGrid[r][c].reachable = (r === 0);
-      }
-    }
-
-    const queue = [];
-    const visited = new Set();
-    const keyOf = (r, c) => `${r},${c}`;
-
-    if (talentGrid.length > 0) {
-      for (let c = 0; c < talentGrid[0].length; c++) {
-        queue.push({ r: 0, c: c });
-      }
-    }
-
-    while (queue.length > 0) {
-      const { r, c } = queue.shift();
-      const key = keyOf(r, c);
-      if (visited.has(key)) continue;
-      visited.add(key);
-
-      const cell = talentGrid[r][c];
-      cell.reachable = true;
-
-      if (cell.purchased) {
-        const neighbors = [
-          { dr: -1, dc: 0, dirSelf: "up", dirOther: "down" },
-          { dr: 1, dc: 0, dirSelf: "down", dirOther: "up" },
-          { dr: 0, dc: -1, dirSelf: "left", dirOther: "right" },
-          { dr: 0, dc: 1, dirSelf: "right", dirOther: "left" }
-        ];
-
-        for (const { dr, dc, dirSelf, dirOther } of neighbors) {
-          const nr = r + dr;
-          const nc = c + dc;
-          if (nr >= 0 && nr < talentGrid.length && nc >= 0 && nc < talentGrid[nr].length) {
-            const neighbor = talentGrid[nr][nc];
-            if (cell.directions[dirSelf] && neighbor.directions[dirOther]) {
-              const neighborKey = keyOf(nr, nc);
-              if (!visited.has(neighborKey)) {
-                queue.push({ r: nr, c: nc });
-              }
-            }
-          }
-        }
-      }
-    }
-
-    // 3. Verify if any talent that is actually purchased on the actor becomes unreachable in the simulated grid
-    for (let r = 0; r < talentGrid.length; r++) {
-      for (let c = 0; c < talentGrid[r].length; c++) {
-        // Skip the one we are refunding
-        if (r === targetRow && c === targetCol) continue;
-        
-        // Check if it was originally purchased
-        const wasPurchased = actor.items.some(t => 
-          t.type === "talent" && 
-          t.system?.key === rows[r].talents[c] && 
-          t.system?.specialization === this.document.name.toLowerCase() && 
-          t.system?.row === r && 
-          t.system?.col === c
-        );
-
-        if (wasPurchased && !talentGrid[r][c].reachable) {
-          return false; // Refunding target breaks the path to (r, c)
-        }
-      }
-    }
-
-    return true; // Safe to refund
+    return TalentTreeUtils.validateRefund(this.document.name, this.document.system.talentRows, targetRow, targetCol, actor);
   }
 }

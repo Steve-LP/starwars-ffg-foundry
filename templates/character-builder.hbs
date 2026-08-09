@@ -1,0 +1,251 @@
+<div class="swffg character-builder-container">
+  
+  {{!-- Info Header --}}
+  <header class="builder-header">
+    <div class="header-stats">
+      <div class="stat-box">
+        <label>Verfügbare XP</label>
+        <span class="value">{{xp}}</span>
+      </div>
+      <div class="stat-box">
+        <label>Wunden</label>
+        <span class="value">{{stats.wounds}}</span>
+      </div>
+      <div class="stat-box">
+        <label>Erschöpfung</label>
+        <span class="value">{{stats.strain}}</span>
+      </div>
+    </div>
+    <div class="header-characteristics">
+      <div class="char-box">Brawn: {{stats.brawn}}</div>
+      <div class="char-box">Agility: {{stats.agility}}</div>
+      <div class="char-box">Intellect: {{stats.intellect}}</div>
+      <div class="char-box">Cunning: {{stats.cunning}}</div>
+      <div class="char-box">Willpower: {{stats.willpower}}</div>
+      <div class="char-box">Presence: {{stats.presence}}</div>
+    </div>
+  </header>
+
+  <hr>
+
+  {{!-- Step 1: Species --}}
+  {{#if (eq step 1)}}
+  <section class="builder-step">
+    <h2>Schritt 1: Spezies wählen</h2>
+    <p>Wähle deine Ausgangs-Spezies. Sie bestimmt deine Basis-Attribute, Wunden, Erschöpfung und Start-XP.</p>
+    
+    <div class="form-group">
+      <label for="species-select">Spezies:</label>
+      <select id="species-select" name="species" {{#if isPending}}disabled{{/if}}>
+        <option value="">Bitte wählen...</option>
+        {{#each speciesList}}
+        <option value="{{this.uuid}}">{{this.name}}</option>
+        {{/each}}
+      </select>
+    </div>
+  </section>
+  {{/if}}
+
+  {{!-- Step 2: Species Bonus Choice --}}
+  {{#if (eq step 2)}}
+  <section class="builder-step">
+    <h2>Schritt 2: Spezies-Bonus wählen</h2>
+    <p>Deine Spezies gewährt dir eine Auswahl an Bonus-Fertigkeiten. Bitte wähle eine:</p>
+    
+    <div class="form-group">
+      <label for="species-choice-select">Bonus-Fertigkeit:</label>
+      <select id="species-choice-select" name="speciesChoice" {{#if isPending}}disabled{{/if}}>
+        <option value="">Bitte wählen...</option>
+        {{#each speciesChoices}}
+        <option value="{{this}}">{{this}}</option>
+        {{/each}}
+      </select>
+    </div>
+  </section>
+  {{/if}}
+
+  {{!-- Step 3: Career --}}
+  {{#if (eq step 3)}}
+  <section class="builder-step">
+    <h2>Schritt 3: Karriere wählen</h2>
+    <p>Deine Karriere gewährt dir Karriere-Fertigkeiten und definiert, welche Spezialisierungen dir zur Verfügung stehen.</p>
+    
+    <div class="form-group">
+      <label for="career-select">Karriere:</label>
+      <select id="career-select" name="career" {{#if isPending}}disabled{{/if}}>
+        <option value="">Bitte wählen...</option>
+        {{#each careersList}}
+        <option value="{{this.uuid}}">{{this.name}}</option>
+        {{/each}}
+      </select>
+    </div>
+  </section>
+  {{/if}}
+
+  {{!-- Step 4: Specialization --}}
+  {{#if (eq step 4)}}
+  <section class="builder-step">
+    <h2>Schritt 4: Start-Spezialisierung wählen</h2>
+    <p>Wähle eine der zu deiner Karriere gehörenden Spezialisierungen als Startpunkt für deine Talente.</p>
+    
+    <div class="form-group">
+      <label for="spec-select">Spezialisierung:</label>
+      <select id="spec-select" name="specialization" {{#if isPending}}disabled{{/if}}>
+        <option value="">Bitte wählen...</option>
+        {{#each specsList}}
+        <option value="{{this.uuid}}">{{this.name}}</option>
+        {{/each}}
+      </select>
+    </div>
+  </section>
+  {{/if}}
+
+  {{!-- Step 5: Free Skills --}}
+  {{#if (eq step 5)}}
+  <section class="builder-step">
+    <h2>Schritt 5: Gratis-Fertigkeiten</h2>
+    <p>Wähle deine kostenlosen Start-Fertigkeiten aus Karriere (max. 4) und Spezialisierung (max. 2).</p>
+    
+    <div class="skills-selection-container">
+      <div class="skills-column">
+        <h3>Karriere-Fertigkeiten ({{actor.system.creation.freeCareerSkills.length}}/4)</h3>
+        <ul class="builder-skills-list">
+          {{#each careerSkills}}
+          <li>
+            <label>
+              <input type="checkbox" data-action="toggleCareerSkill" value="{{this.name}}" {{#if this.checked}}checked{{/if}} {{#if ../isPending}}disabled{{/if}}>
+              {{this.name}} <span class="char-badge">({{this.characteristic}})</span>
+            </label>
+          </li>
+          {{/each}}
+        </ul>
+      </div>
+      
+      <div class="skills-column">
+        <h3>Spezialisierungs-Fertigkeiten ({{actor.system.creation.freeSpecializationSkills.length}}/2)</h3>
+        <ul class="builder-skills-list">
+          {{#each specSkills}}
+          <li>
+            <label>
+              <input type="checkbox" data-action="toggleSpecSkill" value="{{this.name}}" {{#if this.checked}}checked{{/if}} {{#if ../isPending}}disabled{{/if}}>
+              {{this.name}} <span class="char-badge">({{this.characteristic}})</span>
+            </label>
+          </li>
+          {{/each}}
+        </ul>
+      </div>
+    </div>
+  </section>
+  {{/if}}
+
+  {{!-- Step 6: XP Spending (Tabbed: Characteristics, Skill Ranks, Talents) --}}
+  {{#if (eq step 6)}}
+  <section class="builder-step xp-spending-step">
+    <h2>Schritt 6: XP investieren</h2>
+    
+    {{!-- Navigation Tabs --}}
+    <nav class="builder-tabs">
+      <button type="button" class="tab-btn {{#if (eq activeTab 'attributes')}}active{{/if}}" data-action="switchTab" data-tab="attributes" {{#if isPending}}disabled{{/if}}>
+        <i class="fas fa-sliders-h"></i> Attribute
+      </button>
+      <button type="button" class="tab-btn {{#if (eq activeTab 'skills')}}active{{/if}}" data-action="switchTab" data-tab="skills" {{#if isPending}}disabled{{/if}}>
+        <i class="fas fa-graduation-cap"></i> Fertigkeiten
+      </button>
+      <button type="button" class="tab-btn {{#if (eq activeTab 'talents')}}active{{/if}}" data-action="switchTab" data-tab="talents" {{#if isPending}}disabled{{/if}}>
+        <i class="fas fa-sitemap"></i> Talente
+      </button>
+    </nav>
+
+    {{!-- Tab Content: Attributes --}}
+    {{#if (eq activeTab 'attributes')}}
+    <div class="tab-content">
+      <p>Verteile deine verbleibenden Start-XP ({{xp}} XP) auf deine Attribute. Attribute können später im Spiel nicht mehr direkt gesteigert werden!</p>
+      <div class="characteristics-grid">
+        {{#each characteristics as |char key|}}
+        <div class="characteristic-box">
+          <div class="char-name">{{capitalize key}}</div>
+          <div class="char-value">{{char.value}}</div>
+          <div class="char-controls">
+            <button type="button" class="icon-btn" data-action="decreaseChar" data-char="{{key}}" {{#if (lte char.value char.base)}}disabled{{/if}} {{#if ../isPending}}disabled{{/if}}><i class="fas fa-minus"></i></button>
+            <button type="button" class="icon-btn" data-action="increaseChar" data-char="{{key}}" {{#if (gte char.value 5)}}disabled{{/if}} {{#if ../isPending}}disabled{{/if}}><i class="fas fa-plus"></i></button>
+          </div>
+        </div>
+        {{/each}}
+      </div>
+    </div>
+    {{/if}}
+
+    {{!-- Tab Content: Skills --}}
+    {{#if (eq activeTab 'skills')}}
+    <div class="tab-content">
+      <p>Karriere-Fertigkeiten kosten 5/10/15/20/25 XP für Rang 1–5, Nicht-Karriere-Fertigkeiten 10/15/20/25/30 XP.</p>
+      <div class="skills-grid">
+        {{#each allSkills as |skill|}}
+        <div class="skill-row {{#if skill.isCareer}}career-skill{{/if}}">
+          <div class="skill-name">{{skill.name}} <span class="char-badge">({{skill.characteristic}})</span></div>
+          {{#if skill.isCareer}}<div class="career-badge">Career</div>{{/if}}
+          <div class="skill-value"><span class="rank-badge">Rang {{skill.rank}}</span></div>
+          <div class="skill-controls">
+            <button type="button" class="icon-btn action-btn decrease" data-action="decreaseSkill" data-skill="{{skill.name}}" {{#if (lte skill.rank skill.baseRank)}}disabled{{/if}} {{#if ../isPending}}disabled{{/if}}>
+              <i class="fas fa-minus"></i>
+              {{#if skill.refundCost}}<span class="cost-badge refund">+{{skill.refundCost}} XP</span>{{/if}}
+            </button>
+            {{#if skill.isMax}}
+            <span class="max-badge">MAX</span>
+            {{else}}
+            <button type="button" class="icon-btn action-btn increase" data-action="increaseSkill" data-skill="{{skill.name}}" {{#if ../isPending}}disabled{{/if}}>
+              <i class="fas fa-plus"></i>
+              {{#if skill.nextCost}}<span class="cost-badge cost">-{{skill.nextCost}} XP</span>{{/if}}
+            </button>
+            {{/if}}
+          </div>
+        </div>
+        {{/each}}
+      </div>
+    </div>
+    {{/if}}
+
+    {{!-- Tab Content: Talents --}}
+    {{#if (eq activeTab 'talents')}}
+    <div class="tab-content">
+      <p>Kaufe Talente aus deinem Spezialisierungsbaum. XP-Kosten stehen in den Boxen.</p>
+      <div class="specialization-sheet-tree">
+        {{> "systems/starwars-ffg-scratch/templates/parts/talent-grid.hbs"}}
+      </div>
+    </div>
+    {{/if}}
+
+  </section>
+  {{/if}}
+
+  {{!-- Footer Controls --}}
+  <footer class="builder-footer">
+    <div class="left-controls">
+      {{#if (eq step 6)}}
+      <button type="button" data-action="resetPurchases" class="danger" {{#if isPending}}disabled{{/if}}>
+        <i class="fas fa-undo"></i> XP-Käufe zurücksetzen
+      </button>
+      {{/if}}
+      {{#if (gte step 2)}}
+      <button type="button" data-action="prevStep" {{#if isPending}}disabled{{/if}}>
+        <i class="fas fa-arrow-left"></i> Zurück
+      </button>
+      {{/if}}
+    </div>
+    
+    <div class="right-controls">
+      {{#if (lt step 6)}}
+      <button type="button" data-action="nextStep" class="primary" {{#if isPending}}disabled{{/if}}>
+        Weiter <i class="fas fa-arrow-right"></i>
+      </button>
+      {{/if}}
+
+      {{#if (eq step 6)}}
+      <button type="button" data-action="finish" class="primary" {{#if isPending}}disabled{{/if}}>
+        <i class="fas fa-check"></i> Abschließen
+      </button>
+      {{/if}}
+    </div>
+  </footer>
+
+</div>

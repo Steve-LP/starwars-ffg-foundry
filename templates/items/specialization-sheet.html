@@ -22,42 +22,7 @@
       </div>
       {{/if}}
 
-      <div class="talent-grid spec-grid">
-        {{#each talentRows as |row|}}
-          {{#each row.talents as |talent|}}
-          <div class="talent-node-cell">
-            <!-- Talent Block -->
-            <div class="talent-card {{#if talent.purchased}}purchased{{/if}} {{#if (eq talent.activation 'Passive')}}passive{{else}}active{{/if}} {{#unless talent.purchased}}{{#unless talent.reachable}}unreachable{{/unless}}{{/unless}}" 
-                 data-key="{{talent.key}}" 
-                 data-cost="{{row.cost}}" 
-                 data-name="{{talent.name}}" 
-                 data-activation="{{talent.activation}}" 
-                 data-description="{{talent.description}}" 
-                 data-tooltip="{{talent.description}}"
-                 data-row="{{row.index}}"
-                 data-col="{{@index}}"
-                 data-reachable="{{talent.reachable}}">
-              <div class="talent-card-inner">
-                <div class="talent-header">
-                  <div class="talent-activation-badge {{talent.activation}}"></div>
-                  <div class="talent-name">{{talent.name}}</div>
-                </div>
-                <div class="talent-footer">
-                  <div class="talent-activation-label">{{talent.activation}}</div>
-                  <div class="talent-cost">{{row.cost}} XP</div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Connector Lines -->
-            {{#if talent.directions.up}}<div class="connector connector-up"></div>{{/if}}
-            {{#if talent.directions.down}}<div class="connector connector-down"></div>{{/if}}
-            {{#if talent.directions.left}}<div class="connector connector-left"></div>{{/if}}
-            {{#if talent.directions.right}}<div class="connector connector-right"></div>{{/if}}
-          </div>
-          {{/each}}
-        {{/each}}
-      </div>
+      {{> "systems/starwars-ffg-scratch/templates/parts/talent-grid.hbs"}}
     </div>
   </section>
 </form>

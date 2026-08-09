@@ -6,6 +6,7 @@ import { SWFFGSpecializationSheet } from "./specialization-sheet.js";
 import { oggdudeParser } from "./oggdude-importer.js";
 import { CharacterData, NPCData, MinionData, WeaponData, ArmorData, GearData, TalentData, ForcePowerData, SpecializationData, SkillData, SpeciesData, CareerData, AttachmentData } from "./data-models.js";
 import { SWFFGDiceRoller } from "./dice-roller.js";
+import { CharacterBuilder } from "./applications/character-builder.js";
 
 Hooks.once("init", async function () {
   console.log("Star Wars FFG Scratch | Initializing Star Wars FFG System (V13/V14)");
@@ -48,6 +49,11 @@ Hooks.once("init", async function () {
     types: ["specialization"],
     makeDefault: true
   });
+
+  // Preload Handlebars templates & partials
+  await foundry.applications.handlebars.loadTemplates([
+    "systems/starwars-ffg-scratch/templates/parts/talent-grid.hbs"
+  ]);
 
   // Handlebars helper: capitalize string
   Handlebars.registerHelper("capitalize", function (str) {
@@ -126,4 +132,16 @@ Hooks.once("ready", async function () {
   } else {
     console.warn("Star Wars FFG Scratch | ❌ Specializations or Talents packs could not be loaded!");
   }
+});
+
+Hooks.on("createActor", (actor, options, userId) => {
+  console.log("SWFFG | createActor hook fired for", actor.name);
+  // Only trigger for the user who created the actor, and only for characters
+  if (game.user.id !== userId) return;
+  if (actor.type !== "character") return;
+  
+  console.log("SWFFG | Opening Character Builder for new actor:", actor.name);
+  // Auto-open the Character Builder
+  const builder = new CharacterBuilder({ actor });
+  builder.render({ force: true });
 });

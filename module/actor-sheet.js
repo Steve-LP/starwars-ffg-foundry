@@ -1,3 +1,4 @@
+import { CharacterBuilder } from "./applications/character-builder.js";
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
 
@@ -65,8 +66,16 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     form: {
       submitOnChange: true,
       closeOnSubmit: false
+    },
+    actions: {
+      openBuilder: SWFFGActorSheet.#onOpenBuilder
     }
   };
+
+  static async #onOpenBuilder(event, target) {
+    const builder = new CharacterBuilder({ actor: this.document });
+    builder.render({ force: true });
+  }
 
   static PARTS = {
     sheet: {
@@ -531,7 +540,9 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
         event.stopPropagation();
         const charName = event.currentTarget.dataset.characteristic;
         if (charName) {
-          await this.actor.buyAttribute(charName);
+          const result = await this.actor.buyAttribute(charName);
+          if (result && !result.success) ui.notifications?.warn(result.message);
+          else if (result && result.message) ui.notifications?.info(result.message);
         }
       });
 
@@ -540,26 +551,32 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
         event.stopPropagation();
         const charName = event.currentTarget.dataset.characteristic;
         if (charName) {
-          await this.actor.decreaseAttribute(charName);
+          const result = await this.actor.decreaseAttribute(charName);
+          if (result && !result.success) ui.notifications?.warn(result.message);
+          else if (result && result.message) ui.notifications?.info(result.message);
         }
       });
 
       html.find(".lock-creation-btn").click(async (event) => {
         event.preventDefault();
         event.stopPropagation();
-        await this.actor.lockCreation();
+        const result = await this.actor.lockCreation();
+        if (result && !result.success) ui.notifications?.error(result.message);
+        else if (result && result.message) ui.notifications?.info(result.message);
       });
 
       html.find(".toggle-sandbox-btn").click(async (event) => {
         event.preventDefault();
         event.stopPropagation();
-        await this.actor.toggleSandboxMode();
+        const result = await this.actor.toggleSandboxMode();
+        if (result && result.message) ui.notifications?.info(result.message);
       });
 
       html.find(".reset-creation-btn").click(async (event) => {
         event.preventDefault();
         event.stopPropagation();
-        await this.actor.resetToCreationMode();
+        const result = await this.actor.resetToCreationMode();
+        if (result && result.message) ui.notifications?.info(result.message);
       });
 
       // Skill purchase and decrease handlers for character creation phase
@@ -570,7 +587,9 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
         const skillChar = event.currentTarget.dataset.characteristic;
         const skillCat = event.currentTarget.dataset.category;
         if (skillName) {
-          await this.actor.buySkillRank(skillName, skillChar, skillCat);
+          const result = await this.actor.buySkillRank(skillName, skillChar, skillCat);
+          if (result && !result.success) ui.notifications?.warn(result.message);
+          else if (result && result.message) ui.notifications?.info(result.message);
         }
       });
 
@@ -579,7 +598,9 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
         event.stopPropagation();
         const skillName = event.currentTarget.dataset.name;
         if (skillName) {
-          await this.actor.decreaseSkillRank(skillName);
+          const result = await this.actor.decreaseSkillRank(skillName);
+          if (result && !result.success) ui.notifications?.warn(result.message);
+          else if (result && result.message) ui.notifications?.info(result.message);
         }
       });
 
@@ -587,11 +608,10 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
         event.preventDefault();
         const skillName = event.currentTarget.dataset.name;
         const checked = event.currentTarget.checked;
-        try {
-          await this.actor.toggleFreeCareerSkill(skillName, checked);
-        } catch (e) {
+        const result = await this.actor.toggleFreeCareerSkill(skillName, checked);
+        if (result && !result.success) {
           event.currentTarget.checked = !checked; // revert
-          ui.notifications?.warn(e.message);
+          ui.notifications?.warn(result.message);
         }
       });
 
@@ -599,11 +619,10 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
         event.preventDefault();
         const skillName = event.currentTarget.dataset.name;
         const checked = event.currentTarget.checked;
-        try {
-          await this.actor.toggleFreeSpecializationSkill(skillName, checked);
-        } catch (e) {
+        const result = await this.actor.toggleFreeSpecializationSkill(skillName, checked);
+        if (result && !result.success) {
           event.currentTarget.checked = !checked; // revert
-          ui.notifications?.warn(e.message);
+          ui.notifications?.warn(result.message);
         }
       });
     }
@@ -626,11 +645,11 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 
       const talentItem = this.actor.items.find(t => t.type === "talent" && t.system?.key === key);
       if (talentItem) {
-        try {
-          await this.actor.refundTalent(talentItem.id, cost, name);
-          ui.notifications.info(`Refunded ${name}. Regained ${cost} XP.`);
-        } catch (e) {
-          ui.notifications.warn(e.message);
+        const result = await this.actor.refundTalent(talentItem.id, cost, name);
+        if (result && !result.success) {
+          ui.notifications.warn(result.message);
+        } else {
+          if (result && result.message) ui.notifications.info(result.message);
         }
       }
     } else {
@@ -642,15 +661,17 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       const confirmBuy = confirm(`Do you want to buy ${name} for ${cost} XP?`);
       if (!confirmBuy) return;
 
-      try {
-        await this.actor.buyTalent({
-          name: name,
-          key: key,
-          activation: activation,
-          description: description
-        }, cost);
-      } catch (e) {
-        ui.notifications.warn(e.message);
+      const result = await this.actor.buyTalent({
+        name: name,
+        key: key,
+        activation: activation,
+        description: description
+      }, cost);
+      
+      if (result && !result.success) {
+        ui.notifications.warn(result.message);
+      } else {
+        if (result && result.message) ui.notifications.info(result.message);
       }
     }
   }
@@ -1026,23 +1047,17 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     }
 
     if (itemData.type === "species") {
-      try {
-        await this.actor.applySpecies(itemData);
-      } catch (e) {
-        ui.notifications?.warn(e.message);
-      }
+      const result = await this.actor.applySpecies(itemData);
+      if (result && !result.success) ui.notifications?.warn(result.message);
+      else if (result && result.message) ui.notifications?.info(result.message);
     } else if (itemData.type === "career") {
-      try {
-        await this.actor.applyCareer(itemData);
-      } catch (e) {
-        ui.notifications?.warn(e.message);
-      }
+      const result = await this.actor.applyCareer(itemData);
+      if (result && !result.success) ui.notifications?.warn(result.message);
+      else if (result && result.message) ui.notifications?.info(result.message);
     } else if (itemData.type === "specialization") {
-      try {
-        await this.actor.applySpecialization(itemData);
-      } catch (e) {
-        ui.notifications?.warn(e.message);
-      }
+      const result = await this.actor.applySpecialization(itemData);
+      if (result && !result.success) ui.notifications?.warn(result.message);
+      else if (result && result.message) ui.notifications?.info(result.message);
     } else if (itemData.type === "talent") {
       await super._onDropItem(event, data);
     } else {
@@ -1084,11 +1099,12 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     if (!confirmRemove) return;
 
     const isStartingSpec = this.actor.system.biography.specialization === item.name;
-    try {
-      await this.actor.removeSpecialization(itemId, isStartingSpec);
+    const result = await this.actor.removeSpecialization(itemId, isStartingSpec);
+    if (result && !result.success) {
+      ui.notifications?.warn(result.message);
+    } else {
+      if (result && result.message) ui.notifications?.info(result.message);
       this.render();
-    } catch (e) {
-      ui.notifications?.warn(e.message);
     }
   }
 
@@ -1096,11 +1112,12 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     const confirmRemove = confirm("Do you want to remove your Species? This will reset starting characteristics, thresholds, and starting skill bonuses back to default. It will also remove your Career and Specializations.");
     if (!confirmRemove) return;
 
-    try {
-      await this.actor.removeSpecies();
+    const result = await this.actor.removeSpecies();
+    if (result && !result.success) {
+      ui.notifications?.warn(result.message);
+    } else {
+      if (result && result.message) ui.notifications?.info(result.message);
       this.render();
-    } catch (e) {
-      ui.notifications?.warn(e.message);
     }
   }
 
@@ -1108,11 +1125,12 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     const confirmRemove = confirm("Do you want to remove your Career? This will also update your career skills and remove your starting Specialization.");
     if (!confirmRemove) return;
 
-    try {
-      await this.actor.removeCareer();
+    const result = await this.actor.removeCareer();
+    if (result && !result.success) {
+      ui.notifications?.warn(result.message);
+    } else {
+      if (result && result.message) ui.notifications?.info(result.message);
       this.render();
-    } catch (e) {
-      ui.notifications?.warn(e.message);
     }
   }
 
