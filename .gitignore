@@ -14,3 +14,6 @@ package-lock.json
 
 # Tools - generated source JSON files (re-generated from .db files via split-ndjson.cjs)
 tools/src/
+
+# Backups
+*.bak

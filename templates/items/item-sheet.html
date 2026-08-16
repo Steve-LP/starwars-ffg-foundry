@@ -31,6 +31,10 @@
       <input type="text" name="system.skill" value="{{system.skill}}" />
     </div>
     <div class="form-group">
+      <label>Hardpoints</label>
+      <input type="number" name="system.hardpoints" value="{{system.hardpoints}}" min="0" data-dtype="Number" />
+    </div>
+    <div class="form-group">
       <label>Qualities</label>
       <input type="text" name="system.qualities" value="{{system.qualities}}" placeholder="Accurate 1, Pierce 2..." />
     </div>
@@ -45,6 +49,28 @@
     <div class="form-group">
       <label>Defense Rating</label>
       <input type="number" name="system.defence" value="{{system.defence}}" data-dtype="Number" />
+    </div>
+    <div class="form-group">
+      <label>Hardpoints</label>
+      <input type="number" name="system.hardpoints" value="{{system.hardpoints}}" min="0" data-dtype="Number" />
+    </div>
+    <div class="form-group">
+      <label>Qualities</label>
+      <input type="text" name="system.qualities" value="{{system.qualities}}" placeholder="Superior, Reinforced..." />
+    </div>
+    {{/if}}
+
+    <!-- Attachment Settings -->
+    {{#if (eq item.type "attachment")}}
+    <div class="form-group">
+      <label>Required Hardpoints</label>
+      <input type="number" name="system.hardpoints" value="{{system.hardpoints}}" min="0" data-dtype="Number" />
+    </div>
+    <div class="form-group">
+      <label>Slot Type</label>
+      <select name="system.slotType">
+        {{selectOptions (arr "weapon" "armor" "all") selected=system.slotType}}
+      </select>
     </div>
     {{/if}}
 
@@ -66,8 +92,26 @@
     </div>
     {{/if}}
 
+    <!-- Catalog & Trade Fields (Weapon, Armor, Gear, Attachment) -->
+    {{#if (or (eq item.type "weapon") (eq item.type "armor") (eq item.type "gear") (eq item.type "attachment"))}}
+    <hr />
+    <h3>Katalog- & Handelsdaten</h3>
+    <div class="form-group">
+      <label>Preis (Credits)</label>
+      <input type="number" name="system.price" value="{{system.price}}" min="0" data-dtype="Number" />
+    </div>
+    <div class="form-group">
+      <label>Seltenheit (Rarity 0-10)</label>
+      <input type="number" name="system.rarity" value="{{system.rarity}}" min="0" max="10" data-dtype="Number" />
+    </div>
+    <div class="form-group">
+      <label>Eingeschränkt / Illegal (Restricted)</label>
+      <input type="checkbox" name="system.restricted" {{checked system.restricted}} />
+    </div>
+    {{/if}}
+
     <!-- Universal Physical Attributes -->
-    {{#if (ne item.type "specialization")}}
+    {{#if (and (ne item.type "specialization") (ne item.type "talent") (ne item.type "forcePower") (ne item.type "species") (ne item.type "career") (ne item.type "skill") (ne item.type "attachment"))}}
     <div class="form-group">
       <label>Encumbrance</label>
       <input type="number" name="system.encumbrance" value="{{system.encumbrance}}" data-dtype="Number" />
@@ -82,7 +126,6 @@
     {{/if}}
 
     <!-- Equipped status for Weapon, Armor, Gear -->
-    {{#if (or (eq item.type "weapon") (eq item.type "armor") (eq item.type "gear"))}}
     <div class="form-group">
       <label>Equipped Status</label>
       <input type="checkbox" name="system.equipped" {{checked system.equipped}} />

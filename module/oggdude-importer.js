@@ -65,6 +65,9 @@ export function parseOggdudeWeapons(xmlString) {
     const qualities = weaponNode.getElementsByTagName("Qualities")[0]?.textContent || "";
     const skillRaw = weaponNode.getElementsByTagName("SkillKey")[0]?.textContent || weaponNode.getElementsByTagName("Skill")[0]?.textContent || "Ranged - Light";
     const skill = normalizeSkillName(skillRaw);
+    const price = parseInt(weaponNode.getElementsByTagName("Price")[0]?.textContent || "0");
+    const rarity = parseInt(weaponNode.getElementsByTagName("Rarity")[0]?.textContent || "0");
+    const restricted = weaponNode.getElementsByTagName("Restricted")[0]?.textContent?.toLowerCase() === "true";
 
     items.push({
       name: name,
@@ -76,6 +79,9 @@ export function parseOggdudeWeapons(xmlString) {
         encumbrance: encumbrance,
         qualities: qualities,
         skill: skill,
+        price: price,
+        rarity: rarity,
+        restricted: restricted,
         key: key
       }
     });

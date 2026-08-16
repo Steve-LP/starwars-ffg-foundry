@@ -157,6 +157,9 @@ export class WeaponData extends foundry.abstract.TypeDataModel {
       hardpoints: new fields.NumberField({ initial: 0 }),
       qualities: new fields.StringField({ initial: "" }),
       skill: new fields.StringField({ initial: "Ranged - Light" }),
+      price: new fields.NumberField({ initial: 0, min: 0 }),
+      rarity: new fields.NumberField({ initial: 0, min: 0, max: 10 }),
+      restricted: new fields.BooleanField({ initial: false }),
       key: new fields.StringField({ initial: "" }),
       equipped: new fields.BooleanField({ initial: false }),
       modifiers: new fields.SchemaField({
@@ -181,6 +184,9 @@ export class ArmorData extends foundry.abstract.TypeDataModel {
       encumbrance: new fields.NumberField({ initial: 2 }),
       hardpoints: new fields.NumberField({ initial: 0 }),
       qualities: new fields.StringField({ initial: "" }),
+      price: new fields.NumberField({ initial: 0, min: 0 }),
+      rarity: new fields.NumberField({ initial: 0, min: 0, max: 10 }),
+      restricted: new fields.BooleanField({ initial: false }),
       equipped: new fields.BooleanField({ initial: false }),
       key: new fields.StringField({ initial: "" }),
       modifiers: new fields.SchemaField({
@@ -203,6 +209,9 @@ export class GearData extends foundry.abstract.TypeDataModel {
       description: new fields.HTMLField({ initial: "" }),
       quantity: new fields.NumberField({ initial: 1 }),
       encumbrance: new fields.NumberField({ initial: 1 }),
+      price: new fields.NumberField({ initial: 0, min: 0 }),
+      rarity: new fields.NumberField({ initial: 0, min: 0, max: 10 }),
+      restricted: new fields.BooleanField({ initial: false }),
       equipped: new fields.BooleanField({ initial: false }),
       modifiers: new fields.SchemaField({
         wounds: new fields.NumberField({ initial: 0 }),
@@ -328,6 +337,10 @@ export class AttachmentData extends foundry.abstract.TypeDataModel {
     return {
       description: new fields.HTMLField({ initial: "" }),
       hardpoints: new fields.NumberField({ initial: 1, min: 0 }),
+      slotType: new fields.StringField({ initial: "weapon", choices: ["weapon", "armor", "all"] }),
+      price: new fields.NumberField({ initial: 0, min: 0 }),
+      rarity: new fields.NumberField({ initial: 0, min: 0, max: 10 }),
+      restricted: new fields.BooleanField({ initial: false }),
       baseModifiers: new fields.SchemaField({
         wounds: new fields.NumberField({ initial: 0 }),
         strain: new fields.NumberField({ initial: 0 }),
