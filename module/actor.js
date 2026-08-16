@@ -225,8 +225,11 @@ export class SWFFGActor extends Actor {
 
   get totalAvailableXp() {
     if (this.type !== "character") return 0;
-    const total = (this.system.creation?.startingXp || 0) + this.dutyXp + (this.system.xp?.earned || 0);
-    return total - this.currentAttributeXpSpent - this.calculateSpentTalentXp() - this.calculateSpentSpecializationXp() - this.calculateSpentSkillXp();
+    if (this.system.creation?.isCreationMode === true) {
+      const total = (this.system.creation?.startingXp || 0) + this.dutyXp;
+      return total - this.currentAttributeXpSpent - this.calculateSpentTalentXp() - this.calculateSpentSpecializationXp() - this.calculateSpentSkillXp();
+    }
+    return this._source.system?.xp?.available ?? this.system.xp?.available ?? 0;
   }
 
   async buyAttribute(attributeName) {
@@ -1141,10 +1144,6 @@ export class SWFFGActor extends Actor {
     const spentTalentXp = this.calculateSpentTalentXp();
     const spentSpecializationXp = this.calculateSpentSpecializationXp();
 
-    const totalSpentXp = spentAttributeXp + spentSkillXp + spentTalentXp + spentSpecializationXp;
-    const totalXp = startingXp + this.dutyXp + (system.xp?.earned || 0);
-    const availableXp = totalXp - totalSpentXp;
-
     // Set derived attributes
     system.characteristics.brawn.value = brawn;
     system.characteristics.agility.value = agility;
@@ -1153,8 +1152,17 @@ export class SWFFGActor extends Actor {
     system.characteristics.willpower.value = willpower;
     system.characteristics.presence.value = presence;
 
-    system.xp.available = availableXp;
-    system.xp.total = totalXp;
+    if (isCreationMode) {
+      const totalSpentXp = spentAttributeXp + spentSkillXp + spentTalentXp + spentSpecializationXp;
+      const totalXp = startingXp + this.dutyXp;
+      const availableXp = totalXp - totalSpentXp;
+      system.xp.available = availableXp;
+      system.xp.total = totalXp;
+    } else {
+      // In play mode, xp.available and xp.total are stored directly in the database
+      system.xp.available = this._source.system?.xp?.available ?? system.xp?.available ?? 0;
+      system.xp.total = this._source.system?.xp?.total ?? system.xp?.total ?? 0;
+    }
 
     // Expose derivedSkills on actor
     this.derivedSkills = derivedSkills;
@@ -1165,7 +1173,7 @@ export class SWFFGActor extends Actor {
     const hasSpecies = !!system.biography?.species;
     const hasCareer = !!system.biography?.career;
     const hasSpec = this.items.some(i => i.type === "specialization");
-    const xpValid = availableXp >= 0;
+    const xpValid = (system.xp.available ?? 0) >= 0;
     const skillsValid = freeCareerSkills.length === 4 && freeSpecSkills.length === 2;
     const attributesValid = spentAttributeXp <= (this.maxAttributeXpAllowed || 0);
     const lockAllowed = hasSpecies && hasCareer && hasSpec && skillsValid && xpValid && attributesValid;
@@ -1218,7 +1226,7 @@ export class SWFFGActor extends Actor {
     }
 
     const totalForceRating = baseForceRating + forceRatingTalents;
-    if (system.stats.force) {
+    if (system.stats?.force) {
       system.stats.force.max = totalForceRating;
       if (system.stats.force.value === undefined || system.stats.force.value === null) {
         system.stats.force.value = totalForceRating;
@@ -1324,34 +1332,36 @@ export class SWFFGActor extends Actor {
       }
     }
 
-    // Set base wounds/strain
-    if (!system.stats.wounds.base || isCreationMode) system.stats.wounds.base = baseWounds;
-    if (!system.stats.strain.base || isCreationMode) system.stats.strain.base = baseStrain;
-
-    system.stats.wounds.max = baseWounds + (toughenedRanks * 2) + inventoryWoundsMod;
-    system.stats.strain.max = baseStrain + gritRanks + inventoryStrainMod;
-    system.stats.soak.value = (system.characteristics.brawn.value || 0) + armorSoak + enduringRanks + inventorySoakMod;
-
-    system.stats.defence.melee = armorMeleeDefence;
-    system.stats.defence.ranged = armorRangedDefence;
-
-    let carriedEncumbrance = 0;
-    for (const item of this.items) {
-      if (item.type === "weapon" || item.type === "armor" || item.type === "gear") {
-        const enc = item.system.encumbrance || 0;
-        const qty = item.system.quantity !== undefined ? (item.system.quantity || 0) : 1;
-        if (item.type === "armor" && item.system.equipped) {
-          carriedEncumbrance += Math.max(0, enc - 3) * qty;
-        } else {
-          carriedEncumbrance += enc * qty;
+    if (system.stats) {
+      if (system.stats.force) {
+        system.stats.force.max = totalForceRating;
+        if (system.stats.force.value === undefined || system.stats.force.value === null) {
+          system.stats.force.value = totalForceRating;
         }
       }
-    }
 
-    system.stats.encumbrance = {
-      value: carriedEncumbrance,
-      max: 5 + (system.characteristics.brawn.value || 0) + maxEncumbranceBonus
-    };
+      // Set base wounds/strain
+      if (system.stats.wounds) {
+        if (!system.stats.wounds.base || isCreationMode) system.stats.wounds.base = baseWounds;
+        system.stats.wounds.max = baseWounds + (toughenedRanks * 2) + inventoryWoundsMod;
+      }
+      if (system.stats.strain) {
+        if (!system.stats.strain.base || isCreationMode) system.stats.strain.base = baseStrain;
+        system.stats.strain.max = baseStrain + gritRanks + inventoryStrainMod;
+      }
+      if (system.stats.soak) {
+        system.stats.soak.value = (system.characteristics.brawn.value || 0) + armorSoak + enduringRanks + inventorySoakMod;
+      }
+      if (system.stats.defence) {
+        system.stats.defence.melee = armorMeleeDefence;
+        system.stats.defence.ranged = armorRangedDefence;
+      }
+
+      system.stats.encumbrance = {
+        value: carriedEncumbrance,
+        max: 5 + (system.characteristics.brawn.value || 0) + maxEncumbranceBonus
+      };
+    }
 
     // Update in-memory skill items on the actor
     for (const item of this.items) {
