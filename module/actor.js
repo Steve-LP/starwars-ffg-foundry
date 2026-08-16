@@ -466,6 +466,108 @@ export class SWFFGActor extends Actor {
     return { success: true, message: `GM Sandbox-Modus ${newSandbox ? "aktiviert" : "deaktiviert"}.`, data: { sandboxMode: newSandbox } };
   }
 
+  /**
+   * Vergibt XP an den Charakter (z. B. Session-XP). Nur für GMs außerhalb der Charaktererstellung.
+   *
+   * @param {number} amount - Positive Ganzzahl. Wird sowohl zu xp.available als auch xp.total addiert.
+   * @returns {{ success: boolean, message: string, data?: { granted: number, newAvailable: number } }}
+   *
+   * @example
+   * // Konsolentest (als GM, außerhalb Erstellung):
+   * const result = await actor.grantXp(15);
+   * console.log(result); // { success: true, message: "...", data: { granted: 15, newAvailable: 115 } }
+   */
+  async grantXp(amount) {
+    if (this.type !== "character") {
+      return { success: false, message: "grantXp ist nur für Charaktere verfügbar." };
+    }
+
+    if (!game.user?.isGM) {
+      return { success: false, message: "grantXp darf nur vom GM aufgerufen werden." };
+    }
+
+    if (this.system.creation?.isCreationMode === true) {
+      return { success: false, message: "grantXp ist nur außerhalb der Charaktererstellung verfügbar. Bitte zuerst den Wizard abschließen." };
+    }
+
+    // Validierung: amount muss eine positive Ganzzahl sein
+    if (!Number.isInteger(amount) || amount <= 0) {
+      return { success: false, message: `Ungültiger XP-Betrag: "${amount}". Bitte eine positive ganze Zahl angeben.` };
+    }
+
+    const currentAvailable = this.system.xp?.available ?? 0;
+    const currentTotal = this.system.xp?.total ?? 0;
+    const newAvailable = currentAvailable + amount;
+    const newTotal = currentTotal + amount;
+
+    await this.update({
+      "system.xp.available": newAvailable,
+      "system.xp.total": newTotal
+    }, {
+      xpLogDescription: `Session-XP erhalten: +${amount} XP (vergeben von ${game.user.name})`
+    });
+
+    console.info(`SWFFG | [grantXp] ${this.name}: +${amount} XP → verfügbar: ${newAvailable}, gesamt: ${newTotal}`);
+    return {
+      success: true,
+      message: `${amount} XP an ${this.name} vergeben. Verfügbar: ${newAvailable} XP.`,
+      data: { granted: amount, newAvailable, newTotal }
+    };
+  }
+
+  /**
+   * Setzt xp.available direkt auf einen neuen Wert (GM-Korrektur). Nur für GMs außerhalb der Charaktererstellung.
+   * Ändert xp.total NICHT — das ist eine reine Verfügbarkeits-Korrektur, z. B. bei Datenfehler oder Regeländerung.
+   *
+   * @param {number} newValue  - Nicht-negative Ganzzahl.
+   * @param {string} reason    - Pflichtfeld: Begründung für den XP-Log-Eintrag.
+   * @returns {{ success: boolean, message: string, data?: { oldValue: number, newValue: number, reason: string } }}
+   *
+   * @example
+   * // Konsolentest (als GM, außerhalb Erstellung):
+   * const result = await actor.setXp(50, "Retroaktive Korrektur nach Regeländerung");
+   * console.log(result); // { success: true, message: "...", data: { oldValue: 30, newValue: 50, reason: "..." } }
+   */
+  async setXp(newValue, reason) {
+    if (this.type !== "character") {
+      return { success: false, message: "setXp ist nur für Charaktere verfügbar." };
+    }
+
+    if (!game.user?.isGM) {
+      return { success: false, message: "setXp darf nur vom GM aufgerufen werden." };
+    }
+
+    if (this.system.creation?.isCreationMode === true) {
+      return { success: false, message: "setXp ist nur außerhalb der Charaktererstellung verfügbar. Bitte zuerst den Wizard abschließen." };
+    }
+
+    // Validierung: reason ist Pflichtfeld
+    if (!reason || typeof reason !== "string" || reason.trim() === "") {
+      return { success: false, message: "Bitte einen Grund für die Korrektur angeben." };
+    }
+
+    // Validierung: newValue muss eine nicht-negative Ganzzahl sein
+    if (!Number.isInteger(newValue) || newValue < 0) {
+      return { success: false, message: `Ungültiger XP-Wert: "${newValue}". Bitte eine nicht-negative ganze Zahl angeben.` };
+    }
+
+    const oldValue = this.system.xp?.available ?? 0;
+    const trimmedReason = reason.trim();
+
+    await this.update({
+      "system.xp.available": newValue
+    }, {
+      xpLogDescription: `GM-Korrektur: ${trimmedReason} (${oldValue} → ${newValue} XP)`
+    });
+
+    console.info(`SWFFG | [setXp] ${this.name}: ${oldValue} → ${newValue} XP | Grund: "${trimmedReason}"`);
+    return {
+      success: true,
+      message: `XP von ${this.name} von ${oldValue} auf ${newValue} korrigiert.`,
+      data: { oldValue, newValue, reason: trimmedReason }
+    };
+  }
+
   async resetToCreationMode() {
     if (this.type !== "character") return;
     const confirmReset = confirm("Möchtest du den Charakter komplett auf die Standardwerte zurücksetzen? Dadurch werden auch Spezies, Karriere, Spezialisierungen und alle erworbenen Fertigkeiten/Talente gelöscht.");
