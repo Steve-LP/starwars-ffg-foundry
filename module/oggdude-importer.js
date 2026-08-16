@@ -1,3 +1,5 @@
+import { normalizeSkillName } from "./utils/skill-normalization.js";
+
 /**
  * Oggdude XML Dataset parser for Star Wars FFG
  */
@@ -61,6 +63,8 @@ export function parseOggdudeWeapons(xmlString) {
     const range = weaponNode.getElementsByTagName("Range")[0]?.textContent || "Engaged";
     const encumbrance = parseInt(weaponNode.getElementsByTagName("Encumbrance")[0]?.textContent || "1");
     const qualities = weaponNode.getElementsByTagName("Qualities")[0]?.textContent || "";
+    const skillRaw = weaponNode.getElementsByTagName("SkillKey")[0]?.textContent || weaponNode.getElementsByTagName("Skill")[0]?.textContent || "Ranged - Light";
+    const skill = normalizeSkillName(skillRaw);
 
     items.push({
       name: name,
@@ -71,6 +75,7 @@ export function parseOggdudeWeapons(xmlString) {
         range: range,
         encumbrance: encumbrance,
         qualities: qualities,
+        skill: skill,
         key: key
       }
     });
