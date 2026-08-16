@@ -1357,6 +1357,19 @@ export class SWFFGActor extends Actor {
         system.stats.defence.ranged = armorRangedDefence;
       }
 
+      let carriedEncumbrance = 0;
+      for (const item of this.items) {
+        if (item.type === "weapon" || item.type === "armor" || item.type === "gear") {
+          const enc = item.system.encumbrance || 0;
+          const qty = item.system.quantity !== undefined ? (item.system.quantity || 0) : 1;
+          if (item.type === "armor" && item.system.equipped) {
+            carriedEncumbrance += Math.max(0, enc - 3) * qty;
+          } else {
+            carriedEncumbrance += enc * qty;
+          }
+        }
+      }
+
       system.stats.encumbrance = {
         value: carriedEncumbrance,
         max: 5 + (system.characteristics.brawn.value || 0) + maxEncumbranceBonus
