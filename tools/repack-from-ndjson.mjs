@@ -28,6 +28,10 @@ const PACK_MAP = [
   { db: 'adversaries.db', dir: 'adversaries' },
   { db: 'critical-injuries.db', dir: 'critical-injuries' },
   { db: 'critical-injuries-vehicles.db', dir: 'critical-injuries-vehicles' },
+  { db: 'armor.db', dir: 'armor' },
+  { db: 'gear.db', dir: 'gear' },
+  { db: 'attachments.db', dir: 'attachments' },
+  { db: 'weapons.db', dir: 'weapons' },
 ];
 
 async function repackSingle(packName, dbFileName) {
