@@ -101,7 +101,10 @@
   console.assert(lastSet?.description?.includes("Retroaktive"), "C2 LOG FAIL: Grund nicht in Beschreibung");
   console.log("C2 XP-Log:", lastSet ? `✅ "${lastSet.description}"` : "❌ kein Eintrag");
 
-  // C3: Endzustand — frischer Stand
+  // C3: Endzustand — kurz warten, bis Foundry den Socket-Response verarbeitet hat
+  // (actor.update() resolved nach dem DB-Write, aber _onUpdate refresht das lokale
+  //  Dokument erst nach dem Server-Broadcast; 300ms reichen zuverlässig)
+  await new Promise(r => setTimeout(r, 300));
   const finalAvailable = fresh().system.xp?.available;
   const finalTotal     = fresh().system.xp?.total;
   console.log(`C3 Endzustand: available=${finalAvailable}, total=${finalTotal}`);

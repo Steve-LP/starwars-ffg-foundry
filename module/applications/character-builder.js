@@ -520,7 +520,7 @@ export class CharacterBuilder extends HandlebarsApplicationMixin(ApplicationV2) 
         return;
       }
 
-      const confirmRefund = await Dialog.confirm({title: "Talent erstatten", content: `Möchtest du ${name} erstatten (+${cost} XP)?`});
+      const confirmRefund = await foundry.applications.api.DialogV2.confirm({ window: { title: "Talent erstatten" }, content: `<p>Möchtest du <strong>${name}</strong> erstatten (+${cost} XP)?</p>` });
       if (!confirmRefund) return;
 
       let talentItem = actor.items.find(t => 
@@ -548,7 +548,7 @@ export class CharacterBuilder extends HandlebarsApplicationMixin(ApplicationV2) 
         return;
       }
 
-      const confirmBuy = await Dialog.confirm({title: "Talent kaufen", content: `Möchtest du ${name} für ${cost} XP kaufen?`});
+      const confirmBuy = await foundry.applications.api.DialogV2.confirm({ window: { title: "Talent kaufen" }, content: `<p>Möchtest du <strong>${name}</strong> für <strong>${cost} XP</strong> kaufen?</p>` });
       if (!confirmBuy) return;
 
       const result = await actor.buyTalent({
@@ -572,8 +572,8 @@ export class CharacterBuilder extends HandlebarsApplicationMixin(ApplicationV2) 
     const instance = this;
     if (instance.isPending) return;
 
-    const confirmed = await Dialog.confirm({
-      title: "XP-Käufe zurücksetzen",
+    const confirmed = await foundry.applications.api.DialogV2.confirm({
+      window: { title: "XP-Käufe zurücksetzen" },
       content: "<p>Möchtest du wirklich alle getätigten XP-Ausgaben für Attribute, Fertigkeiten und Talente zurücksetzen?</p><p>Spezies, Karriere, Spezialisierung und Gratis-Fertigkeiten bleiben erhalten.</p>"
     });
 
