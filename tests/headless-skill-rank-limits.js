@@ -99,6 +99,31 @@
     results.playLimitPassed = (r3.success === true && r4.success === true && r5.success === true && r6.success === false);
     console.groupEnd();
 
+    // ── 4. Non-GM Player Client Test ──────────────────────────────────────────
+    console.group("4) Non-GM Player Client Kauf- und Erstattungs-Rechte");
+    const origDesc = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(game.user), "isGM");
+    Object.defineProperty(game.user, "isGM", { value: false, configurable: true });
+
+    try {
+      console.assert(game.user.isGM === false, "4.0 FAIL: game.user.isGM sollte false sein");
+
+      // Nicht-GM Spieler kauft Charm von 0 auf 1
+      const pBuy = await testActor.buySkillRank("Charm", "presence", "General");
+      console.assert(pBuy.success === true, "4.1 FAIL: Nicht-GM Spieler konnte Charm nicht kaufen");
+      console.log("4.1 Nicht-GM Spieler Skill-Kauf: ✅", pBuy.message);
+
+      // Nicht-GM Spieler versucht Skill zu erstatten -> muss blockiert werden
+      const pDec = await testActor.decreaseSkillRank("Charm");
+      console.assert(pDec.success === false, "4.2 FAIL: Nicht-GM Spieler durfte Skill erstatten");
+      console.log("4.2 Nicht-GM Erstattung abgelehnt: ✅", pDec.message);
+
+      results.nonGmPassed = (pBuy.success === true && pDec.success === false);
+    } finally {
+      delete game.user.isGM;
+      if (origDesc) Object.defineProperty(Object.getPrototypeOf(game.user), "isGM", origDesc);
+    }
+    console.groupEnd();
+
   } finally {
     await testActor.delete();
     console.log("SWFFG TEST | Test Dummy gelöscht.");
