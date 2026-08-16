@@ -64,7 +64,7 @@
   const attPack = game.packs.get("starwars-ffg-scratch.attachments");
   assert("9) Attachments compendium exists", !!attPack);
   if (attPack) {
-    const index = await attPack.getIndex({ fields: ["system.price", "system.rarity", "system.restricted", "system.slotType", "system.hardpoints", "system.mods"] });
+    const index = await attPack.getIndex({ fields: ["system.price", "system.rarity", "system.restricted", "system.slotType", "system.hardpoints", "system.mods"], force: true });
     assert("10) Attachments pack contains items (>150)", index.size >= 150, `found ${index.size}`);
 
     // Core Weapon Attachment: Augmented Spin Barrel
