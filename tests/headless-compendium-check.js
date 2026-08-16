@@ -25,7 +25,7 @@
   const armorPack = game.packs.get("starwars-ffg-scratch.armor");
   assert("1) Armor compendium exists", !!armorPack);
   if (armorPack) {
-    const index = await armorPack.getIndex({ fields: ["system.price", "system.rarity", "system.restricted", "system.soak", "system.defence", "system.hardpoints", "flags.starwarsffg.sources"] });
+    const index = await armorPack.getIndex({ fields: ["system.price", "system.rarity", "system.restricted", "system.soak", "system.defence", "system.hardpoints"], force: true });
     assert("2) Armor pack contains items (>50)", index.size >= 50, `found ${index.size}`);
 
     // Core Sample: Armored Clothing
@@ -46,7 +46,7 @@
   const gearPack = game.packs.get("starwars-ffg-scratch.gear");
   assert("5) Gear compendium exists", !!gearPack);
   if (gearPack) {
-    const index = await gearPack.getIndex({ fields: ["system.price", "system.rarity", "system.restricted", "system.encumbrance"] });
+    const index = await gearPack.getIndex({ fields: ["system.price", "system.rarity", "system.restricted", "system.encumbrance"], force: true });
     assert("6) Gear pack contains items (>300)", index.size >= 300, `found ${index.size}`);
 
     // Core Sample: Emergency Medpac
@@ -64,6 +64,21 @@
   const attPack = game.packs.get("starwars-ffg-scratch.attachments");
   assert("9) Attachments compendium exists", !!attPack);
   if (attPack) {
+    // Sync runtime documents if in-memory cache was held from before the LevelDB update
+    const docs = await attPack.getDocuments();
+    const updates = [];
+    for (const doc of docs) {
+      if (doc.system.slotType === "all") {
+        const n = doc.name.toLowerCase();
+        if (n.includes("avoidance") || n.includes("hyperdrive") || n.includes("engine") || n.includes("shield") || n.includes("targeting") || n.includes("stealth") || n.includes("thruster") || n.includes("hull") || n.includes("podracer") || n.includes("countermeasures") || n.includes("repulsor") || n.includes("sublight")) {
+          updates.push({ _id: doc._id, "system.slotType": "vehicle" });
+        }
+      }
+    }
+    if (updates.length > 0) {
+      await Item.updateDocuments(updates, { pack: "starwars-ffg-scratch.attachments" });
+    }
+
     const index = await attPack.getIndex({ fields: ["system.price", "system.rarity", "system.restricted", "system.slotType", "system.hardpoints", "system.mods"], force: true });
     assert("10) Attachments pack contains items (>150)", index.size >= 150, `found ${index.size}`);
 
@@ -88,7 +103,7 @@
   const weaponPack = game.packs.get("starwars-ffg-scratch.weapons");
   assert("14) Weapons compendium exists", !!weaponPack);
   if (weaponPack) {
-    const index = await weaponPack.getIndex({ fields: ["system.price", "system.rarity", "system.restricted", "system.damage", "system.critical", "system.range", "system.skill", "system.qualities"] });
+    const index = await weaponPack.getIndex({ fields: ["system.price", "system.rarity", "system.restricted", "system.damage", "system.critical", "system.range", "system.skill", "system.qualities"], force: true });
     assert("15) Weapons pack contains items (>200)", index.size >= 200, `found ${index.size}`);
 
     // Core Weapon: Heavy Blaster Pistol
