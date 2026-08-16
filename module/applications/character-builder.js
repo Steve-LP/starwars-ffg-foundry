@@ -53,6 +53,7 @@ export class CharacterBuilder extends HandlebarsApplicationMixin(ApplicationV2) 
       resetPurchases: CharacterBuilder.#onResetPurchases,
       increaseSkill: CharacterBuilder.#onIncreaseSkill,
       decreaseSkill: CharacterBuilder.#onDecreaseSkill,
+      openTalentTree: CharacterBuilder.#onOpenTalentTree,
       talentCardClick: CharacterBuilder.#onTalentCardClick,
       switchTab: CharacterBuilder.#onSwitchTab
     }
@@ -64,19 +65,21 @@ export class CharacterBuilder extends HandlebarsApplicationMixin(ApplicationV2) 
     }
   };
 
+  static async #onOpenTalentTree(event, target) {
+    const specName = this.actor.system.creation?.specializationSnapshot?.name;
+    const specItem = specName 
+      ? this.actor.items.find(i => i.type === "specialization" && i.name === specName)
+      : this.actor.items.find(i => i.type === "specialization");
+
+    if (specItem) {
+      specItem.sheet.render(true);
+    } else {
+      ui.notifications.warn("Keine Spezialisierung auf dem Charakter vorhanden.");
+    }
+  }
+
   _onRender(context, options) {
     super._onRender(context, options);
-    
-    const html = $(this.element);
-    if (this.currentStep === CharacterBuilder.STEPS.XP_SPENDING && this.activeTab === "talents") {
-      this.setPosition({ width: 850 });
-      // Delegate click to talent cards
-      html.find(".talent-card").click((e) => {
-        CharacterBuilder.#onTalentCardClick.call(this, e, e.currentTarget);
-      });
-    } else {
-      this.setPosition({ width: 600 });
-    }
   }
 
   determineCurrentStep(actor) {

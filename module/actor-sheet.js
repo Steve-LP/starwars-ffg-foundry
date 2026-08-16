@@ -33,13 +33,24 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     },
     actions: {
       openBuilder: SWFFGActorSheet.#onOpenBuilder,
-      toggleEditMode: SWFFGActorSheet.#onToggleEditMode
+      toggleEditMode: SWFFGActorSheet.#onToggleEditMode,
+      openSpecialization: SWFFGActorSheet.#onOpenSpecialization
     }
   };
 
   static async #onOpenBuilder(event, target) {
     const builder = new CharacterBuilder({ actor: this.document });
     builder.render({ force: true });
+  }
+
+  static async #onOpenSpecialization(event, target) {
+    const itemId = target.dataset.itemId;
+    const item = itemId ? this.document.items.get(itemId) : this.document.items.find(i => i.type === "specialization");
+    if (item) {
+      item.sheet.render(true);
+    } else {
+      ui.notifications.warn("Spezialisierung nicht gefunden.");
+    }
   }
 
   /**
@@ -62,10 +73,9 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
   static TABS = {
     primary: {
       id: "primary",
-      initial: "skills",
+      initial: "overview",
       tabs: [
-        { id: "skills", label: "Skills" },
-        { id: "talents", label: "Talents & Force" },
+        { id: "overview", label: "Übersicht" },
         { id: "inventory", label: "Inventory" },
         { id: "biography", label: "Biography" },
         { id: "xpLog", label: "XP Log" }
@@ -74,7 +84,7 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
   };
 
   tabGroups = {
-    primary: "skills"
+    primary: "overview"
   };
 
   /**

@@ -208,10 +208,23 @@
     {{!-- Tab Content: Talents --}}
     {{#if (eq activeTab 'talents')}}
     <div class="tab-content">
-      <p>Kaufe Talente aus deinem Spezialisierungsbaum. XP-Kosten stehen in den Boxen.</p>
-      <div class="specialization-sheet-tree">
-        {{> "systems/starwars-ffg-scratch/templates/parts/talent-grid.hbs"}}
+      <p>Talente werden direkt im interaktiven Talentbaum deiner Spezialisierung erworben.</p>
+      {{#if specialization}}
+      <div class="talent-tree-open-box">
+        <div class="spec-info-row">
+          <i class="fas fa-sitemap spec-icon"></i>
+          <div>
+            <strong>{{specialization.name}}</strong>
+            <div class="spec-subtext">Spezialisierungs-Talentbaum</div>
+          </div>
+        </div>
+        <button type="button" class="open-tree-btn" data-action="openTalentTree">
+          <i class="fas fa-external-link-alt"></i> Talentbaum öffnen
+        </button>
       </div>
+      {{else}}
+      <p class="warning-text" style="color: #ef4444;"><i class="fas fa-exclamation-triangle"></i> Bitte wähle zuerst in Schritt 4 eine Spezialisierung aus.</p>
+      {{/if}}
     </div>
     {{/if}}
 

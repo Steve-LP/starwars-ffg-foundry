@@ -2048,12 +2048,14 @@ body.game,
 
 /* Character Builder Styles */
 .character-builder {
-  min-height: 500px;
+  min-height: 400px;
 }
 .character-builder-container {
   display: flex;
   flex-direction: column;
   height: 100%;
+  min-height: 0;
+  overflow: hidden;
 }
 .builder-header {
   display: flex;
@@ -2063,6 +2065,7 @@ body.game,
   padding: 10px;
   border-radius: 5px;
   margin-bottom: 10px;
+  flex-shrink: 0;
 }
 .header-stats {
   display: flex;
@@ -2085,7 +2088,9 @@ body.game,
 }
 .builder-step {
   flex: 1;
-  padding: 10px 0;
+  padding: 10px 4px;
+  overflow-y: auto;
+  min-height: 0;
 }
 .builder-step h2 {
   border-bottom: 2px solid var(--color-border-dark-1);
@@ -2585,4 +2590,182 @@ body.game,
 
 #actors .xp-batch-sidebar-btn:hover {
   background: rgba(244, 196, 48, 0.2);
+}
+
+/* ==========================================================================
+   UI-Overhaul: Overview Tab Spec Cards & Compact Tree Links
+   ========================================================================== */
+.overview-trees-section {
+  margin-bottom: 12px;
+  background: rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  padding: 8px 12px;
+}
+
+.overview-trees-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 4px;
+}
+
+.overview-trees-header h3 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--sw-accent-orange, #ff9f1c);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.spec-cards-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.spec-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-left: 3px solid var(--sw-accent-orange, #ff9f1c);
+  border-radius: 4px;
+  padding: 6px 10px;
+  min-width: 200px;
+  flex: 1 1 calc(50% - 8px);
+  max-width: 100%;
+  gap: 8px;
+  transition: all 0.15s ease-in-out;
+}
+
+.spec-card:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--sw-accent-orange, #ff9f1c);
+}
+
+.spec-card.force-card {
+  border-left-color: #da70d6;
+}
+
+.spec-card.signature-card {
+  border-left-color: #60a5fa;
+}
+
+.spec-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+}
+
+.spec-card-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.spec-card-subtitle {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.5);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.spec-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.open-tree-btn {
+  background: rgba(255, 159, 28, 0.15);
+  color: #ffd480;
+  border: 1px solid rgba(255, 159, 28, 0.4);
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+  text-decoration: none;
+}
+
+.open-tree-btn:hover {
+  background: rgba(255, 159, 28, 0.3);
+  color: #fff;
+  border-color: #ff9f1c;
+}
+
+.spec-card.force-card .open-tree-btn {
+  background: rgba(218, 112, 214, 0.15);
+  color: #f5b0f5;
+  border-color: rgba(218, 112, 214, 0.4);
+}
+
+.spec-card.force-card .open-tree-btn:hover {
+  background: rgba(218, 112, 214, 0.3);
+  color: #fff;
+}
+
+.spec-card-delete {
+  color: rgba(239, 68, 68, 0.7);
+  padding: 3px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.spec-card-delete:hover {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.15);
+}
+
+/* Wizard Talent Box */
+.talent-tree-open-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 159, 28, 0.3);
+  border-left: 4px solid var(--sw-accent-orange, #ff9f1c);
+  border-radius: 6px;
+  padding: 12px 16px;
+  margin-top: 10px;
+  gap: 12px;
+}
+
+.spec-info-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.spec-info-row .spec-icon {
+  font-size: 24px;
+  color: var(--sw-accent-orange, #ff9f1c);
+}
+
+.spec-subtext {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.talent-tree-open-box .open-tree-btn {
+  padding: 8px 16px;
+  font-size: 13px;
 }

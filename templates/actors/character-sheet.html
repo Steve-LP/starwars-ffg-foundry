@@ -163,18 +163,18 @@
   <section class="characteristics-grid">
     {{#each characteristics as |char id|}}
     <div class="char-node-wrapper">
-      <div class="char-node rollable-char {{#unless ../editMode}}disabled-roll{{/unless}}" data-characteristic="{{id}}" {{#unless ../editMode}}title="Bearbeitungsmodus aktivieren zum Würfeln"{{/unless}}>
+      <div class="char-node rollable-char" data-characteristic="{{id}}" title="Attribut würfeln">
         <div class="char-label">{{capitalize id}}</div>
         <div class="char-value-circle">
           <input class="char-input" type="number" name="system.characteristics.{{id}}.value" value="{{char.value}}" data-dtype="Number" onClick="this.select(); event.stopPropagation();" {{#unless ../editMode}}disabled{{/unless}} />
         </div>
       </div>
-      {{#if ../isCreationOrGM}}
+      {{#if (and ../isCreationOrGM ../editMode)}}
       <div class="char-controls-row">
-        <button type="button" class="decrease-characteristic-btn {{#unless char.isDecreasable}}disabled{{/unless}} {{#unless ../editMode}}disabled{{/unless}}" data-characteristic="{{id}}" title="Senken (XP erstattet)" {{#unless char.isDecreasable}}disabled{{/unless}} {{#unless ../editMode}}disabled{{/unless}}>
+        <button type="button" class="decrease-characteristic-btn {{#unless char.isDecreasable}}disabled{{/unless}}" data-characteristic="{{id}}" title="Senken (XP erstattet)" {{#unless char.isDecreasable}}disabled{{/unless}}>
           <i class="fas fa-minus"></i>
         </button>
-        <button type="button" class="upgrade-characteristic-btn {{#unless char.canAfford}}disabled{{/unless}} {{#unless ../editMode}}disabled{{/unless}}" data-characteristic="{{id}}" title="Upgrade für {{char.cost}} XP" {{#unless char.canAfford}}disabled{{/unless}} {{#unless ../editMode}}disabled{{/unless}}>
+        <button type="button" class="upgrade-characteristic-btn {{#unless char.canAfford}}disabled{{/unless}}" data-characteristic="{{id}}" title="Upgrade für {{char.cost}} XP" {{#unless char.canAfford}}disabled{{/unless}}>
           <i class="fas fa-plus"></i> <span class="cost-val">{{char.cost}} XP</span>
         </button>
       </div>
@@ -224,35 +224,114 @@
     </div>
   </section>
 
-  <!-- Sheet Navigation -->
+  <!-- Sheet Navigation (4 Tabs) -->
   <nav class="sheet-tabs tabs" data-group="primary">
-    <a class="item {{tabs.skills.cssClass}}" data-action="tab" data-group="primary" data-tab="skills">Skills</a>
-    <a class="item {{tabs.talents.cssClass}}" data-action="tab" data-group="primary" data-tab="talents">Talents & Force</a>
-    <a class="item {{tabs.inventory.cssClass}}" data-action="tab" data-group="primary" data-tab="inventory">Inventory</a>
-    <a class="item {{tabs.biography.cssClass}}" data-action="tab" data-group="primary" data-tab="biography">Biography</a>
-    <a class="item {{tabs.xpLog.cssClass}}" data-action="tab" data-group="primary" data-tab="xpLog">XP Log</a>
+    <a class="item {{tabs.overview.cssClass}}" data-action="tab" data-group="primary" data-tab="overview">
+      <i class="fas fa-id-card"></i> Übersicht
+    </a>
+    <a class="item {{tabs.inventory.cssClass}}" data-action="tab" data-group="primary" data-tab="inventory">
+      <i class="fas fa-boxes"></i> Inventory
+    </a>
+    <a class="item {{tabs.biography.cssClass}}" data-action="tab" data-group="primary" data-tab="biography">
+      <i class="fas fa-book"></i> Biography
+    </a>
+    <a class="item {{tabs.xpLog.cssClass}}" data-action="tab" data-group="primary" data-tab="xpLog">
+      <i class="fas fa-history"></i> XP Log
+    </a>
   </nav>
 
   <!-- Sheet Body -->
   <section class="sheet-body">
-    <!-- Skills Tab -->
-    <div class="tab skills {{tabs.skills.cssClass}}" data-group="primary" data-tab="skills">
+    <!-- Tab 1: Overview (Übersicht) -->
+    <div class="tab overview {{tabs.overview.cssClass}}" data-group="primary" data-tab="overview">
+      
+      <!-- Specializations & Career Trees Section (Scalable Cards Grid) -->
+      <div class="overview-trees-section">
+        <div class="overview-trees-header">
+          <h3><i class="fas fa-sitemap"></i> Spezialisierungen & Talentbäume</h3>
+          {{#if editMode}}
+          <span class="bio-drop-hint" style="font-size: 11px; color: rgba(255,255,255,0.4);">Spezialisierung hier ablegen</span>
+          {{/if}}
+        </div>
+        <div class="spec-cards-grid">
+          {{#each specializations as |spec|}}
+          <div class="spec-card" data-item-id="{{spec.id}}">
+            <div class="spec-card-info">
+              <span class="spec-card-title">{{spec.name}}</span>
+              <span class="spec-card-subtitle">Karriere-Skills: {{spec.system.careerSkills}}</span>
+            </div>
+            <div class="spec-card-actions">
+              <button type="button" class="open-tree-btn" data-action="openSpecialization" data-item-id="{{spec.id}}" title="Talentbaum im Fenster öffnen">
+                <i class="fas fa-external-link-alt"></i> Talentbaum
+              </button>
+              {{#if ../editMode}}
+              <a class="spec-card-delete remove-spec-header" data-item-id="{{spec.id}}" title="Spezialisierung entfernen"><i class="fas fa-trash"></i></a>
+              {{/if}}
+            </div>
+          </div>
+          {{/each}}
+
+          {{#each forceSpecializations as |spec|}}
+          <div class="spec-card force-card" data-item-id="{{spec.id}}">
+            <div class="spec-card-info">
+              <span class="spec-card-title">{{spec.name}}</span>
+              <span class="spec-card-subtitle">Macht-Baum</span>
+            </div>
+            <div class="spec-card-actions">
+              <button type="button" class="open-tree-btn" data-action="openSpecialization" data-item-id="{{spec.id}}" title="Macht-Baum im Fenster öffnen">
+                <i class="fas fa-external-link-alt"></i> Öffnen
+              </button>
+              {{#if ../editMode}}
+              <a class="spec-card-delete remove-spec-header" data-item-id="{{spec.id}}" title="Macht-Baum entfernen"><i class="fas fa-trash"></i></a>
+              {{/if}}
+            </div>
+          </div>
+          {{/each}}
+
+          {{#each signatureSpecializations as |spec|}}
+          <div class="spec-card signature-card" data-item-id="{{spec.id}}">
+            <div class="spec-card-info">
+              <span class="spec-card-title">{{spec.name}}</span>
+              <span class="spec-card-subtitle">Signature Ability</span>
+            </div>
+            <div class="spec-card-actions">
+              <button type="button" class="open-tree-btn" data-action="openSpecialization" data-item-id="{{spec.id}}" title="Signature Ability im Fenster öffnen">
+                <i class="fas fa-external-link-alt"></i> Öffnen
+              </button>
+              {{#if ../editMode}}
+              <a class="spec-card-delete remove-spec-header" data-item-id="{{spec.id}}" title="Signature Ability entfernen"><i class="fas fa-trash"></i></a>
+              {{/if}}
+            </div>
+          </div>
+          {{/each}}
+
+          {{#unless specializations.length}}
+          <div class="spec-card empty-card" style="border-left-style: dashed; opacity: 0.6;">
+            <div class="spec-card-info">
+              <span class="spec-card-subtitle">Keine Spezialisierung gewählt</span>
+            </div>
+          </div>
+          {{/unless}}
+        </div>
+      </div>
+
+      <!-- Skills List -->
       <div class="skills-list">
         <div class="skills-header row">
-          <span class="col-career">Career</span>
-          {{#if isCreationMode}}
-          <span class="col-free-career" title="Free Career Skill Rank (Choose 4)">Free Car.</span>
-          <span class="col-free-spec" title="Free Specialization Skill Rank (Choose 2)">Free Spec.</span>
+          <span class="col-career" title="Karriere-Fertigkeit"><i class="fas fa-star"></i></span>
+          {{#if (and isCreationMode editMode)}}
+          <span class="col-free-career" title="Freier Karriere-Rang (Wähle 4)">Free Car.</span>
+          <span class="col-free-spec" title="Freier Spezialisierungs-Rang (Wähle 2)">Free Spec.</span>
           {{/if}}
-          <span class="col-name">Skill</span>
-          <span class="col-char">Characteristic</span>
-          <span class="col-rank">Rank</span>
-          <span class="col-roll">Action</span>
+          <span class="col-name">Fertigkeit</span>
+          <span class="col-char">Attribut</span>
+          <span class="col-rank">Rang</span>
+          <span class="col-roll">Pool / Wurf</span>
         </div>
         {{#each skills as |skill id|}}
         <div class="skill-row row item {{#if skill.career}}career-skill{{/if}}" data-item-id="{{skill.id}}">
           <span class="col-career">
-            {{#if ../showCareerToggles}}
+            {{#if (and ../showCareerToggles ../editMode)}}
             <input type="checkbox" class="career-toggle" data-item-id="{{skill.id}}" data-name="{{skill.name}}" data-characteristic="{{skill.characteristic}}" data-category="{{skill.category}}" {{checked skill.career}} />
             {{else}}
             {{#if skill.career}}
@@ -262,7 +341,7 @@
             {{/if}}
             {{/if}}
           </span>
-          {{#if ../isCreationMode}}
+          {{#if (and ../isCreationMode ../editMode)}}
           <span class="col-free-career">
             {{#if skill.isCareerSource}}
             <input type="checkbox" class="free-career-toggle" data-name="{{skill.name}}" {{checked skill.freeCareerSelected}} {{#unless skill.freeCareerSelected}}{{#if ../freeCareerLimitReached}}disabled title="Limit von 4 erreicht" style="opacity:0.5; cursor: not-allowed;"{{/if}}{{/unless}} />
@@ -281,28 +360,20 @@
           <span class="col-name">{{skill.name}}</span>
           <span class="col-char">{{capitalize skill.characteristic}}</span>
           <span class="col-rank">
-            {{#if ../isCreationOrGM}}
+            {{#if (and ../isCreationOrGM ../editMode)}}
             <div class="skill-controls-row">
               {{#if ../isGM}}
-              {{!-- GM: Rang-Senkung immer aktiv (serverseitiger Check in decreaseSkillRank) --}}
               <button type="button" class="decrease-skill-btn {{#unless skill.isDecreasable}}disabled{{/unless}}" data-name="{{skill.name}}" title="Rang verringern (XP erstattet) — GM-Aktion" {{#unless skill.isDecreasable}}disabled{{/unless}}>
                 <i class="fas fa-minus"></i>
               </button>
-              {{else}}
-              {{!-- Nicht-GM: sichtbar, aber disabled mit erklärendem Tooltip via umschließenden Span --}}
-              <span class="gm-only-action-wrapper" title="Nur der GM kann bereits bestätigte Käufe zurücknehmen." style="display: inline-flex;">
-                <button type="button" class="decrease-skill-btn disabled gm-only-action" data-name="{{skill.name}}" tabindex="-1" disabled>
-                  <i class="fas fa-minus"></i>
-                </button>
-              </span>
               {{/if}}
               <span class="skill-rank-badge">{{skill.baseValue}}</span>
-              <button type="button" class="upgrade-skill-btn {{#unless skill.canAfford}}disabled{{/unless}} {{#unless ../editMode}}disabled{{/unless}}" data-name="{{skill.name}}" data-characteristic="{{skill.characteristic}}" data-category="{{skill.category}}" title="Upgrade für {{skill.cost}} XP" {{#unless skill.canAfford}}disabled{{/unless}} {{#unless ../editMode}}disabled{{/unless}}>
+              <button type="button" class="upgrade-skill-btn {{#unless skill.canAfford}}disabled{{/unless}}" data-name="{{skill.name}}" data-characteristic="{{skill.characteristic}}" data-category="{{skill.category}}" title="Upgrade für {{skill.cost}} XP" {{#unless skill.canAfford}}disabled{{/unless}}>
                 <i class="fas fa-plus"></i> <span class="cost-val">{{skill.cost}} XP</span>
               </button>
             </div>
             {{else}}
-            <input type="number" class="skill-val-input" data-item-id="{{skill.id}}" data-name="{{skill.name}}" data-characteristic="{{skill.characteristic}}" data-category="{{skill.category}}" value="{{skill.value}}" min="0" max="6" {{#if ../lockFields}}disabled{{/if}} />
+            <span class="skill-rank-badge">{{skill.value}}</span>
             {{/if}}
           </span>
           <span class="col-roll">
@@ -314,113 +385,12 @@
               <span class="die-preview green" title="Ability">◆</span>
               {{/each}}
             </span>
-            <a class="rollable-skill roll-btn {{#unless ../editMode}}disabled-roll{{/unless}}" data-name="{{skill.name}}" data-characteristic="{{skill.characteristic}}" data-rank="{{skill.value}}" {{#unless ../editMode}}title="Bearbeitungsmodus aktivieren zum Würfeln"{{/unless}}>
-              🎲 Load Pool
+            <a class="rollable-skill roll-btn" data-name="{{skill.name}}" data-characteristic="{{skill.characteristic}}" data-rank="{{skill.value}}" title="Würfelpool laden">
+              🎲 Wurf
             </a>
           </span>
         </div>
         {{/each}}
-      </div>
-    </div>
-
-    <!-- Talents Tab -->
-    <div class="tab talents {{tabs.talents.cssClass}}" data-group="primary" data-tab="talents">
-      <div class="tab-header row">
-        <h2>Talents List</h2>
-        <a class="item-create button-link" data-type="talent">+ Add Custom Talent</a>
-      </div>
-      <div class="item-list">
-        {{#each talents as |talent|}}
-        <div class="item talent-row row" data-item-id="{{talent._id}}">
-          <span class="item-name">
-            <strong>{{talent.name}}</strong>
-            {{#if (gt talent.system.ranks 1)}}<span class="talent-ranks-badge">Rank {{talent.system.ranks}}</span>{{/if}}
-            (Tier {{talent.system.tier}})
-          </span>
-          <span class="item-activation">{{talent.system.activation}}</span>
-          <div class="item-controls">
-            <a class="item-edit"><i class="fas fa-edit"></i></a>
-            <a class="item-delete"><i class="fas fa-trash"></i></a>
-          </div>
-        </div>
-        {{/each}}
-      </div>
-
-      <!-- Specializations & Trees List -->
-      <div class="specializations-list-container">
-        <div class="tab-header row">
-          <h2>Specialization Trees</h2>
-        </div>
-        <div class="item-list">
-          {{#each specializations as |spec|}}
-          <div class="item specialization-row row" data-item-id="{{spec.id}}">
-            <span class="item-name"><strong>{{spec.name}}</strong> (Career Skills: {{spec.system.careerSkills}})</span>
-            <div class="item-controls">
-              <a class="item-edit button-link" title="Open Tree"><i class="fas fa-project-diagram"></i> Open Tree</a>
-              <a class="item-delete button-link" title="Remove Specialization"><i class="fas fa-trash"></i> Remove</a>
-            </div>
-          </div>
-          {{/each}}
-        </div>
-      </div>
-
-      <!-- Force Power Trees List -->
-      {{#if forceSpecializations.length}}
-      <div class="specializations-list-container force-trees" style="margin-top: 15px;">
-        <div class="tab-header row">
-          <h2>Force Power Trees</h2>
-        </div>
-        <div class="item-list">
-          {{#each forceSpecializations as |spec|}}
-          <div class="item specialization-row row" data-item-id="{{spec.id}}" style="border-left: 2px solid #da70d6;">
-            <span class="item-name"><strong>{{spec.name}}</strong> (Force Tree)</span>
-            <div class="item-controls">
-              <a class="item-edit button-link" title="Open Tree" style="color: #ffb7ff; border-color: rgba(218,112,214,0.3);"><i class="fas fa-project-diagram"></i> Open Tree</a>
-              <a class="item-delete button-link" title="Remove Force Tree"><i class="fas fa-trash"></i> Remove</a>
-            </div>
-          </div>
-          {{/each}}
-        </div>
-      </div>
-      {{/if}}
-
-      <!-- Signature Abilities Trees List -->
-      {{#if signatureSpecializations.length}}
-      <div class="specializations-list-container signature-trees" style="margin-top: 15px;">
-        <div class="tab-header row">
-          <h2>Signature Abilities</h2>
-        </div>
-        <div class="item-list">
-          {{#each signatureSpecializations as |spec|}}
-          <div class="item specialization-row row" data-item-id="{{spec.id}}" style="border-left: 2px solid var(--sw-accent-orange);">
-            <span class="item-name"><strong>{{spec.name}}</strong> (Signature Ability)</span>
-            <div class="item-controls">
-              <a class="item-edit button-link" title="Open Tree" style="color: var(--sw-accent-orange); border-color: rgba(255,159,28,0.3);"><i class="fas fa-project-diagram"></i> Open Tree</a>
-              <a class="item-delete button-link" title="Remove Signature Ability"><i class="fas fa-trash"></i> Remove</a>
-            </div>
-          </div>
-          {{/each}}
-        </div>
-      </div>
-      {{/if}}
-
-      <!-- Force Powers List (Flat items listing fallback) -->
-      <div class="force-powers-list-container" style="margin-top: 20px;">
-        <div class="tab-header row">
-          <h2>Raw Force Powers (Individual items)</h2>
-          <a class="item-create button-link" data-type="forcePower">+ Add Force Power</a>
-        </div>
-        <div class="item-list">
-          {{#each forcePowers as |power|}}
-          <div class="item force-power-row row" data-item-id="{{power._id}}">
-            <span class="item-name"><strong>{{power.name}}</strong></span>
-            <div class="item-controls">
-              <a class="item-edit"><i class="fas fa-edit"></i></a>
-              <a class="item-delete"><i class="fas fa-trash"></i></a>
-            </div>
-          </div>
-          {{/each}}
-        </div>
       </div>
     </div>
 
