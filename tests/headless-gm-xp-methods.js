@@ -86,19 +86,25 @@
   console.log("C1 XP-Log:", lastGrant ? `✅ "${lastGrant.description}"` : "❌ kein Eintrag");
 
   // C2: setXp(10, "Retroaktive Korrektur")
-  // oldValue = frischer Stand nach grantXp, d.h. xpBefore + 20
-  const xpAfterGrant = fresh().system.xp?.available ?? 0;
+  // Nach grantXp(20) steht available bei xpBefore+20.
+  // setXp muss diesen Wert als oldValue lesen und im Log protokollieren —
+  // nicht den vor-grantXp-Snapshot. Das ist der Kern dieses Bug-Checks.
+  const expectedOldValue = xpBefore + 20;  // = available nach grantXp
   const r9 = await fresh().setXp(10, "Retroaktive Korrektur nach Spielleitertreffen");
   console.assert(r9.success === true, "C2 FAIL: setXp abgelehnt");
-  console.assert(r9.data?.oldValue === xpAfterGrant, "C2 FAIL: oldValue falsch");
+  console.assert(r9.data?.oldValue === expectedOldValue,
+    `C2 FAIL: oldValue falsch — erwartet ${expectedOldValue}, erhalten ${r9.data?.oldValue} (Stale-Read-Bug?)`);
   console.assert(r9.data?.newValue === 10, "C2 FAIL: newValue falsch");
   console.log("C2 setXp(10):", r9.success ? "✅" : "❌", r9.message, r9.data);
 
-  // XP-Log-Prüfung für C2 — frischer Stand
+  // XP-Log-Prüfung für C2: Description muss den korrekten Ausgangswert enthalten
   const logAfterSet = fresh().system.xp?.log ?? [];
   const lastSet = logAfterSet.at(-1);
   console.assert(lastSet?.description?.includes("GM-Korrektur"), "C2 LOG FAIL: Beschreibung fehlt/falsch");
   console.assert(lastSet?.description?.includes("Retroaktive"), "C2 LOG FAIL: Grund nicht in Beschreibung");
+  // Kernprüfung: Log muss korrekte oldValue enthalten, nicht den veralteten Snapshot
+  console.assert(lastSet?.description?.includes(String(expectedOldValue)),
+    `C2 LOG FAIL: Log enthält falschen Ausgangswert — erwartet "${expectedOldValue}" in "${lastSet?.description}"`);
   console.log("C2 XP-Log:", lastSet ? `✅ "${lastSet.description}"` : "❌ kein Eintrag");
 
   // C3: Konsistenz-Check — kein fresh()-Read nötig, da Foundry's _onUpdate

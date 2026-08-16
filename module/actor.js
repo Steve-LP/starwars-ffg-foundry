@@ -551,7 +551,16 @@ export class SWFFGActor extends Actor {
       return { success: false, message: `Ungültiger XP-Wert: "${newValue}". Bitte eine nicht-negative ganze Zahl angeben.` };
     }
 
-    const oldValue = this.system.xp?.available ?? 0;
+    // oldValue frisch aus der Collection lesen, nicht aus dem lokalen Snapshot.
+    // Hintergrund: Foundry aktualisiert this.system erst nach dem Server-Socket-
+    // Round-Trip. Wurde kurz zuvor z. B. grantXp() aufgerufen, liest this.system
+    // noch den alten Stand — der Log-Eintrag wäre dann inhaltlich falsch.
+    // game.actors.get(this.id) liefert die selbe Referenz, daher: _source lesen.
+    // _source wird von Foundry synchron beim Update-Response befüllt, während
+    // system ein berechnetes Getter-Proxy ist, das ggf. auf veraltete preparedData
+    // zurückgreift.
+    const liveActor = game.actors.get(this.id) ?? this;
+    const oldValue = liveActor._source?.system?.xp?.available ?? liveActor.system.xp?.available ?? 0;
     const trimmedReason = reason.trim();
 
     await this.update({
