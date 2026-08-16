@@ -82,7 +82,9 @@
     assert("3) Exactly 1 Signature Ability resolved", context.signatureSpecializations?.length === 1, `found ${context.signatureSpecializations?.length}`);
 
     // Render HTML and test DOM structure
-    await sheet._render(true);
+    await sheet.render({ force: true });
+    // Allow microtask to complete rendering
+    await new Promise(r => setTimeout(r, 50));
     const sheetEl = sheet.element;
     assert("4) Sheet rendered in DOM", !!sheetEl && document.body.contains(sheetEl));
 
@@ -121,7 +123,8 @@
     // Set to step 6 (XP Spending, Skills tab with 35 items) to test maximum height overflow
     builder.currentStep = CharacterBuilder.STEPS.XP_SPENDING;
     builder.activeTab = "skills";
-    await builder._render(true);
+    await builder.render({ force: true });
+    await new Promise(r => setTimeout(r, 50));
 
     const builderEl = builder.element;
     assert("12) CharacterBuilder rendered in DOM", !!builderEl && document.body.contains(builderEl));
