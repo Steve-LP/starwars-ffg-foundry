@@ -116,6 +116,13 @@
       "path": "packs/gear",
       "type": "Item",
       "system": "starwars-ffg-scratch"
+    },
+    {
+      "name": "attachments",
+      "label": "Attachments (SRD)",
+      "path": "packs/attachments",
+      "type": "Item",
+      "system": "starwars-ffg-scratch"
     }
   ],
   "relationships": {

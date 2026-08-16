@@ -233,6 +233,254 @@ export function parseOggdudeSpecies(xmlString) {
 }
 
 /**
+ * Formats Oggdude text tags to clean HTML
+ */
+export function formatOggdudeDescription(desc) {
+  if (!desc) return "";
+  let formatted = desc;
+  
+  formatted = formatted.replace(/\[h3\]/gi, "</h3>").replace(/\[H3\]/gi, "<h3>");
+  formatted = formatted.replace(/\[h4\]/gi, "</h4>").replace(/\[H4\]/gi, "<h4>");
+  formatted = formatted.replace(/\[b\]/gi, "</strong>").replace(/\[B\]/gi, "<strong>");
+  formatted = formatted.replace(/\[i\]/gi, "</em>").replace(/\[I\]/gi, "<em>");
+  formatted = formatted.replace(/\[p\]/gi, "</p>").replace(/\[P\]/gi, "<p>");
+  formatted = formatted.replace(/\[bullet\]/gi, "</li>").replace(/\[Bullet\]/gi, "<li>");
+  
+  formatted = formatted.replace(/\[SETBACK\]/gi, "<strong>[Setback]</strong>");
+  formatted = formatted.replace(/\[BOOST\]/gi, "<strong>[Boost]</strong>");
+  formatted = formatted.replace(/\[DIFFICULTY\]/gi, "<strong>[Difficulty]</strong>");
+  formatted = formatted.replace(/\[DI\]/gi, "<strong>[Difficulty]</strong>");
+  formatted = formatted.replace(/\[CHALLENGE\]/gi, "<strong>[Challenge]</strong>");
+  formatted = formatted.replace(/\[ABILITY\]/gi, "<strong>[Ability]</strong>");
+  formatted = formatted.replace(/\[PROFICIENCY\]/gi, "<strong>[Proficiency]</strong>");
+  formatted = formatted.replace(/\[FORCE\]/gi, "<strong>[Force]</strong>");
+  formatted = formatted.replace(/\[SUCCESS\]/gi, "<strong>[Success]</strong>");
+  formatted = formatted.replace(/\[ADVANTAGE\]/gi, "<strong>[Advantage]</strong>");
+  formatted = formatted.replace(/\[TRIUMPH\]/gi, "<strong>[Triumph]</strong>");
+  formatted = formatted.replace(/\[FAILURE\]/gi, "<strong>[Failure]</strong>");
+  formatted = formatted.replace(/\[THREAT\]/gi, "<strong>[Threat]</strong>");
+  formatted = formatted.replace(/\[DESPAIR\]/gi, "<strong>[Despair]</strong>");
+  
+  formatted = formatted.replace(/\r?\n\r?\n/g, "<br><br>");
+  formatted = formatted.replace(/\r?\n/g, " ");
+  formatted = formatted.replace(/\s+/g, " ");
+  
+  return formatted.trim();
+}
+
+/**
+ * Parses Oggdude Armor XML definitions
+ */
+export function parseOggdudeArmor(xmlString) {
+  const parser = new DOMParser();
+  const xmlDoc = parser.parseFromString(xmlString, "text/xml");
+  const armors = xmlDoc.getElementsByTagName("Armor");
+  const items = [];
+
+  for (let i = 0; i < armors.length; i++) {
+    const armorNode = armors[i];
+    const key = armorNode.getElementsByTagName("Key")[0]?.textContent || "";
+    const name = armorNode.getElementsByTagName("Name")[0]?.textContent || "Unnamed Armor";
+    const descRaw = armorNode.getElementsByTagName("Description")[0]?.textContent || "";
+    const description = formatOggdudeDescription(descRaw);
+
+    const soak = parseInt(armorNode.getElementsByTagName("Soak")[0]?.textContent || "0");
+    const defence = parseInt(armorNode.getElementsByTagName("Defense")[0]?.textContent || armorNode.getElementsByTagName("Def")[0]?.textContent || "0");
+    const encumbrance = parseInt(armorNode.getElementsByTagName("Encumbrance")[0]?.textContent || "0");
+    const hardpoints = parseInt(armorNode.getElementsByTagName("HP")[0]?.textContent || "0");
+    const price = parseInt(armorNode.getElementsByTagName("Price")[0]?.textContent || "0");
+    const rarity = parseInt(armorNode.getElementsByTagName("Rarity")[0]?.textContent || "0");
+    const restricted = armorNode.getElementsByTagName("Restricted")[0]?.textContent?.toLowerCase() === "true";
+
+    // Extract qualities
+    const qualityList = [];
+    const qualitiesNode = armorNode.getElementsByTagName("Qualities")[0];
+    if (qualitiesNode) {
+      const qNodes = qualitiesNode.getElementsByTagName("Quality");
+      for (let j = 0; j < qNodes.length; j++) {
+        const qKey = qNodes[j].getElementsByTagName("Key")[0]?.textContent || "";
+        const count = qNodes[j].getElementsByTagName("Count")[0]?.textContent;
+        const qName = normalizeSkillName(qKey);
+        qualityList.push(count ? `${qName} ${count}` : qName);
+      }
+    }
+
+    items.push({
+      name: name,
+      type: "armor",
+      system: {
+        description: description,
+        soak: soak,
+        defence: defence,
+        encumbrance: encumbrance,
+        hardpoints: hardpoints,
+        qualities: qualityList.join(", "),
+        price: price,
+        rarity: rarity,
+        restricted: restricted,
+        equipped: false,
+        key: key,
+        modifiers: {
+          wounds: 0,
+          strain: 0,
+          soak: 0,
+          encumbrance: 0,
+          characteristics: "",
+          skills: ""
+        },
+        attachments: []
+      }
+    });
+  }
+
+  return items;
+}
+
+/**
+ * Parses Oggdude Gear XML definitions
+ */
+export function parseOggdudeGear(xmlString) {
+  const parser = new DOMParser();
+  const xmlDoc = parser.parseFromString(xmlString, "text/xml");
+  const gears = xmlDoc.getElementsByTagName("Gear");
+  const items = [];
+
+  for (let i = 0; i < gears.length; i++) {
+    const gearNode = gears[i];
+    const key = gearNode.getElementsByTagName("Key")[0]?.textContent || "";
+    const name = gearNode.getElementsByTagName("Name")[0]?.textContent || "Unnamed Gear";
+    const descRaw = gearNode.getElementsByTagName("Description")[0]?.textContent || "";
+    const description = formatOggdudeDescription(descRaw);
+
+    const encumbrance = parseInt(gearNode.getElementsByTagName("Encumbrance")[0]?.textContent || "0");
+    const price = parseInt(gearNode.getElementsByTagName("Price")[0]?.textContent || "0");
+    const rarity = parseInt(gearNode.getElementsByTagName("Rarity")[0]?.textContent || "0");
+    const restricted = gearNode.getElementsByTagName("Restricted")[0]?.textContent?.toLowerCase() === "true";
+
+    items.push({
+      name: name,
+      type: "gear",
+      system: {
+        description: description,
+        quantity: 1,
+        encumbrance: encumbrance,
+        price: price,
+        rarity: rarity,
+        restricted: restricted,
+        equipped: false,
+        key: key,
+        modifiers: {
+          wounds: 0,
+          strain: 0,
+          soak: 0,
+          encumbrance: 0,
+          characteristics: "",
+          skills: ""
+        }
+      }
+    });
+  }
+
+  return items;
+}
+
+/**
+ * Parses Oggdude Item Attachment XML definitions
+ */
+export function parseOggdudeAttachments(xmlString) {
+  const parser = new DOMParser();
+  const xmlDoc = parser.parseFromString(xmlString, "text/xml");
+  const attachments = xmlDoc.getElementsByTagName("ItemAttachment");
+  const items = [];
+
+  for (let i = 0; i < attachments.length; i++) {
+    const attNode = attachments[i];
+    const key = attNode.getElementsByTagName("Key")[0]?.textContent || "";
+    const name = attNode.getElementsByTagName("Name")[0]?.textContent || "Unnamed Attachment";
+    const descRaw = attNode.getElementsByTagName("Description")[0]?.textContent || "";
+    const description = formatOggdudeDescription(descRaw);
+
+    const typeRaw = attNode.getElementsByTagName("Type")[0]?.textContent || "";
+    let slotType = "all";
+    if (typeRaw.toLowerCase().includes("weapon")) slotType = "weapon";
+    else if (typeRaw.toLowerCase().includes("armor")) slotType = "armor";
+
+    const hardpoints = parseInt(attNode.getElementsByTagName("HP")[0]?.textContent || "0");
+    const price = parseInt(attNode.getElementsByTagName("Price")[0]?.textContent || "0");
+    const rarity = parseInt(attNode.getElementsByTagName("Rarity")[0]?.textContent || "0");
+    const restricted = attNode.getElementsByTagName("Restricted")[0]?.textContent?.toLowerCase() === "true";
+
+    // Added Mods (upgradeable modifications)
+    const mods = [];
+    const addedModsNode = attNode.getElementsByTagName("AddedMods")[0];
+    if (addedModsNode) {
+      const modNodes = addedModsNode.getElementsByTagName("Mod");
+      for (let j = 0; j < modNodes.length; j++) {
+        const mKey = modNodes[j].getElementsByTagName("Key")[0]?.textContent || "";
+        const mCount = parseInt(modNodes[j].getElementsByTagName("Count")[0]?.textContent || "1");
+        const mMisc = modNodes[j].getElementsByTagName("MiscDesc")[0]?.textContent?.trim() || "";
+
+        let modTarget = mKey.toLowerCase();
+        let modType = "quality";
+        let modValue = mCount;
+
+        if (mKey.includes("DAMADD")) {
+          modType = "stat";
+          modTarget = "damage";
+        } else if (mKey.includes("CRITSUB")) {
+          modType = "stat";
+          modTarget = "critical";
+          modValue = -mCount;
+        } else if (mKey.includes("SOAKADD")) {
+          modType = "stat";
+          modTarget = "soak";
+        } else if (mKey.includes("DEFADD") || mKey.includes("MELEEDEFADD") || mKey.includes("RANGEDEFADD")) {
+          modType = "stat";
+          modTarget = "defence";
+        }
+
+        const modName = mMisc || (mCount > 1 ? `${mKey} +${mCount}` : mKey);
+        mods.push({
+          name: modName,
+          type: modType,
+          target: modTarget,
+          value: modValue,
+          active: false
+        });
+      }
+    }
+
+    items.push({
+      name: name,
+      type: "attachment",
+      system: {
+        description: description,
+        hardpoints: hardpoints,
+        slotType: slotType,
+        price: price,
+        rarity: rarity,
+        restricted: restricted,
+        baseModifiers: {
+          wounds: 0,
+          strain: 0,
+          soak: 0,
+          encumbrance: 0,
+          characteristics: "",
+          skills: "",
+          qualities: "",
+          damage: 0,
+          critical: 0
+        },
+        mods: mods,
+        key: key
+      }
+    });
+  }
+
+  return items;
+}
+
+/**
  * Exposing a general dispatcher
  */
 export function oggdudeParser(xmlString, type) {
@@ -240,6 +488,12 @@ export function oggdudeParser(xmlString, type) {
     return parseOggdudeTalents(xmlString);
   } else if (type === "weapon") {
     return parseOggdudeWeapons(xmlString);
+  } else if (type === "armor") {
+    return parseOggdudeArmor(xmlString);
+  } else if (type === "gear") {
+    return parseOggdudeGear(xmlString);
+  } else if (type === "attachment") {
+    return parseOggdudeAttachments(xmlString);
   } else if (type === "species") {
     return parseOggdudeSpecies(xmlString);
   }
