@@ -1135,10 +1135,8 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       const result = await this.actor.applySpecialization(itemData);
       if (result && !result.success) ui.notifications?.warn(result.message);
       else if (result && result.message) ui.notifications?.info(result.message);
-    } else if (itemData.type === "talent") {
-      await super._onDropItem(event, data);
     } else {
-      await super._onDropItem(event, data);
+      await super._onDropItem(event, item);
     }
   }
 
