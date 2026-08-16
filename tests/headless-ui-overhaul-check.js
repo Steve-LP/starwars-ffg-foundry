@@ -31,7 +31,7 @@
   }
 
   // 2. Check CharacterBuilder actions
-  const { CharacterBuilder } = await import("./applications/character-builder.js");
+  const { CharacterBuilder } = await import("/systems/starwars-ffg-scratch/module/applications/character-builder.js");
   assert("8) CharacterBuilder is defined", !!CharacterBuilder);
   assert("9) CharacterBuilder action 'openTalentTree' is defined", typeof CharacterBuilder.DEFAULT_OPTIONS?.actions?.openTalentTree === "function");
   assert("10) CharacterBuilder width is fixed to 600px", CharacterBuilder.DEFAULT_OPTIONS?.position?.width === 600);
