@@ -59,6 +59,21 @@
     const editContext = await sheet._prepareContext({});
     assert("15) Toggled editMode is true in context", editContext.editMode === true);
 
+    // 4. Test Actor WITH Specialization Attached (resolving TalentTreeUtils.buildGrid)
+    await testActor.createEmbeddedDocuments("Item", [{
+      name: "Bounty Hunter / Assassin",
+      type: "specialization",
+      system: {
+        career: "Bounty Hunter",
+        careerSkills: "Melee, Ranged - Heavy, Skulduggery, Stealth",
+        talentRows: []
+      }
+    }]);
+
+    const specContext = await sheet._prepareContext({});
+    assert("16) Actor with specialization prepares context without error", specContext.specializations.length === 1);
+    assert("17) Prepared specialization name is 'Bounty Hunter / Assassin'", specContext.specializations[0].name === "Bounty Hunter / Assassin");
+
   } finally {
     await testActor.delete();
   }

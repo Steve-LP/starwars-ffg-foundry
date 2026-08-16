@@ -1,5 +1,6 @@
 import { CharacterBuilder } from "./applications/character-builder.js";
 import { CANONICAL_SKILLS, normalizeSkillName, getSkillCharacteristic } from "./utils/skill-normalization.js";
+import { TalentTreeUtils } from "./utils/talent-tree.js";
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
 
