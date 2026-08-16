@@ -156,7 +156,7 @@ export class WeaponData extends foundry.abstract.TypeDataModel {
       encumbrance: new fields.NumberField({ initial: 1 }),
       hardpoints: new fields.NumberField({ initial: 0 }),
       qualities: new fields.StringField({ initial: "" }),
-      skill: new fields.StringField({ initial: "Ranged-Light" }),
+      skill: new fields.StringField({ initial: "Ranged - Light" }),
       key: new fields.StringField({ initial: "" }),
       equipped: new fields.BooleanField({ initial: false }),
       modifiers: new fields.SchemaField({
