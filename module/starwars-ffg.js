@@ -142,6 +142,8 @@ Hooks.on("createActor", (actor, options, userId) => {
   // Only trigger for the user who created the actor, and only for characters
   if (game.user.id !== userId) return;
   if (actor.type !== "character") return;
+  if (actor.system.creation?.isCreationMode === false) return;
+  if (options.skipBuilder) return;
   
   console.log("SWFFG | Opening Character Builder for new actor:", actor.name);
   // Auto-open the Character Builder
