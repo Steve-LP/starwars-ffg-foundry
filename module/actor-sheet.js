@@ -352,6 +352,7 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       const yellowCount = Math.max(0, Math.min(charValue, value));
 
       const creation = this.actor.system.creation || {};
+      const isSandbox = creation.sandboxMode || false;
       const careerSkills = creation.careerSnapshot?.careerSkills || creation.careerSkills || [];
       const specSkills = creation.specializationSnapshot?.careerSkills || creation.specializationSkills || [];
       const freeCareer = creation.ledger?.freeCareerSkills || creation.freeCareerSkills || [];
