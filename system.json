@@ -3,6 +3,9 @@
   "title": "Star Wars FFG Scratch Ruleset",
   "description": "A custom ruleset for Star Wars FFG (Edge of the Empire, Age of Rebellion, Force and Destiny) built from scratch.",
   "version": "0.1.0",
+  "url": "https://github.com/Steve-LP/starwars-ffg-foundry",
+  "manifest": "https://raw.githubusercontent.com/Steve-LP/starwars-ffg-foundry/main/system.json",
+  "download": "https://github.com/Steve-LP/starwars-ffg-foundry/archive/refs/heads/main.zip",
   "compatibility": {
     "minimum": "13",
     "verified": "14"
