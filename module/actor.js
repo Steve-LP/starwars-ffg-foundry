@@ -327,6 +327,8 @@ export class SWFFGActor extends Actor {
       });
       return { success: true, message: `${attributeName.toUpperCase()} auf ${currentRawValue - 1} gesenkt. ${refund} XP erstattet.` };
     }
+  }
+
   /**
    * Returns the maximum allowed skill rank based on creation mode vs. play mode.
    * @returns {number} 2 during creation mode, 5 during regular play mode.
