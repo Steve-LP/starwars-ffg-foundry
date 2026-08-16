@@ -7,6 +7,7 @@ import { oggdudeParser } from "./oggdude-importer.js";
 import { CharacterData, NPCData, MinionData, WeaponData, ArmorData, GearData, TalentData, ForcePowerData, SpecializationData, SkillData, SpeciesData, CareerData, AttachmentData } from "./data-models.js";
 import { SWFFGDiceRoller } from "./dice-roller.js";
 import { CharacterBuilder } from "./applications/character-builder.js";
+import { XpBatchDialog } from "./applications/xp-batch-dialog.js";
 
 Hooks.once("init", async function () {
   console.log("Star Wars FFG Scratch | Initializing Star Wars FFG System (V13/V14)");
@@ -52,7 +53,8 @@ Hooks.once("init", async function () {
 
   // Preload Handlebars templates & partials
   await foundry.applications.handlebars.loadTemplates([
-    "systems/starwars-ffg-scratch/templates/parts/talent-grid.hbs"
+    "systems/starwars-ffg-scratch/templates/parts/talent-grid.hbs",
+    "systems/starwars-ffg-scratch/templates/dialogs/xp-batch.hbs"
   ]);
 
   // Handlebars helper: capitalize string
@@ -74,7 +76,8 @@ Hooks.once("init", async function () {
   // Expose system namespace globally
   game.starwarsFFG = {
     importOggdudeXml: oggdudeParser,
-    diceRoller: new SWFFGDiceRoller()
+    diceRoller: new SWFFGDiceRoller(),
+    openXpBatchDialog: () => new XpBatchDialog().render({ force: true })
   };
 });
 
@@ -144,4 +147,30 @@ Hooks.on("createActor", (actor, options, userId) => {
   // Auto-open the Character Builder
   const builder = new CharacterBuilder({ actor });
   builder.render({ force: true });
+});
+
+/**
+ * Inject GM-only "Session-XP vergeben" button into the Actors sidebar.
+ */
+Hooks.on("renderActorDirectory", (app, html) => {
+  if (!game.user?.isGM) return;
+  // Avoid duplicate buttons on re-renders
+  if (html.querySelector(".xp-batch-sidebar-btn")) return;
+
+  const headerActions = html.querySelector(".directory-footer, .action-buttons, footer");
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.classList.add("xp-batch-sidebar-btn");
+  btn.innerHTML = `<i class="fas fa-star"></i> Session-XP vergeben`;
+  btn.title = "XP an Spielercharaktere vergeben (GM-only)";
+  btn.addEventListener("click", () => {
+    new XpBatchDialog().render({ force: true });
+  });
+
+  if (headerActions) {
+    headerActions.prepend(btn);
+  } else {
+    // Fallback: append to the whole sidebar content
+    html.appendChild(btn);
+  }
 });

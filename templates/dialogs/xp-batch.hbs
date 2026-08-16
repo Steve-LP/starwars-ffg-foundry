@@ -1,0 +1,77 @@
+<form class="xp-batch-form">
+
+  {{!-- Global default XP amount --}}
+  <div class="xp-batch-header">
+    <label for="xp-batch-default" class="xp-batch-default-label">
+      <i class="fas fa-star"></i>
+      Standard-XP für alle
+    </label>
+    <input
+      type="number"
+      id="xp-batch-default"
+      class="xp-batch-default-input"
+      value="{{defaultAmount}}"
+      min="1"
+      step="1"
+      placeholder="z.B. 15"
+    />
+  </div>
+
+  {{!-- Character list --}}
+  <div class="xp-batch-char-list">
+    {{#each characters}}
+    <div
+      class="xp-batch-row {{#if inCreation}}xp-batch-row--creation{{/if}}"
+      data-actor-id="{{id}}"
+      data-actor-name="{{name}}"
+    >
+      {{!-- Selection checkbox --}}
+      <input
+        type="checkbox"
+        class="xp-batch-checkbox"
+        {{#if selected}}checked{{/if}}
+        {{#if inCreation}}disabled title="Charakter befindet sich noch in der Erstellung"{{/if}}
+      />
+
+      {{!-- Actor portrait --}}
+      <img class="xp-batch-portrait" src="{{img}}" alt="{{name}}" />
+
+      {{!-- Name & owner --}}
+      <div class="xp-batch-char-info">
+        <span class="xp-batch-char-name">{{name}}</span>
+        <span class="xp-batch-owner-row">
+          <span class="xp-batch-online-dot {{#if isOnline}}online{{/if}}" title="{{#if isOnline}}Spieler online{{else}}Spieler offline{{/if}}"></span>
+          <span class="xp-batch-owner-name">{{ownerName}}</span>
+          {{#if inCreation}}<span class="xp-batch-creation-badge">Erstellung</span>{{/if}}
+        </span>
+      </div>
+
+      {{!-- Per-character override --}}
+      <input
+        type="number"
+        class="xp-batch-override"
+        data-actor-id="{{id}}"
+        value="{{override}}"
+        min="1"
+        step="1"
+        placeholder="Override"
+        title="Leer lassen für Standard-Betrag"
+        {{#if inCreation}}disabled{{/if}}
+      />
+    </div>
+    {{/each}}
+
+    {{#unless characters}}
+    <p class="xp-batch-empty">Keine Spielercharaktere im Spiel vorhanden.</p>
+    {{/unless}}
+  </div>
+
+  {{!-- Footer buttons --}}
+  <div class="xp-batch-footer">
+    <button type="button" data-action="apply" class="xp-batch-apply-btn">
+      <i class="fas fa-check"></i>
+      XP vergeben
+    </button>
+  </div>
+
+</form>
