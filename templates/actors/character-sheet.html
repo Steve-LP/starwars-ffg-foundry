@@ -26,13 +26,22 @@
   {{/if}}
 
   <!-- Header Info -->
-  <header class="sheet-header" style="margin-bottom: 4px;">
+  <header class="sheet-header {{#if editMode}}edit-mode-header{{/if}}" style="margin-bottom: 4px;">
     <div class="profile-image-container">
       <img class="profile-img" src="{{actor.img}}" data-edit="img" title="{{actor.name}}" />
     </div>
     <div class="header-details">
       <div class="row header-name-row" style="justify-content: space-between; align-items: center; border-bottom: none; padding: 0;">
         <h1 class="charname" style="flex: 1;"><input name="name" type="text" value="{{actor.name}}" placeholder="Name" /></h1>
+        <!-- Edit-Lock Toggle Button -->
+        <button type="button"
+          class="edit-lock-btn {{#if editMode}}edit-mode-on{{/if}}"
+          data-action="toggleEditMode"
+          title="{{#if editMode}}Bearbeitungsmodus AN — klicken zum Sperren{{else}}Bearbeitungsmodus AUS — klicken zum Bearbeiten{{/if}}"
+          style="flex: 0 0 auto; margin-right: 8px; background: {{#if editMode}}rgba(251,191,36,0.2){{else}}rgba(255,255,255,0.07){{/if}}; color: {{#if editMode}}#fbbf24{{else}}rgba(255,255,255,0.4){{/if}}; border: 1.5px solid {{#if editMode}}#fbbf24{{else}}rgba(255,255,255,0.15){{/if}}; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 13px; transition: all 0.15s;">
+          <i class="fas {{#if editMode}}fa-lock-open{{else}}fa-lock{{/if}}"></i>
+          {{#if editMode}}Bearbeiten{{else}}Gesperrt{{/if}}
+        </button>
         <!-- XP Box on the right of the name -->
         <div class="xp-profile-box xp-box" style="flex: 0 0 auto; display: flex; align-items: center; gap: 8px;">
           <label style="margin-bottom: 0; padding-right: 4px;">XP (Avail/Total)</label>
@@ -274,9 +283,17 @@
           <span class="col-rank">
             {{#if ../isCreationOrGM}}
             <div class="skill-controls-row">
-              <button type="button" class="decrease-skill-btn {{#unless skill.isDecreasable}}disabled{{/unless}}" data-name="{{skill.name}}" title="Rang verringern (XP erstattet)" {{#unless skill.isDecreasable}}disabled{{/unless}}>
+              {{#if ../isGM}}
+              {{!-- GM: Rang-Senkung immer aktiv (serverseitiger Check in decreaseSkillRank) --}}
+              <button type="button" class="decrease-skill-btn {{#unless skill.isDecreasable}}disabled{{/unless}}" data-name="{{skill.name}}" title="Rang verringern (XP erstattet) — GM-Aktion" {{#unless skill.isDecreasable}}disabled{{/unless}}>
                 <i class="fas fa-minus"></i>
               </button>
+              {{else}}
+              {{!-- Nicht-GM: sichtbar, aber disabled mit erklärendem Tooltip --}}
+              <button type="button" class="decrease-skill-btn disabled gm-only-action" data-name="{{skill.name}}" title="Nur der GM kann bereits bestätigte Käufe zurücknehmen." disabled>
+                <i class="fas fa-minus"></i>
+              </button>
+              {{/if}}
               <span class="skill-rank-badge">{{skill.baseValue}}</span>
               <button type="button" class="upgrade-skill-btn {{#unless skill.canAfford}}disabled{{/unless}}" data-name="{{skill.name}}" data-characteristic="{{skill.characteristic}}" data-category="{{skill.category}}" title="Upgrade für {{skill.cost}} XP" {{#unless skill.canAfford}}disabled{{/unless}}>
                 <i class="fas fa-plus"></i> <span class="cost-val">{{skill.cost}} XP</span>

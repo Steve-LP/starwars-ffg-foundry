@@ -431,7 +431,7 @@ export class SWFFGActor extends Actor {
         return { success: false, message: `Kann ${skillName} nicht unter den Startwert von ${freeRanks} senken!` };
       }
       if (!isGM) {
-        return { success: false, message: "Fertigkeiten können nach der Charaktererstellung hier nicht verändert werden!" };
+        return { success: false, message: "Nur der GM kann bereits bestätigte Käufe zurücknehmen." };
       }
       const isCareer = skillItem?.system?.career || false;
       const refund = isCareer ? (currentRank * 5) : ((currentRank * 5) + 5);
@@ -1719,6 +1719,12 @@ export class SWFFGActor extends Actor {
     if (this.type !== "character") return;
     const talentItem = this.items.get(talentId);
     if (!talentItem) return { success: false, message: "Talent nicht gefunden." };
+
+    // Im Play-Modus: nur GM darf Talente erstatten
+    const isCreationMode = this.system.creation?.isCreationMode === true;
+    if (!isCreationMode && !game.user?.isGM) {
+      return { success: false, message: "Nur der GM kann bereits bestätigte Käufe zurücknehmen." };
+    }
 
     await this.deleteEmbeddedDocuments("Item", [talentId]);
     const availableXp = this.system.xp.available || 0;

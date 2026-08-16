@@ -2269,3 +2269,47 @@ body.game,
   display: inline-flex;
   align-items: center;
 }
+
+/* ── Edit-Lock / Bearbeitungsmodus ──────────────────────────────────────────
+ * Auffälliger Rahmen + Hintergrund wenn editMode aktiv ist.
+ * Zweck: für alle am Tisch sichtbar machen, dass hier gerade XP verteilt wird.
+ */
+
+/* Ganzes Sheet-Window erhält pulsierenden Amber-Rahmen */
+.application.starwars-ffg.edit-mode-active {
+  outline: 3px solid #fbbf24 !important;
+  outline-offset: -2px;
+  box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.35), 0 0 24px 4px rgba(251, 191, 36, 0.15) !important;
+  animation: edit-mode-pulse 2s ease-in-out infinite;
+}
+
+@keyframes edit-mode-pulse {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.35), 0 0 24px 4px rgba(251, 191, 36, 0.15); }
+  50%       { box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.6),  0 0 36px 8px rgba(251, 191, 36, 0.28); }
+}
+
+/* Banner am Header-Rand als zweites Signal */
+.sheet-header.edit-mode-header::before {
+  content: "✏ BEARBEITUNGSMODUS AKTIV";
+  display: block;
+  background: rgba(251, 191, 36, 0.15);
+  color: #fbbf24;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-align: center;
+  padding: 3px 0;
+  margin-bottom: 6px;
+  border-radius: 3px;
+  border: 1px solid rgba(251, 191, 36, 0.3);
+}
+
+/* GM-only Aktionen: Nicht-GM sieht den Button, aber gedimmt */
+.gm-only-action {
+  opacity: 0.45;
+  cursor: not-allowed !important;
+}
+
+.gm-only-action:hover {
+  opacity: 0.55;
+}

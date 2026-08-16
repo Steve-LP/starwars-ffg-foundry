@@ -68,13 +68,24 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       closeOnSubmit: false
     },
     actions: {
-      openBuilder: SWFFGActorSheet.#onOpenBuilder
+      openBuilder: SWFFGActorSheet.#onOpenBuilder,
+      toggleEditMode: SWFFGActorSheet.#onToggleEditMode
     }
   };
 
   static async #onOpenBuilder(event, target) {
     const builder = new CharacterBuilder({ actor: this.document });
     builder.render({ force: true });
+  }
+
+  /**
+   * Schaltet den Bearbeitungsmodus um. Rein client-seitiger Zustand —
+   * wird NICHT persistiert, setzt sich bei jedem Render/Öffnen auf false zurück.
+   */
+  static async #onToggleEditMode(event, target) {
+    this.editMode = !this.editMode;
+    console.info(`SWFFG | [ActorSheet] Bearbeitungsmodus: ${this.editMode ? 'AN' : 'AUS'} (${this.document.name})`);
+    this.render();
   }
 
   static PARTS = {
@@ -103,6 +114,13 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
   };
 
   /**
+   * Bearbeitungsmodus: IMMER false beim Öffnen/Rendern des Sheets.
+   * Kein Persistieren am Actor — flüchtiger UI-Zustand, nur client-seitig.
+   * Steuert ob Kauf- und Würfel-Buttons aktiv sind.
+   */
+  editMode = false;
+
+  /**
    * Compatibility getter for this.actor in DocumentSheetV2
    */
   get actor() {
@@ -115,6 +133,8 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     context.actor = this.document;
     const actorData = this.document;
     context.isGM = game.user.isGM;
+    // editMode: flüchtiger UI-Zustand, nicht aus Actor-Daten gelesen
+    context.editMode = this.editMode;
 
     // Set up default skills if they don't exist
     context.skills = this._prepareSkills();
@@ -493,9 +513,18 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     super._onRender(context, options);
     const html = $(this.element);
 
-    // Roll click handlers (Now routing to the central Dice Roller)
-    html.find(".rollable-skill").click(this._onRollSkill.bind(this));
-    html.find(".rollable-char").click(this._onRollCharacteristic.bind(this));
+    // Visueller Edit-Lock-Rahmen: auffällig, damit andere Mitspieler es sehen
+    if (this.editMode) {
+      this.element.classList.add("edit-mode-active");
+    } else {
+      this.element.classList.remove("edit-mode-active");
+    }
+
+    // Roll click handlers — nur im Bearbeitungsmodus aktiv
+    if (this.editMode) {
+      html.find(".rollable-skill").click(this._onRollSkill.bind(this));
+      html.find(".rollable-char").click(this._onRollCharacteristic.bind(this));
+    }
 
     // Item controls
     html.find(".item-edit").click(this._onItemEdit.bind(this));
@@ -525,38 +554,16 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
         fp.render(true);
       });
 
-      // Talent tree purchase/refund handler
+      // Talent tree: immer binden (GM kann immer erstatten); Kauf nur im editMode
       html.find(".talent-card").click(this._onTalentCardClick.bind(this));
 
-      // Biography removal handler
+      // Biography removal handler — keine XP-Seiteneffekte, immer erlaubt
       html.find(".remove-bio").click(this._onRemoveBio.bind(this));
 
       // Specialization header removal handler
       html.find(".remove-spec-header").click(this._onRemoveSpecHeader.bind(this));
 
-      // Character creation upgrade, decrease & locking handlers
-      html.find(".upgrade-characteristic-btn").click(async (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        const charName = event.currentTarget.dataset.characteristic;
-        if (charName) {
-          const result = await this.actor.buyAttribute(charName);
-          if (result && !result.success) ui.notifications?.warn(result.message);
-          else if (result && result.message) ui.notifications?.info(result.message);
-        }
-      });
-
-      html.find(".decrease-characteristic-btn").click(async (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        const charName = event.currentTarget.dataset.characteristic;
-        if (charName) {
-          const result = await this.actor.decreaseAttribute(charName);
-          if (result && !result.success) ui.notifications?.warn(result.message);
-          else if (result && result.message) ui.notifications?.info(result.message);
-        }
-      });
-
+      // GM-only Verwaltungsaktionen (Sandbox, Sperren, Reset) — immer erlaubt
       html.find(".lock-creation-btn").click(async (event) => {
         event.preventDefault();
         event.stopPropagation();
@@ -579,10 +586,38 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
         if (result && result.message) ui.notifications?.info(result.message);
       });
 
-      // Skill purchase and decrease handlers for character creation phase
+      // ── Kauf- und Rückgabe-Buttons: nur im Bearbeitungsmodus ──────────────
+      // (Ausnahme: GM-Refund-Buttons sind im Template für GMs immer aktiv und
+      //  werden durch actor.decreaseSkillRank/refundTalent serverseitig geprüft)
+
+      html.find(".upgrade-characteristic-btn").click(async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (!this.editMode) return;
+        const charName = event.currentTarget.dataset.characteristic;
+        if (charName) {
+          const result = await this.actor.buyAttribute(charName);
+          if (result && !result.success) ui.notifications?.warn(result.message);
+          else if (result && result.message) ui.notifications?.info(result.message);
+        }
+      });
+
+      html.find(".decrease-characteristic-btn").click(async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (!this.editMode) return;
+        const charName = event.currentTarget.dataset.characteristic;
+        if (charName) {
+          const result = await this.actor.decreaseAttribute(charName);
+          if (result && !result.success) ui.notifications?.warn(result.message);
+          else if (result && result.message) ui.notifications?.info(result.message);
+        }
+      });
+
       html.find(".upgrade-skill-btn").click(async (event) => {
         event.preventDefault();
         event.stopPropagation();
+        if (!this.editMode) return;
         const skillName = event.currentTarget.dataset.name;
         const skillChar = event.currentTarget.dataset.characteristic;
         const skillCat = event.currentTarget.dataset.category;
@@ -596,6 +631,9 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       html.find(".decrease-skill-btn").click(async (event) => {
         event.preventDefault();
         event.stopPropagation();
+        // GM-Refunds laufen immer durch (serverseitiger Check in decreaseSkillRank)
+        // Nicht-GM im Play-Modus: JS-Guard zusätzlich zur serverseitigen Ablehnung
+        if (!this.editMode && !game.user.isGM) return;
         const skillName = event.currentTarget.dataset.name;
         if (skillName) {
           const result = await this.actor.decreaseSkillRank(skillName);
@@ -606,26 +644,29 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 
       html.find(".free-career-toggle").change(async (event) => {
         event.preventDefault();
+        if (!this.editMode) return;
         const skillName = event.currentTarget.dataset.name;
         const checked = event.currentTarget.checked;
         const result = await this.actor.toggleFreeCareerSkill(skillName, checked);
         if (result && !result.success) {
-          event.currentTarget.checked = !checked; // revert
+          event.currentTarget.checked = !checked;
           ui.notifications?.warn(result.message);
         }
       });
 
       html.find(".free-spec-toggle").change(async (event) => {
         event.preventDefault();
+        if (!this.editMode) return;
         const skillName = event.currentTarget.dataset.name;
         const checked = event.currentTarget.checked;
         const result = await this.actor.toggleFreeSpecializationSkill(skillName, checked);
         if (result && !result.success) {
-          event.currentTarget.checked = !checked; // revert
+          event.currentTarget.checked = !checked;
           ui.notifications?.warn(result.message);
         }
       });
     }
+
   }
 
   async _onTalentCardClick(event) {
