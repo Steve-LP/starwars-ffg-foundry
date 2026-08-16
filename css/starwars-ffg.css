@@ -2088,9 +2088,11 @@ body.game,
 }
 .builder-step {
   flex: 1;
-  padding: 10px 4px;
+  padding: 10px 6px;
   overflow-y: auto;
+  overflow-x: hidden;
   min-height: 0;
+  scrollbar-width: thin;
 }
 .builder-step h2 {
   border-bottom: 2px solid var(--color-border-dark-1);
