@@ -337,7 +337,7 @@ export class AttachmentData extends foundry.abstract.TypeDataModel {
     return {
       description: new fields.HTMLField({ initial: "" }),
       hardpoints: new fields.NumberField({ initial: 1, min: 0 }),
-      slotType: new fields.StringField({ initial: "weapon", choices: ["weapon", "armor", "all"] }),
+      slotType: new fields.StringField({ initial: "weapon", choices: ["weapon", "armor", "vehicle", "all"] }),
       price: new fields.NumberField({ initial: 0, min: 0 }),
       rarity: new fields.NumberField({ initial: 0, min: 0, max: 10 }),
       restricted: new fields.BooleanField({ initial: false }),

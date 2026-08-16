@@ -109,7 +109,7 @@ const sampleAttXml = `
 const parsedAtts = parseOggdudeAttachments(sampleAttXml);
 assert("5) Weapon attachment got slotType 'weapon'", parsedAtts[0].system.slotType === "weapon");
 assert("6) Armor attachment got slotType 'armor'", parsedAtts[1].system.slotType === "armor");
-assert("7) Vehicle attachment safely received slotType fallback 'all'", parsedAtts[2].system.slotType === "all");
+assert("7) Vehicle attachment received slotType 'vehicle'", parsedAtts[2].system.slotType === "vehicle");
 
 console.log("==================================================");
 console.log(`TOTAL: ${passed + failed} | PASSED: ${passed} | FAILED: ${failed}`);

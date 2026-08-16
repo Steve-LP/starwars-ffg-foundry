@@ -316,9 +316,11 @@ export function compileAttachments() {
       }
 
       const typeRaw = getTag(xml, "Type");
+      const typeLower = typeRaw.toLowerCase();
       let slotType = "all";
-      if (typeRaw.toLowerCase().includes("weapon")) slotType = "weapon";
-      else if (typeRaw.toLowerCase().includes("armor")) slotType = "armor";
+      if (typeLower.includes("weapon")) slotType = "weapon";
+      else if (typeLower.includes("armor")) slotType = "armor";
+      else if (typeLower.includes("vehicle") || typeLower.includes("starship")) slotType = "vehicle";
 
       const hardpoints = parseInt(getTag(xml, "HP") || "0");
       const price = parseInt(getTag(xml, "Price") || "0");

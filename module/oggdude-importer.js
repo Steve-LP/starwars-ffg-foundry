@@ -401,9 +401,11 @@ export function parseOggdudeAttachments(xmlString) {
     const description = formatOggdudeDescription(descRaw);
 
     const typeRaw = attNode.getElementsByTagName("Type")[0]?.textContent || "";
+    const typeLower = typeRaw.toLowerCase();
     let slotType = "all";
-    if (typeRaw.toLowerCase().includes("weapon")) slotType = "weapon";
-    else if (typeRaw.toLowerCase().includes("armor")) slotType = "armor";
+    if (typeLower.includes("weapon")) slotType = "weapon";
+    else if (typeLower.includes("armor")) slotType = "armor";
+    else if (typeLower.includes("vehicle") || typeLower.includes("starship")) slotType = "vehicle";
 
     const hardpoints = parseInt(attNode.getElementsByTagName("HP")[0]?.textContent || "0");
     const price = parseInt(attNode.getElementsByTagName("Price")[0]?.textContent || "0");

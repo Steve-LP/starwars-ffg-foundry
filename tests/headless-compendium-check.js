@@ -77,24 +77,29 @@
     const supArmor = index.find(i => i.name === "Superior Armor Customization");
     assert("12) Core Armor Attachment 'Superior Armor Customization' exists", !!supArmor);
     assert("    Superior Armor Customization SlotType == 'armor'", supArmor?.system?.slotType === "armor", `got ${supArmor?.system?.slotType}`);
+
+    // Vehicle Attachment: Collision Avoidance System
+    const colAvoid = index.find(i => i.name === "Collision Avoidance System");
+    assert("13) Vehicle Attachment 'Collision Avoidance System' exists", !!colAvoid);
+    assert("    Collision Avoidance System SlotType == 'vehicle'", colAvoid?.system?.slotType === "vehicle", `got ${colAvoid?.system?.slotType}`);
   }
 
   // 4. Check Weapons Compendium
   const weaponPack = game.packs.get("starwars-ffg-scratch.weapons");
-  assert("13) Weapons compendium exists", !!weaponPack);
+  assert("14) Weapons compendium exists", !!weaponPack);
   if (weaponPack) {
     const index = await weaponPack.getIndex({ fields: ["system.price", "system.rarity", "system.restricted", "system.damage", "system.critical", "system.range", "system.skill", "system.qualities"] });
-    assert("14) Weapons pack contains items (>200)", index.size >= 200, `found ${index.size}`);
+    assert("15) Weapons pack contains items (>200)", index.size >= 200, `found ${index.size}`);
 
     // Core Weapon: Heavy Blaster Pistol
     const heavyPistol = index.find(i => i.name === "Heavy Blaster Pistol");
-    assert("15) Core Weapon 'Heavy Blaster Pistol' exists", !!heavyPistol);
+    assert("16) Core Weapon 'Heavy Blaster Pistol' exists", !!heavyPistol);
     assert("    Heavy Blaster Pistol Skill == 'Ranged - Light'", heavyPistol?.system?.skill === "Ranged - Light", `got ${heavyPistol?.system?.skill}`);
     assert("    Heavy Blaster Pistol Damage == 7", heavyPistol?.system?.damage === 7, `got ${heavyPistol?.system?.damage}`);
 
     // Non-Core Weapon: TT24 Holdout Blaster (Beyond the Rim)
     const tt24 = index.find(i => i.name === "TT24 Holdout Blaster");
-    assert("16) Non-Core Weapon 'TT24 Holdout Blaster' exists", !!tt24);
+    assert("17) Non-Core Weapon 'TT24 Holdout Blaster' exists", !!tt24);
     assert("    TT24 Damage == 6", tt24?.system?.damage === 6, `got ${tt24?.system?.damage}`);
     assert("    TT24 Range == 'Medium'", tt24?.system?.range === "Medium", `got ${tt24?.system?.range}`);
   }
