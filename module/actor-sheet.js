@@ -389,8 +389,8 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       const nextRank = baseRank + 1;
       const cost = isCareer ? (nextRank * 5) : ((nextRank * 5) + 5);
       const isGM = game.user?.isGM || false;
-      const isSandbox = this.actor.system.creation?.sandboxMode || false;
-      const canUpgrade = !this.actor.system.creation?.isCreationMode || baseRank < 2;
+      const maxRank = this.actor.getMaxSkillRank();
+      const canUpgrade = baseRank < maxRank;
       const canAfford = isSandbox || (
         canUpgrade && (
           isGM || this.actor.totalAvailableXp >= cost
@@ -453,9 +453,10 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       const cost = isCareer ? (nextRank * 5) : ((nextRank * 5) + 5);
       const isGM = game.user?.isGM || false;
       const isSandbox = this.actor.system.creation?.sandboxMode || false;
-      const canUpgrade = !this.actor.system.creation?.isCreationMode || baseRank < 2;
+      const maxRankCustom = this.actor.getMaxSkillRank();
+      const canUpgradeCustom = baseRank < maxRankCustom;
       const canAfford = isSandbox || (
-        canUpgrade && (
+        canUpgradeCustom && (
           isGM || this.actor.totalAvailableXp >= cost
         )
       );

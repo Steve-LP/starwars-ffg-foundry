@@ -327,11 +327,17 @@ export class SWFFGActor extends Actor {
       });
       return { success: true, message: `${attributeName.toUpperCase()} auf ${currentRawValue - 1} gesenkt. ${refund} XP erstattet.` };
     }
+  /**
+   * Returns the maximum allowed skill rank based on creation mode vs. play mode.
+   * @returns {number} 2 during creation mode, 5 during regular play mode.
+   */
+  getMaxSkillRank() {
+    if (this.system.creation?.sandboxMode === true) return 5;
+    return this.system.creation?.isCreationMode === true ? 2 : 5;
   }
 
   async buySkillRank(skillName, skillChar, skillCat) {
-    if (this.type !== "character") return;
-    const isGM = game.user?.isGM || false;
+    if (this.type !== "character") return { success: false, message: "Nur für Charaktere verfügbar." };
     const isCreationMode = this.system.creation?.isCreationMode === true;
 
     // Make sure skill item exists
@@ -344,6 +350,7 @@ export class SWFFGActor extends Actor {
     const currentRank = isCreationMode ? (freeRanks + currentUpgrades) : (skillItem?.system?.value || 0);
     const isCareer = isCreationMode ? (this.derivedSkills?.[skillName.toLowerCase()]?.career || false) : (skillItem?.system?.career || false);
 
+    const maxRank = this.getMaxSkillRank();
     const nextRank = currentRank + 1;
     const cost = isCareer ? (nextRank * 5) : ((nextRank * 5) + 5);
     const currentAvailable = this.system.xp?.available || 0;
@@ -351,16 +358,11 @@ export class SWFFGActor extends Actor {
     const isSandbox = this.system.creation?.sandboxMode || false;
 
     if (!isSandbox) {
-      if (!isCreationMode) {
-        if (!isGM) {
-          return { success: false, message: "Fertigkeiten können nach der Charaktererstellung hier nicht gesteigert werden!" };
-        }
+      if (currentRank >= maxRank) {
+        return { success: false, message: `Maximaler Rang (${maxRank}) bereits erreicht.` };
       }
       if (this.totalAvailableXp < cost) {
         return { success: false, message: `Nicht genug XP vorhanden! (Kosten: ${cost} XP, Verfügbar: ${this.totalAvailableXp} XP)` };
-      }
-      if (isCreationMode && currentRank >= 2) {
-        return { success: false, message: `Während der Charaktererstellung dürfen Fertigkeiten nicht über Rang 2 gesteigert werden!` };
       }
     }
 
@@ -1624,7 +1626,7 @@ export class SWFFGActor extends Actor {
     const currentRank = isCreationMode ? (freeRanks + currentUpgrades) : (skillItem?.system?.value || 0);
 
     const isCareer = this.isCareerSkill(skillName);
-    const maxRank = (isCreationMode && !isSandbox) ? 2 : 5;
+    const maxRank = this.getMaxSkillRank();
     const isMax = currentRank >= maxRank;
 
     const nextRank = currentRank + 1;
