@@ -60,45 +60,54 @@
   console.groupEnd();
 
   // ── Block C: Erfolgreiche Operationen + XP-Log-Prüfung ──────────────────────
+  // HINWEIS: Nach actor.update() muss der frische Document-Stand per
+  // game.actors.get() abgerufen werden — der lokale actor-Snapshot ist veraltet.
   console.group("C) Happy Path + XP-Log");
 
-  const xpBefore = actor.system.xp?.available ?? 0;
-  const totalBefore = actor.system.xp?.total ?? 0;
+  const actorId = actor.id;
+  const fresh = () => game.actors.get(actorId); // immer aktueller Stand
+
+  const xpBefore    = fresh().system.xp?.available ?? 0;
+  const totalBefore = fresh().system.xp?.total ?? 0;
   console.log(`C0 Ausgangswert: available=${xpBefore}, total=${totalBefore}`);
 
   // C1: grantXp(20)
-  const r8 = await actor.grantXp(20);
+  const r8 = await fresh().grantXp(20);
   console.assert(r8.success === true, "C1 FAIL: grantXp(20) abgelehnt");
   console.assert(r8.data?.granted === 20, "C1 FAIL: granted-Wert falsch");
   console.assert(r8.data?.newAvailable === xpBefore + 20, "C1 FAIL: newAvailable falsch");
   console.log("C1 grantXp(20):", r8.success ? "✅" : "❌", r8.message, r8.data);
 
-  // XP-Log-Prüfung für C1
-  const logAfterGrant = actor.system.xp?.log ?? [];
+  // XP-Log-Prüfung für C1 — frischer Stand
+  const logAfterGrant = fresh().system.xp?.log ?? [];
   const lastGrant = logAfterGrant.at(-1);
   console.assert(lastGrant?.description?.includes("Session-XP"), "C1 LOG FAIL: Beschreibung fehlt/falsch");
   console.assert(lastGrant?.description?.includes(game.user.name), "C1 LOG FAIL: GM-Name fehlt");
   console.log("C1 XP-Log:", lastGrant ? `✅ "${lastGrant.description}"` : "❌ kein Eintrag");
 
   // C2: setXp(10, "Retroaktive Korrektur")
-  const r9 = await actor.setXp(10, "Retroaktive Korrektur nach Spielleitertreffen");
+  // oldValue = frischer Stand nach grantXp, d.h. xpBefore + 20
+  const xpAfterGrant = fresh().system.xp?.available ?? 0;
+  const r9 = await fresh().setXp(10, "Retroaktive Korrektur nach Spielleitertreffen");
   console.assert(r9.success === true, "C2 FAIL: setXp abgelehnt");
-  console.assert(r9.data?.oldValue === xpBefore + 20, "C2 FAIL: oldValue falsch");
+  console.assert(r9.data?.oldValue === xpAfterGrant, "C2 FAIL: oldValue falsch");
   console.assert(r9.data?.newValue === 10, "C2 FAIL: newValue falsch");
   console.log("C2 setXp(10):", r9.success ? "✅" : "❌", r9.message, r9.data);
 
-  // XP-Log-Prüfung für C2
-  const logAfterSet = actor.system.xp?.log ?? [];
+  // XP-Log-Prüfung für C2 — frischer Stand
+  const logAfterSet = fresh().system.xp?.log ?? [];
   const lastSet = logAfterSet.at(-1);
   console.assert(lastSet?.description?.includes("GM-Korrektur"), "C2 LOG FAIL: Beschreibung fehlt/falsch");
   console.assert(lastSet?.description?.includes("Retroaktive"), "C2 LOG FAIL: Grund nicht in Beschreibung");
   console.log("C2 XP-Log:", lastSet ? `✅ "${lastSet.description}"` : "❌ kein Eintrag");
 
-  // C3: Endzustand
-  console.log(`C3 Endzustand: available=${actor.system.xp?.available}, total=${actor.system.xp?.total}`);
-  console.assert(actor.system.xp?.available === 10, "C3 FAIL: Endzustand available falsch");
-  console.assert(actor.system.xp?.total === totalBefore + 20, "C3 FAIL: total sollte unverändert von setXp sein");
-  console.log("C3 total unverändert durch setXp:", actor.system.xp?.total === totalBefore + 20 ? "✅" : "❌");
+  // C3: Endzustand — frischer Stand
+  const finalAvailable = fresh().system.xp?.available;
+  const finalTotal     = fresh().system.xp?.total;
+  console.log(`C3 Endzustand: available=${finalAvailable}, total=${finalTotal}`);
+  console.assert(finalAvailable === 10, "C3 FAIL: Endzustand available falsch");
+  console.assert(finalTotal === totalBefore + 20, "C3 FAIL: total sollte unverändert von setXp sein");
+  console.log("C3 total unverändert durch setXp:", finalTotal === totalBefore + 20 ? "✅" : "❌");
 
   console.groupEnd();
   console.groupEnd();
