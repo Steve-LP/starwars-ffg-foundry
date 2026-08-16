@@ -65,6 +65,10 @@
   assert("9) Attachments compendium exists", !!attPack);
   if (attPack) {
     // Sync runtime documents if in-memory cache was held from before the LevelDB update
+    // Unlock if locked to allow runtime sync
+    const wasLocked = attPack.locked;
+    if (wasLocked) await attPack.configure({ locked: false });
+
     const docs = await attPack.getDocuments();
     const updates = [];
     for (const doc of docs) {
@@ -78,6 +82,8 @@
     if (updates.length > 0) {
       await Item.updateDocuments(updates, { pack: "starwars-ffg-scratch.attachments" });
     }
+
+    if (wasLocked) await attPack.configure({ locked: true });
 
     const index = await attPack.getIndex({ fields: ["system.price", "system.rarity", "system.restricted", "system.slotType", "system.hardpoints", "system.mods"], force: true });
     assert("10) Attachments pack contains items (>150)", index.size >= 150, `found ${index.size}`);
