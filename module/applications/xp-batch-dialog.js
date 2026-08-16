@@ -1,5 +1,3 @@
-import { SWFFGActor } from "../actor.js";
-
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
 /**
