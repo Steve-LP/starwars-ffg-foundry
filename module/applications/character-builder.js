@@ -411,6 +411,14 @@ export class CharacterBuilder extends HandlebarsApplicationMixin(ApplicationV2) 
     const instance = this;
     if (instance.isPending) return;
 
+    const confirmed = await foundry.applications.api.DialogV2.confirm({
+      window: { title: "Charaktererstellung abschließen" },
+      content: "<p>Möchtest du die Charaktererstellung wirklich abschließen?</p><p><strong>Hinweis:</strong> Danach ist der Charakterbogen gesperrt und Attribute sowie Start-Entscheidungen können nur noch durch den Spielleiter verändert oder erstattet werden.</p>",
+      yes: { label: "Abschließen", icon: "fas fa-check" },
+      no: { label: "Weiter bearbeiten", icon: "fas fa-times" }
+    });
+    if (!confirmed) return;
+
     instance.isPending = true;
     try {
       // Charakter offiziell und vollständig über lockCreation finalisieren
