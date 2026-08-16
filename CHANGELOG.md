@@ -61,3 +61,42 @@ All notable changes, architectural implementations, and bug fixes for the Star W
 - `tests/unit-importer-resilience.js`: 7 node unit tests for corrupted XML error isolation and slotType fallbacks.
 - `tests/verify-equipment-samples.js`: Automated comparison of Core vs. Non-Core equipment against official FFG sourcebooks.
 - `tests/headless-compendium-check.js`: 17 headless in-Foundry verification assertions across all 4 equipment compendiums.
+
+---
+
+## [2026-08-16] - UI Overhaul & Sheet Streamlining (Pre-Live-Test)
+
+### 🚀 Features & Enhancements
+
+#### 1. Character Sheet Tab Reorganization (5 $\rightarrow$ 4 Tabs)
+- Replaced separate "Skills" and "Talents & Force" tabs with a unified, high-density **"Übersicht" (Overview)** tab.
+- Integrated a scalable, responsive **Specializations & Trees Card Grid** (`.spec-cards-grid`):
+  - Renders regular specializations with `#ff9f1c` accent and direct button to `SWFFGSpecializationSheet`.
+  - Color-codes Force trees (`.force-card`, `#da70d6`) and Signature Abilities (`.signature-card`, `#60a5fa`).
+  - Supports arbitrary multiclassing with graceful flex-wrapping across varying window widths.
+- Embedded prominent circular characteristic nodes with integrated direct roll triggers.
+- Retained full 35-skill overview table with dice pool previews and roll triggers.
+
+#### 2. Edit-Mode DOM Cleanliness
+- Upgraded characteristic and skill increase/decrease buttons (`+` / `-`) to be completely removed from the DOM (`{{#if (and isCreationOrGM editMode)}}`) in the locked/view state.
+- Preserved direct dice roll triggers (`rollable-char`, `rollable-skill`) in locked state for uninterrupted tabletop play.
+
+#### 3. Character Builder Wizard Window & Height Scrolling Fix
+- Resolved window overflow on smaller viewports ($\le 1366\times 768$) by equipping `.character-builder-container` with `min-height: 0; overflow: hidden;` and `.builder-step` with `overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; min-height: 0;`.
+- Replaced embedded 5x4 talent grid in Step 6 with a compact *"Talentbaum öffnen"* action card that opens `SWFFGSpecializationSheet` directly.
+- Locked wizard dialog width to a clean 600px.
+
+#### 4. Iconography & Compact UI Density
+- Integrated FontAwesome icons across tabs (`fa-id-card`, `fa-boxes`, `fa-book`, `fa-history`), action cards (`fa-external-link-alt`, `fa-trash`, `fa-sitemap`), career headers (`fa-star`), and wizard flow navigation (`fa-arrow-left`, `fa-arrow-right`, `fa-check`).
+
+---
+
+### 🐛 Bug Fixes
+- **ReferenceError on Spec Resolution**: Fixed missing `TalentTreeUtils` import in `module/actor-sheet.js` when rendering actors with embedded specializations.
+
+---
+
+### 🧪 Test Suites Delivered
+- `tests/headless-ui-overhaul-check.js`: 17 in-Foundry assertions verifying 4-tab registration, edit-mode toggling, and builder action dispatch.
+- `tests/headless-deep-verification.js`: 24 in-Foundry assertions validating 4-tree multiclassing layouts, DOM-level scroll height measurements under 450px constrained viewports, and item action routing.
+
