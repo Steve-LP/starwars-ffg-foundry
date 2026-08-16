@@ -114,3 +114,72 @@ Any database change that alters `system.xp.available` or `system.xp.total` (eith
 *   **Positive changes:** Logged as XP refunds or grants (green badge `+X XP`).
 *   **Negative changes:** Logged as XP expenditures (red/grey badge `-X XP`).
 *   **Details:** Each log entry records a timestamp, the user who performed the edit, the description of the change, and the before/after available and total XP.
+
+---
+
+## 7. XP Granting & Group Distribution (`grantXp`)
+
+The `SWFFGActor` class provides an asynchronous `grantXp(amount, options)` method for GM awards and session progression:
+
+```javascript
+await actor.grantXp(15, { reason: "Session 4 completion" });
+```
+
+*   **Ledger Enforcement:** Increments `system.experience.earned` and `system.experience.total` without overwriting historical creation baselines.
+*   **Batch & Group XP Dialog:** Allows GMs to select multiple party members simultaneously. Pre-selection dynamically checks per actor if its assigned primary owner (player) is currently online (`user.active && actor.testUserPermission(user, "OWNER")`), preventing unintended XP distribution to inactive/offline players.
+
+---
+
+## 8. Canonical Skills & Normalization (`module/utils/skill-normalization.js`)
+
+All 35 standard Star Wars FFG skills are strictly standardized in `CANONICAL_SKILLS`:
+
+*   **Canonical Mapping:** Normalizes legacy inputs, OggDude keys (`RANGLT`, `RANGHVY`, `PILOTSP`, `PILOTPL`, `LTSABER`, `CORE`, `MED`, etc.), and punctuation variants (`Ranged: Heavy` / `Ranged-Heavy` $\rightarrow$ `Ranged - Heavy`).
+*   **Idempotence:** `normalizeSkillName(name)` is idempotent; calling it on an already canonical skill returns the exact name without alteration.
+*   **Characteristic Resolution:** `getSkillCharacteristic(skillName)` maps any skill to its governing characteristic (e.g. `Ranged - Heavy` $\rightarrow$ `agility`, `Brawl` $\rightarrow$ `brawn`, `Core Worlds` $\rightarrow$ `intellect`).
+
+---
+
+## 9. Weapon Attack Rolls & Talent Integration
+
+Weapon attacks are wired directly through the central skill roll engine:
+
+1.  **Context Enrichment:** In `SWFFGActorSheet._prepareContext()`, every weapon item is enriched with:
+    *   `derivedSkillName`: Normalized standard skill name.
+    *   `derivedCharacteristic`: Governing attribute key.
+    *   `derivedRank`: Current character rank in that skill.
+2.  **Attack Button Execution:** Clicking 🎲 on a weapon triggers `_onRollSkill(event)`:
+    *   Passes the canonical skill name and characteristic.
+    *   Queries active talents for skill boosts (`boostSkills`) and setback removal (`setbackRemoveSkills`).
+    *   Pops the interactive dice pool builder with pre-calculated ability/proficiency dice and automatic talent boost/setback dice.
+
+---
+
+## 10. Equipment Architecture & Catalog Datasets
+
+All equipment items share unified catalog and handling fields:
+
+| Field | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `system.price` | `Number` | `0` | Base purchase price in Credits. |
+| `system.rarity` | `Number` | `0` | Rarity rating on a scale of `0` to `10`. |
+| `system.restricted` | `Boolean` | `false` | True if the item is black market / restricted. |
+
+### Item Types & Schemas
+
+*   **`weapon`**: Damage, Critical, Range, Encumbrance, Hardpoints, Qualities, Skill, Catalog fields.
+*   **`armor`**: Soak, Defense rating, Encumbrance, Hardpoints, Qualities, Catalog fields.
+*   **`gear`**: Description, Quantity, Encumbrance, Catalog fields.
+*   **`attachment`**: Description, Hardpoints, Base Modifiers, Upgradeable `mods` array, Catalog fields, and `slotType`:
+    *   `"weapon"`: Fits handheld/mounted weapons.
+    *   `"armor"`: Fits personal armor.
+    *   `"vehicle"`: Fits vehicle/starship hulls and systems.
+    *   `"all"`: Universal gear and storage modifications.
+
+### Compendium Packs (Foundry V14 LevelDB)
+
+*   `starwars-ffg-scratch.weapons`: **480** items
+*   `starwars-ffg-scratch.armor`: **112** items
+*   `starwars-ffg-scratch.gear`: **586** items
+*   `starwars-ffg-scratch.attachments`: **346** items (139 weapon, 59 armor, 125 vehicle, 23 universal)
+

@@ -96,10 +96,11 @@ docs: update character-rules-guide with career skill cost table
 
 | Datei | Inhalt |
 |---|---|
-| `character-rules-guide.md` | XP-Engine, API-Methoden, Skill-/Attribut-Kosten |
+| `character-rules-guide.md` | XP-Engine, API-Methoden, Skill-/Attribut-Kosten, Ausrüstungs-Architektur |
 | `system-specification-ffg-creation.md` | Phase 1-3 Charaktererstellung, alle Härtefälle |
 | `creation-xp-rules.md` | Detaillierte XP-Ledger-Regeln |
 | `instructions.md` | Senior Developer Persona & V14 Guardrails |
+| `CHANGELOG.md` | Chronologische Release- & Feature-Historie |
 
 ---
 
@@ -124,4 +125,4 @@ Reine Logik-Methode, ohne UI, jederzeit testbar.
 
 ---
 
-*Letzte Aktualisierung: 2026-08-09 | Basierend auf Planungsgespraech mit Gemini*
+*Letzte Aktualisierung: 2026-08-16 | Stand nach Equipment- & Kompendien-Befüllung*
