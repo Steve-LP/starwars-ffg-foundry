@@ -436,9 +436,15 @@
           {{#each weapons as |weapon|}}
           <div class="item inventory-row row" data-item-id="{{weapon._id}}">
             <span class="item-name"><strong>{{weapon.name}}</strong> (Dmg: {{weapon.system.damage}} / Crit: {{weapon.system.critical}})</span>
-            <span class="item-detail">{{weapon.system.range}} ({{weapon.system.skill}})</span>
+            <span class="item-detail">{{weapon.system.range}} ({{weapon.derivedSkillName}})</span>
             <span class="item-roll">
-              <a class="rollable-skill roll-btn" data-name="{{weapon.name}}" data-characteristic="{{lookup (lookup ../skills weapon.system.skill) 'characteristic'}}" data-rank="{{lookup (lookup ../skills weapon.system.skill) 'value'}}">
+              <a class="rollable-skill roll-btn"
+                 data-name="{{weapon.derivedSkillName}}"
+                 data-skill="{{weapon.derivedSkillName}}"
+                 data-characteristic="{{weapon.derivedCharacteristic}}"
+                 data-rank="{{weapon.derivedRank}}"
+                 data-weapon-name="{{weapon.name}}"
+                 title="Angriffswurf mit {{weapon.name}} ({{weapon.derivedSkillName}})">
                 🎲 Attack
               </a>
             </span>

@@ -1,45 +1,9 @@
 import { CharacterBuilder } from "./applications/character-builder.js";
+import { CANONICAL_SKILLS, normalizeSkillName, getSkillCharacteristic } from "./utils/skill-normalization.js";
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
 
-export const DEFAULT_SKILLS = [
-  { name: "Astrogation", characteristic: "intellect", category: "General" },
-  { name: "Athletics", characteristic: "brawn", category: "General" },
-  { name: "Charm", characteristic: "presence", category: "General" },
-  { name: "Coercion", characteristic: "willpower", category: "General" },
-  { name: "Computers", characteristic: "intellect", category: "General" },
-  { name: "Cool", characteristic: "presence", category: "General" },
-  { name: "Coordination", characteristic: "agility", category: "General" },
-  { name: "Core Worlds", characteristic: "intellect", category: "Knowledge" },
-  { name: "Deception", characteristic: "cunning", category: "General" },
-  { name: "Discipline", characteristic: "willpower", category: "General" },
-  { name: "Education", characteristic: "intellect", category: "Knowledge" },
-  { name: "Leadership", characteristic: "presence", category: "General" },
-  { name: "Lore", characteristic: "intellect", category: "Knowledge" },
-  { name: "Mechanics", characteristic: "intellect", category: "General" },
-  { name: "Medicine", characteristic: "intellect", category: "General" },
-  { name: "Negotiation", characteristic: "presence", category: "General" },
-  { name: "Outer Rim", characteristic: "intellect", category: "Knowledge" },
-  { name: "Perception", characteristic: "cunning", category: "General" },
-  { name: "Piloting - Planetary", characteristic: "agility", category: "General" },
-  { name: "Piloting - Space", characteristic: "agility", category: "General" },
-  { name: "Resilience", characteristic: "brawn", category: "General" },
-  { name: "Skulduggery", characteristic: "cunning", category: "General" },
-  { name: "Stealth", characteristic: "agility", category: "General" },
-  { name: "Streetwise", characteristic: "cunning", category: "General" },
-  { name: "Survival", characteristic: "cunning", category: "General" },
-  { name: "Underworld", characteristic: "intellect", category: "Knowledge" },
-  { name: "Vigilance", characteristic: "willpower", category: "General" },
-  { name: "Warfare", characteristic: "intellect", category: "Knowledge" },
-  { name: "Xenology", characteristic: "intellect", category: "Knowledge" },
-  // Combat Skills
-  { name: "Brawl", characteristic: "brawn", category: "Combat" },
-  { name: "Gunnery", characteristic: "agility", category: "Combat" },
-  { name: "Lightsaber", characteristic: "brawn", category: "Combat" },
-  { name: "Melee", characteristic: "brawn", category: "Combat" },
-  { name: "Ranged - Light", characteristic: "agility", category: "Combat" },
-  { name: "Ranged - Heavy", characteristic: "agility", category: "Combat" }
-];
+export const DEFAULT_SKILLS = CANONICAL_SKILLS;
 
 export const CHOICE_SPECIES = {
   "twilek": ["Charm", "Deception"],
@@ -156,6 +120,20 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       else if (item.type === "talent") rawTalents.push(item);
       else if (item.type === "forcePower") context.forcePowers.push(item);
     }
+
+    // Enrich weapon items with normalized skill and resolved characteristics/ranks for attack rolls
+    context.weapons = context.weapons.map(weapon => {
+      const wObj = (typeof weapon.toObject === "function") ? weapon.toObject() : foundry.utils.deepClone(weapon);
+      wObj._id = weapon.id || weapon._id;
+      wObj.id = weapon.id || weapon._id;
+      const rawSkill = weapon.system?.skill || "Ranged - Light";
+      const normalizedSkill = normalizeSkillName(rawSkill);
+      const skillData = context.skills[normalizedSkill] || {};
+      wObj.derivedSkillName = normalizedSkill;
+      wObj.derivedCharacteristic = skillData.characteristic || getSkillCharacteristic(normalizedSkill);
+      wObj.derivedRank = skillData.value ?? 0;
+      return wObj;
+    });
 
     // Group raw talents by key for stacked display
     const groupedTalents = {};
@@ -759,9 +737,11 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       return;
     }
     const element = event.currentTarget;
-    const skillName = element.dataset.name || "";
-    const charName = element.dataset.characteristic;
+    const rawSkill = element.dataset.name || element.dataset.skill || "";
+    const skillName = normalizeSkillName(rawSkill);
+    const charName = element.dataset.characteristic || getSkillCharacteristic(skillName);
     const rank = parseInt(element.dataset.rank || 0);
+    const weaponName = element.dataset.weaponName || "";
 
     const charValue = this.actor.system.characteristics[charName]?.value || 0;
     
@@ -778,26 +758,26 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
         const system = item.system;
         const ranks = system.ranks || 1;
 
-        // Check boost skills
-        const boostSkillsList = (system.boostSkills || "").split(",").map(s => s.trim().toLowerCase());
+        // Check boost skills (normalized)
+        const boostSkillsList = (system.boostSkills || "").split(",").map(s => normalizeSkillName(s.trim()).toLowerCase()).filter(s => s);
         if (boostSkillsList.includes(skillName.toLowerCase())) {
           boostCount += ranks;
         }
 
-        // Check setback removal skills
-        const removeSkillsList = (system.setbackRemoveSkills || "").split(",").map(s => s.trim().toLowerCase());
+        // Check setback removal skills (normalized)
+        const removeSkillsList = (system.setbackRemoveSkills || "").split(",").map(s => normalizeSkillName(s.trim()).toLowerCase()).filter(s => s);
         if (removeSkillsList.includes(skillName.toLowerCase())) {
           setbackRemovalCount += ranks;
         }
 
         // Check boost characteristics
-        const boostCharsList = (system.boostCharacteristics || "").split(",").map(s => s.trim().toLowerCase());
+        const boostCharsList = (system.boostCharacteristics || "").split(",").map(s => s.trim().toLowerCase()).filter(s => s);
         if (boostCharsList.includes(charName.toLowerCase())) {
           boostCount += ranks;
         }
 
         // Check setback removal characteristics
-        const removeCharsList = (system.setbackRemoveCharacteristics || "").split(",").map(s => s.trim().toLowerCase());
+        const removeCharsList = (system.setbackRemoveCharacteristics || "").split(",").map(s => s.trim().toLowerCase()).filter(s => s);
         if (removeCharsList.includes(charName.toLowerCase())) {
           setbackRemovalCount += ranks;
         }
@@ -805,13 +785,14 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
     }
 
     // Open/set central dice roller pool
-    if (game.starwarsFFG.diceRoller) {
+    if (game.starwarsFFG?.diceRoller) {
       game.starwarsFFG.diceRoller.setPool({
         ability: greenCount,
         proficiency: yellowCount,
         boost: boostCount,
         setbackRemoval: setbackRemovalCount
       });
+      game.starwarsFFG.diceRoller.render(true);
     }
   }
 
