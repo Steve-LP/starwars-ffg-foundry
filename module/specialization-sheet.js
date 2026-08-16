@@ -128,7 +128,10 @@ export class SWFFGSpecializationSheet extends HandlebarsApplicationMixin(ItemShe
         return;
       }
 
-      const confirmRefund = confirm(`Do you want to refund ${name} and regain ${cost} XP?`);
+      const confirmRefund = await foundry.applications.api.DialogV2.confirm({
+        window: { title: "Talent erstatten" },
+        content: `<p>Möchtest du <strong>${name}</strong> erstatten (+${cost} XP)?</p>`
+      });
       if (!confirmRefund) return;
 
       // Find exact coordinate matched item first, or fall back to key match
@@ -150,20 +153,28 @@ export class SWFFGSpecializationSheet extends HandlebarsApplicationMixin(ItemShe
           logDescription: `Erstattung von Talent "${name}" (+${cost} XP) aus ${this.document.name}`
         });
         if (result && !result.success) {
-          ui.notifications.warn(result.message);
+          ui.notifications?.warn(result.message);
         } else {
-          if (result && result.message) ui.notifications.info(result.message);
+          if (result && result.message) ui.notifications?.info(result.message);
           this.render();
         }
       }
     } else {
       // Path validation
       if (!isReachable) {
-        ui.notifications.warn(`You cannot purchase "${name}" yet! You must purchase an adjacent connected talent first.`);
+        ui.notifications?.warn(`Talent "${name}" ist noch nicht erreichbar! Kaufe zuerst ein angrenzendes verbundenes Talent.`);
         return;
       }
 
-      const confirmBuy = confirm(`Do you want to buy ${name} for ${cost} XP?`);
+      if (availableXp < cost) {
+        ui.notifications?.warn(`Nicht genug XP vorhanden, um "${name}" zu kaufen! (Kosten: ${cost} XP, Verfügbar: ${availableXp} XP)`);
+        return;
+      }
+
+      const confirmBuy = await foundry.applications.api.DialogV2.confirm({
+        window: { title: "Talent kaufen" },
+        content: `<p>Möchtest du <strong>${name}</strong> für <strong>${cost} XP</strong> kaufen?</p>`
+      });
       if (!confirmBuy) return;
 
       const result = await actor.buyTalent({
@@ -179,9 +190,9 @@ export class SWFFGSpecializationSheet extends HandlebarsApplicationMixin(ItemShe
       });
       
       if (result && !result.success) {
-        ui.notifications.warn(result.message);
+        ui.notifications?.warn(result.message);
       } else {
-        if (result && result.message) ui.notifications.info(result.message);
+        if (result && result.message) ui.notifications?.info(result.message);
         this.render();
       }
     }

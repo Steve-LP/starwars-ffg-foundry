@@ -201,28 +201,7 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       }
 
       if (rows && Array.isArray(rows)) {
-        specObj.system.talentRows = rows.map(row => {
-          const resolvedTalents = row.talents.map((talentKey, colIdx) => {
-            const refTalent = talentsIndex.find(t => t.system?.key === talentKey);
-            const isPurchased = this.actor.items.some(t => t.type === "talent" && t.system?.key === talentKey);
-            
-            return {
-              key: talentKey,
-              name: refTalent ? refTalent.name : talentKey.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' '),
-              description: refTalent ? refTalent.system.description : "No description available.",
-              activation: refTalent ? refTalent.system.activation : "Passive",
-              ranked: refTalent ? refTalent.system.ranked : false,
-              purchased: isPurchased,
-              directions: row.directions[colIdx] || { up: false, down: false, left: false, right: false }
-            };
-          });
-
-          return {
-            index: row.index,
-            cost: row.cost,
-            talents: resolvedTalents
-          };
-        });
+        specObj.system.talentRows = TalentTreeUtils.buildGrid(spec.name, rows, talentsIndex, this.actor);
       }
       return specObj;
     });
@@ -671,54 +650,113 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 
   async _onTalentCardClick(event) {
     event.preventDefault();
+    if (!this.editMode) {
+      ui.notifications?.warn("Bitte zuerst den Bearbeitungsmodus aktivieren, um Talente zu bearbeiten.");
+      return;
+    }
     const card = event.currentTarget;
     const key = card.dataset.key;
     const cost = parseInt(card.dataset.cost || 0);
     const name = card.dataset.name;
     const activation = card.dataset.activation;
     const description = card.dataset.description;
+    const row = parseInt(card.dataset.row);
+    const col = parseInt(card.dataset.col);
+    const specName = card.closest("[data-spec-name]")?.dataset?.specName || "";
     const isPurchased = card.classList.contains("purchased");
-    const availableXp = this.actor.system.xp.available || 0;
+    const isReachable = card.dataset.reachable === "true";
+    const availableXp = this.actor.system.xp?.available || 0;
 
     if (isPurchased) {
-      const confirmRefund = confirm(`Do you want to refund ${name} and regain ${cost} XP?`);
-      if (!confirmRefund) return;
-
-      const talentItem = this.actor.items.find(t => t.type === "talent" && t.system?.key === key);
-      if (talentItem) {
-        const result = await this.actor.refundTalent(talentItem.id, cost, name);
-        if (result && !result.success) {
-          ui.notifications.warn(result.message);
-        } else {
-          if (result && result.message) ui.notifications.info(result.message);
-        }
-      }
-    } else {
-      if (availableXp < cost) {
-        ui.notifications.warn(`Not enough XP to purchase ${name}! (Cost: ${cost} XP, Available: ${availableXp} XP)`);
+      const isCreationMode = this.actor.system.creation?.isCreationMode === true;
+      if (!isCreationMode && !game.user?.isGM) {
+        ui.notifications?.warn("Nur der GM kann bereits bestätigte Käufe zurücknehmen.");
         return;
       }
 
-      const confirmBuy = confirm(`Do you want to buy ${name} for ${cost} XP?`);
+      // Validate refund graph if specialization item found
+      const specItem = this.actor.items.find(i => i.type === "specialization" && i.name.toLowerCase() === specName.toLowerCase());
+      if (specItem && !isNaN(row) && !isNaN(col)) {
+        const refundValid = TalentTreeUtils.validateRefund(specItem.name, specItem.system.talentRows, row, col, this.actor);
+        if (!refundValid) {
+          ui.notifications?.warn(`Talent "${name}" kann nicht erstattet werden, da andere gekaufte Talente davon abhängen!`);
+          return;
+        }
+      }
+
+      const confirmRefund = await foundry.applications.api.DialogV2.confirm({
+        window: { title: "Talent erstatten" },
+        content: `<p>Möchtest du <strong>${name}</strong> erstatten (+${cost} XP)?</p>`
+      });
+      if (!confirmRefund) return;
+
+      // Find talent item by exact coordinate or key
+      let talentItem = this.actor.items.find(t => 
+        t.type === "talent" && 
+        t.system?.key === key && 
+        (!specName || t.system?.specialization === specName.toLowerCase()) && 
+        (!isNaN(row) ? t.system?.row === row : true) && 
+        (!isNaN(col) ? t.system?.col === col : true)
+      );
+      if (!talentItem) {
+        talentItem = this.actor.items.find(t => t.type === "talent" && t.system?.key === key);
+      }
+
+      if (talentItem) {
+        const result = await this.actor.refundTalent(talentItem.id, cost, name, {
+          logDescription: `Erstattung von Talent "${name}" (+${cost} XP)`
+        });
+        if (result && !result.success) {
+          ui.notifications?.warn(result.message);
+        } else {
+          if (result && result.message) ui.notifications?.info(result.message);
+          this.render();
+        }
+      }
+    } else {
+      if (!isReachable && !isNaN(row) && row > 0) {
+        ui.notifications?.warn(`Talent "${name}" ist noch nicht erreichbar! Kaufe zuerst ein angrenzendes verbundenes Talent.`);
+        return;
+      }
+
+      if (availableXp < cost) {
+        ui.notifications?.warn(`Nicht genug XP vorhanden, um "${name}" zu kaufen! (Kosten: ${cost} XP, Verfügbar: ${availableXp} XP)`);
+        return;
+      }
+
+      const confirmBuy = await foundry.applications.api.DialogV2.confirm({
+        window: { title: "Talent kaufen" },
+        content: `<p>Möchtest du <strong>${name}</strong> für <strong>${cost} XP</strong> kaufen?</p>`
+      });
       if (!confirmBuy) return;
 
       const result = await this.actor.buyTalent({
         name: name,
         key: key,
         activation: activation,
-        description: description
-      }, cost);
+        description: description,
+        specialization: specName.toLowerCase(),
+        row: row,
+        col: col
+      }, cost, {
+        logDescription: `Kauf von Talent "${name}" (-${cost} XP)`
+      });
       
       if (result && !result.success) {
-        ui.notifications.warn(result.message);
+        ui.notifications?.warn(result.message);
       } else {
-        if (result && result.message) ui.notifications.info(result.message);
+        if (result && result.message) ui.notifications?.info(result.message);
+        this.render();
       }
     }
   }
 
   async _onRollSkill(event) {
     event.preventDefault();
+    if (!this.editMode) {
+      ui.notifications?.warn("Bitte zuerst den Bearbeitungsmodus aktivieren, um zu würfeln.");
+      return;
+    }
     const element = event.currentTarget;
     const skillName = element.dataset.name || "";
     const charName = element.dataset.characteristic;
@@ -778,6 +816,10 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 
   async _onRollCharacteristic(event) {
     event.preventDefault();
+    if (!this.editMode) {
+      ui.notifications?.warn("Bitte zuerst den Bearbeitungsmodus aktivieren, um zu würfeln.");
+      return;
+    }
     const element = event.currentTarget;
     const charName = element.dataset.characteristic;
     const charValue = this.actor.system.characteristics[charName]?.value || 0;

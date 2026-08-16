@@ -163,18 +163,18 @@
   <section class="characteristics-grid">
     {{#each characteristics as |char id|}}
     <div class="char-node-wrapper">
-      <div class="char-node rollable-char" data-characteristic="{{id}}">
+      <div class="char-node rollable-char {{#unless ../editMode}}disabled-roll{{/unless}}" data-characteristic="{{id}}" {{#unless ../editMode}}title="Bearbeitungsmodus aktivieren zum Würfeln"{{/unless}}>
         <div class="char-label">{{capitalize id}}</div>
         <div class="char-value-circle">
-          <input class="char-input" type="number" name="system.characteristics.{{id}}.value" value="{{char.value}}" data-dtype="Number" onClick="this.select(); event.stopPropagation();" {{#if ../lockFields}}disabled{{/if}} />
+          <input class="char-input" type="number" name="system.characteristics.{{id}}.value" value="{{char.value}}" data-dtype="Number" onClick="this.select(); event.stopPropagation();" {{#unless ../editMode}}disabled{{/unless}} />
         </div>
       </div>
       {{#if ../isCreationOrGM}}
       <div class="char-controls-row">
-        <button type="button" class="decrease-characteristic-btn {{#unless char.isDecreasable}}disabled{{/unless}}" data-characteristic="{{id}}" title="Senken (XP erstattet)" {{#unless char.isDecreasable}}disabled{{/unless}}>
+        <button type="button" class="decrease-characteristic-btn {{#unless char.isDecreasable}}disabled{{/unless}} {{#unless ../editMode}}disabled{{/unless}}" data-characteristic="{{id}}" title="Senken (XP erstattet)" {{#unless char.isDecreasable}}disabled{{/unless}} {{#unless ../editMode}}disabled{{/unless}}>
           <i class="fas fa-minus"></i>
         </button>
-        <button type="button" class="upgrade-characteristic-btn {{#unless char.canAfford}}disabled{{/unless}}" data-characteristic="{{id}}" title="Upgrade für {{char.cost}} XP" {{#unless char.canAfford}}disabled{{/unless}}>
+        <button type="button" class="upgrade-characteristic-btn {{#unless char.canAfford}}disabled{{/unless}} {{#unless ../editMode}}disabled{{/unless}}" data-characteristic="{{id}}" title="Upgrade für {{char.cost}} XP" {{#unless char.canAfford}}disabled{{/unless}} {{#unless ../editMode}}disabled{{/unless}}>
           <i class="fas fa-plus"></i> <span class="cost-val">{{char.cost}} XP</span>
         </button>
       </div>
@@ -289,13 +289,15 @@
                 <i class="fas fa-minus"></i>
               </button>
               {{else}}
-              {{!-- Nicht-GM: sichtbar, aber disabled mit erklärendem Tooltip --}}
-              <button type="button" class="decrease-skill-btn disabled gm-only-action" data-name="{{skill.name}}" title="Nur der GM kann bereits bestätigte Käufe zurücknehmen." disabled>
-                <i class="fas fa-minus"></i>
-              </button>
+              {{!-- Nicht-GM: sichtbar, aber disabled mit erklärendem Tooltip via umschließenden Span --}}
+              <span class="gm-only-action-wrapper" title="Nur der GM kann bereits bestätigte Käufe zurücknehmen." style="display: inline-flex;">
+                <button type="button" class="decrease-skill-btn disabled gm-only-action" data-name="{{skill.name}}" tabindex="-1" disabled>
+                  <i class="fas fa-minus"></i>
+                </button>
+              </span>
               {{/if}}
               <span class="skill-rank-badge">{{skill.baseValue}}</span>
-              <button type="button" class="upgrade-skill-btn {{#unless skill.canAfford}}disabled{{/unless}}" data-name="{{skill.name}}" data-characteristic="{{skill.characteristic}}" data-category="{{skill.category}}" title="Upgrade für {{skill.cost}} XP" {{#unless skill.canAfford}}disabled{{/unless}}>
+              <button type="button" class="upgrade-skill-btn {{#unless skill.canAfford}}disabled{{/unless}} {{#unless ../editMode}}disabled{{/unless}}" data-name="{{skill.name}}" data-characteristic="{{skill.characteristic}}" data-category="{{skill.category}}" title="Upgrade für {{skill.cost}} XP" {{#unless skill.canAfford}}disabled{{/unless}} {{#unless ../editMode}}disabled{{/unless}}>
                 <i class="fas fa-plus"></i> <span class="cost-val">{{skill.cost}} XP</span>
               </button>
             </div>
@@ -312,7 +314,7 @@
               <span class="die-preview green" title="Ability">◆</span>
               {{/each}}
             </span>
-            <a class="rollable-skill roll-btn" data-name="{{skill.name}}" data-characteristic="{{skill.characteristic}}" data-rank="{{skill.value}}">
+            <a class="rollable-skill roll-btn {{#unless ../editMode}}disabled-roll{{/unless}}" data-name="{{skill.name}}" data-characteristic="{{skill.characteristic}}" data-rank="{{skill.value}}" {{#unless ../editMode}}title="Bearbeitungsmodus aktivieren zum Würfeln"{{/unless}}>
               🎲 Load Pool
             </a>
           </span>

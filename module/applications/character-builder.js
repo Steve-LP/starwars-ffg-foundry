@@ -413,17 +413,21 @@ export class CharacterBuilder extends HandlebarsApplicationMixin(ApplicationV2) 
 
     instance.isPending = true;
     try {
-      // Charakter offiziell aus dem Erstellungsmodus entlassen
+      // Charakter offiziell und vollständig über lockCreation finalisieren
+      // (überträgt Attribute aus dem Ledger in feste Werte, finalisiert Skills & XP-Log)
+      const result = await instance.actor.lockCreation();
+      if (result && !result.success) {
+        ui.notifications?.warn(result.message);
+        return;
+      }
+      
       await instance.actor.update({
-        "system.creation.isCreationMode": false,
         "system.creation.wizardStep": CharacterBuilder.STEPS.XP_SPENDING
-      }, {
-        xpLogDescription: "Charaktererstellung abgeschlossen"
       });
       console.info(`SWFFG | [CharacterBuilder] ${instance.actor.name}: Erstellung abgeschlossen — isCreationMode = false`);
+      instance.close();
     } finally {
       instance.isPending = false;
-      instance.close();
     }
   }
 

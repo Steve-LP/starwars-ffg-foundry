@@ -104,9 +104,13 @@ export class TalentTreeUtils {
     }
 
     return rows.map((row, rIdx) => {
+      let rowCost = (rIdx + 1) * 5;
+      if (typeof row.cost === "number" && row.cost > 0) {
+        rowCost = row.cost;
+      }
       return {
-        index: row.index,
-        cost: row.cost,
+        index: rIdx,
+        cost: rowCost,
         talents: talentGrid[rIdx]
       };
     });
@@ -256,16 +260,13 @@ export class TalentTreeUtils {
           t.system?.col === c
         );
         
-        if (!talentItem) {
-          talentItem = actor.items.find(t => t.type === "talent" && t.system?.key === talentKey);
-        }
-
         if (talentItem) {
+          const rowCost = (typeof rows[r].cost === "number" && rows[r].cost > 0) ? rows[r].cost : ((r + 1) * 5);
           purchasedTalents.push({
             id: talentItem.id,
             row: r,
             col: c,
-            cost: rows[r].cost,
+            cost: rowCost,
             name: talentItem.name
           });
         }

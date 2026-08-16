@@ -2308,8 +2308,29 @@ body.game,
 .gm-only-action {
   opacity: 0.45;
   cursor: not-allowed !important;
+  pointer-events: none;
 }
 
-.gm-only-action:hover {
+.gm-only-action-wrapper {
+  display: inline-flex;
+  cursor: not-allowed;
+}
+
+.gm-only-action-wrapper:hover .gm-only-action {
   opacity: 0.55;
+}
+
+/* Deaktivierte Würfelknöpfe wenn editMode === false */
+.rollable-char.disabled-roll,
+.rollable-skill.disabled-roll {
+  opacity: 0.55;
+  cursor: not-allowed !important;
+  filter: grayscale(0.5);
+}
+
+.rollable-char.disabled-roll:hover,
+.rollable-skill.disabled-roll:hover {
+  transform: none !important;
+  box-shadow: none !important;
+  opacity: 0.65;
 }

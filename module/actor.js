@@ -693,20 +693,28 @@ export class SWFFGActor extends Actor {
       });
     };
 
-    // Gather derived values before we clear ledger
-    const derivedBrawn = this.system.characteristics.brawn.value;
-    const derivedAgility = this.system.characteristics.agility.value;
-    const derivedIntellect = this.system.characteristics.intellect.value;
-    const derivedCunning = this.system.characteristics.cunning.value;
-    const derivedWillpower = this.system.characteristics.willpower.value;
-    const derivedPresence = this.system.characteristics.presence.value;
-
+    const species = this.system.creation?.speciesSnapshot;
+    const ledgerUpgrades = this.system.creation?.ledger?.upgrades?.characteristics || {};
     const baseChars = this.system.creation?.baseCharacteristics || { brawn: 2, agility: 2, intellect: 2, cunning: 2, willpower: 2, presence: 2 };
+
+    const getFinalChar = (char) => {
+      const speciesBaseVal = species ? (species.characteristics?.[char]?.value ?? species.characteristics?.[char] ?? 2) : (baseChars[char] ?? 2);
+      const upgradeVal = ledgerUpgrades[char] || 0;
+      return Math.max(speciesBaseVal + upgradeVal, this.system.characteristics?.[char]?.value ?? 2);
+    };
+
+    // Gather derived values before we clear ledger
+    const derivedBrawn = getFinalChar("brawn");
+    const derivedAgility = getFinalChar("agility");
+    const derivedIntellect = getFinalChar("intellect");
+    const derivedCunning = getFinalChar("cunning");
+    const derivedWillpower = getFinalChar("willpower");
+    const derivedPresence = getFinalChar("presence");
 
     // 1. Attribute net upgrades logging
     for (const char of ["brawn", "agility", "intellect", "cunning", "willpower", "presence"]) {
-      const baseVal = baseChars[char] ?? 2;
-      const currentVal = this.system.characteristics[char].value;
+      const baseVal = species ? (species.characteristics?.[char]?.value ?? species.characteristics?.[char] ?? 2) : (baseChars[char] ?? 2);
+      const currentVal = getFinalChar(char);
       if (currentVal > baseVal) {
         let cost = 0;
         for (let v = baseVal + 1; v <= currentVal; v++) {
@@ -862,6 +870,7 @@ export class SWFFGActor extends Actor {
     });
 
     ui.notifications?.info("Charaktererstellung abgeschlossen. Bogen gesperrt.");
+    return { success: true, message: "Charaktererstellung abgeschlossen. Bogen gesperrt." };
   }
 
   /** @override */
@@ -895,7 +904,7 @@ export class SWFFGActor extends Actor {
     let baseWounds = 10;
     let baseStrain = 10;
 
-    let startingXp = 0;
+    let startingXp = system.creation?.startingXp ?? 0;
 
     const derivedSkills = {};
     for (const skill of DEFAULT_SKILLS) {
@@ -958,7 +967,7 @@ export class SWFFGActor extends Actor {
         baseWounds = species.wounds?.base ?? species.wounds ?? 10;
         baseStrain = species.strain?.base ?? species.strain ?? 10;
 
-        startingXp = species.xp ?? 0;
+        startingXp = species.xp ?? (system.creation?.startingXp ?? 0);
 
         // Apply species starting skills (e.g. Charm:1)
         const speciesSkillsStr = species.modifiers?.skills || species.skills || "";
@@ -1688,8 +1697,8 @@ export class SWFFGActor extends Actor {
   }
 
   async buyTalent(talentData, cost, options = {}) {
-    if (this.type !== "character") return;
-    const availableXp = this.system.xp.available || 0;
+    if (this.type !== "character") return { success: false, message: "Nur für Charaktere verfügbar." };
+    const availableXp = this.system.xp?.available || 0;
     if (availableXp < cost) {
       return { success: false, message: `Nicht genug XP, um ${talentData.name} zu kaufen! (Kosten: ${cost} XP, Verfügbar: ${availableXp} XP)` };
     }
@@ -1708,15 +1717,15 @@ export class SWFFGActor extends Actor {
         activation: talentData.activation,
         description: talentData.description,
         specialization: talentData.specialization || "",
-        row: talentData.row !== undefined ? talentData.row : -1,
-        col: talentData.col !== undefined ? talentData.col : -1
+        row: (talentData.row !== undefined && talentData.row !== null && !isNaN(talentData.row)) ? Number(talentData.row) : -1,
+        col: (talentData.col !== undefined && talentData.col !== null && !isNaN(talentData.col)) ? Number(talentData.col) : -1
       }
     }]);
     return { success: true, message: `Talent ${talentData.name} gekauft.` };
   }
 
   async refundTalent(talentId, cost, name, options = {}) {
-    if (this.type !== "character") return;
+    if (this.type !== "character") return { success: false, message: "Nur für Charaktere verfügbar." };
     const talentItem = this.items.get(talentId);
     if (!talentItem) return { success: false, message: "Talent nicht gefunden." };
 
@@ -1727,7 +1736,7 @@ export class SWFFGActor extends Actor {
     }
 
     await this.deleteEmbeddedDocuments("Item", [talentId]);
-    const availableXp = this.system.xp.available || 0;
+    const availableXp = this.system.xp?.available || 0;
     const newAvailable = availableXp + cost;
     await this.update(
       { "system.xp.available": newAvailable },
