@@ -410,7 +410,21 @@ export class CharacterBuilder extends HandlebarsApplicationMixin(ApplicationV2) 
   static async #onFinish(event, target) {
     const instance = this;
     if (instance.isPending) return;
-    instance.close();
+
+    instance.isPending = true;
+    try {
+      // Charakter offiziell aus dem Erstellungsmodus entlassen
+      await instance.actor.update({
+        "system.creation.isCreationMode": false,
+        "system.creation.wizardStep": CharacterBuilder.STEPS.XP_SPENDING
+      }, {
+        xpLogDescription: "Charaktererstellung abgeschlossen"
+      });
+      console.info(`SWFFG | [CharacterBuilder] ${instance.actor.name}: Erstellung abgeschlossen — isCreationMode = false`);
+    } finally {
+      instance.isPending = false;
+      instance.close();
+    }
   }
 
   static async #onIncreaseChar(event, target) {
