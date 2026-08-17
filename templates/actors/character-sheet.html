@@ -360,7 +360,7 @@
           <span class="col-name">{{skill.name}}</span>
           <span class="col-char">{{capitalize skill.characteristic}}</span>
           <span class="col-rank">
-            {{#if (and ../isCreationOrGM ../editMode)}}
+            {{#if ../editMode}}
             <div class="skill-controls-row">
               {{#if ../isGM}}
               <button type="button" class="decrease-skill-btn {{#unless skill.isDecreasable}}disabled{{/unless}}" data-name="{{skill.name}}" title="Rang verringern (XP erstattet) — GM-Aktion" {{#unless skill.isDecreasable}}disabled{{/unless}}>
