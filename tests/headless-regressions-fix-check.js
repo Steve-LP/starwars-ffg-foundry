@@ -20,6 +20,7 @@
       characteristics: { brawn: { value: 2 }, agility: { value: 3 }, intellect: { value: 2 }, cunning: { value: 2 }, willpower: { value: 2 }, presence: { value: 2 } },
       creation: {
         isCreationMode: true,
+        startingXp: 100,
         baseCharacteristics: { brawn: 2, agility: 3, intellect: 2, cunning: 2, willpower: 2, presence: 2 },
         speciesSnapshot: { name: "Human" },
         careerSnapshot: { name: "Bounty Hunter" },
@@ -102,7 +103,9 @@
     // =========================================================================
     // FIX 4: Specialization Tree Button & Purchase Locked Mode
     // =========================================================================
-    await testActor.update({ "system.creation.isCreationMode": false });
+    await testActor.update({ "system.creation.isCreationMode": false, "system.xp.available": 50 });
+    const athleticsItem = testActor.items.find(i => i.name.toLowerCase() === "athletics");
+    if (athleticsItem) await athleticsItem.update({ "system.value": 1 });
     const specSheet = new SWFFGSpecializationSheet({ document: specDoc });
     await specSheet.render({ force: true });
     await new Promise(r => setTimeout(r, 50));
