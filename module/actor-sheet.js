@@ -494,9 +494,11 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       this.element.classList.remove("edit-mode-active");
     }
 
-    // Roll click handlers — immer aktiv (im Spiel- und Bearbeitungsmodus)
-    html.find(".rollable-skill").click(this._onRollSkill.bind(this));
-    html.find(".rollable-char").click(this._onRollCharacteristic.bind(this));
+    // Roll click handlers — nur im Spielmodus (wenn gesperrt) aktiv
+    if (!this.editMode) {
+      html.find(".rollable-skill").click(this._onRollSkill.bind(this));
+      html.find(".rollable-char").click(this._onRollCharacteristic.bind(this));
+    }
 
     // Item controls
     html.find(".item-edit").click(this._onItemEdit.bind(this));
@@ -746,6 +748,10 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 
   async _onRollSkill(event) {
     event.preventDefault();
+    if (this.editMode) {
+      ui.notifications?.warn("Würfelwürfe sind im Bearbeitungsmodus deaktiviert. Bitte zuerst sperren (Spielmodus).");
+      return;
+    }
     const element = event.currentTarget;
     const rawSkill = element.dataset.name || element.dataset.skill || "";
     const skillName = normalizeSkillName(rawSkill);
@@ -808,6 +814,10 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 
   async _onRollCharacteristic(event) {
     event.preventDefault();
+    if (this.editMode) {
+      ui.notifications?.warn("Würfelwürfe sind im Bearbeitungsmodus deaktiviert. Bitte zuerst sperren (Spielmodus).");
+      return;
+    }
     const element = event.currentTarget;
     const charName = element.dataset.characteristic;
     const charValue = this.actor.system.characteristics[charName]?.value || 0;

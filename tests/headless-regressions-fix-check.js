@@ -162,13 +162,24 @@
       }
     }
 
-    // Toggle to edit mode and verify tree button appears
+    // Toggle to edit mode and verify tree button appears & roll buttons are disabled
     sheet.editMode = true;
     await sheet.render({ force: true });
     await new Promise(r => setTimeout(r, 50));
     const editSheetEl = sheet.element;
     const editTreeBtn = editSheetEl.querySelector('.spec-card .open-tree-btn');
     assert("19) Talent tree button is visible in edit mode", !!editTreeBtn);
+
+    const disabledRollBtn = editSheetEl.querySelector('.disabled-roll');
+    assert("20) Roll buttons receive .disabled-roll class in edit mode", !!disabledRollBtn);
+
+    let editRollWarnTriggered = false;
+    ui.notifications.warn = (msg) => {
+      if (msg.includes("deaktiviert")) editRollWarnTriggered = true;
+      origWarn.call(ui.notifications, msg);
+    };
+    await sheet._onRollSkill({ preventDefault: () => {}, currentTarget: document.createElement("a") });
+    assert("21) Rolling in edit mode is rejected with warning", editRollWarnTriggered);
 
     // Restore isGM and notification
     Object.defineProperty(game.user, "isGM", { value: origIsGM, configurable: true });

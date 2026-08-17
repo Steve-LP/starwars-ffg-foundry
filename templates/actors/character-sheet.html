@@ -163,7 +163,7 @@
   <section class="characteristics-grid">
     {{#each characteristics as |char id|}}
     <div class="char-node-wrapper">
-      <div class="char-node rollable-char" data-characteristic="{{id}}" title="Attribut würfeln">
+      <div class="char-node {{#unless editMode}}rollable-char{{else}}disabled-roll{{/unless}}" data-characteristic="{{id}}" title="{{#if editMode}}Im Bearbeitungsmodus deaktiviert (erst sperren zum Würfeln){{else}}Attribut würfeln{{/if}}">
         <div class="char-label">{{capitalize id}}</div>
         <div class="char-value-circle">
           <input class="char-input" type="number" name="system.characteristics.{{id}}.value" value="{{char.value}}" data-dtype="Number" onClick="this.select(); event.stopPropagation();" {{#unless ../editMode}}disabled{{/unless}} />
@@ -385,7 +385,7 @@
               <span class="die-preview green" title="Ability">◆</span>
               {{/each}}
             </span>
-            <a class="rollable-skill roll-btn" data-name="{{skill.name}}" data-characteristic="{{skill.characteristic}}" data-rank="{{skill.value}}" title="Würfelpool laden">
+            <a class="{{#unless ../editMode}}rollable-skill{{else}}disabled-roll{{/unless}} roll-btn" data-name="{{skill.name}}" data-characteristic="{{skill.characteristic}}" data-rank="{{skill.value}}" title="{{#if ../editMode}}Im Bearbeitungsmodus deaktiviert (erst sperren zum Würfeln){{else}}Würfelpool laden{{/if}}">
               🎲 Wurf
             </a>
           </span>
@@ -408,13 +408,13 @@
             <span class="item-name"><strong>{{weapon.name}}</strong> (Dmg: {{weapon.system.damage}} / Crit: {{weapon.system.critical}})</span>
             <span class="item-detail">{{weapon.system.range}} ({{weapon.derivedSkillName}})</span>
             <span class="item-roll">
-              <a class="rollable-skill roll-btn"
+              <a class="{{#unless ../editMode}}rollable-skill{{else}}disabled-roll{{/unless}} roll-btn"
                  data-name="{{weapon.derivedSkillName}}"
                  data-skill="{{weapon.derivedSkillName}}"
                  data-characteristic="{{weapon.derivedCharacteristic}}"
                  data-rank="{{weapon.derivedRank}}"
                  data-weapon-name="{{weapon.name}}"
-                 title="Angriffswurf mit {{weapon.name}} ({{weapon.derivedSkillName}})">
+                 title="{{#if ../editMode}}Im Bearbeitungsmodus deaktiviert (erst sperren zum Würfeln){{else}}Angriffswurf mit {{weapon.name}} ({{weapon.derivedSkillName}}){{/if}}">
                 🎲 Attack
               </a>
             </span>
