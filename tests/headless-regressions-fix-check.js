@@ -100,73 +100,77 @@
     await builder.close();
 
     // =========================================================================
-    // FIX 4: SpecializationSheet Talent Purchase Locked Mode
+    // FIX 4: Specialization Tree Button & Purchase Locked Mode
     // =========================================================================
     await testActor.update({ "system.creation.isCreationMode": false });
     const specSheet = new SWFFGSpecializationSheet({ document: specDoc });
     await specSheet.render({ force: true });
     await new Promise(r => setTimeout(r, 50));
 
-    // Simulate actor sheet being in locked mode
+    // Actor sheet in locked mode
     const sheet = new SWFFGActorSheet({ document: testActor });
     sheet.editMode = false;
     testActor.sheet = sheet;
 
-    // Test clicking a talent card when locked
-    const mockCard = document.createElement("div");
-    mockCard.className = "talent-card";
-    mockCard.dataset.key = "grit";
-    mockCard.dataset.cost = "5";
-    mockCard.dataset.name = "Grit";
-    mockCard.dataset.row = "0";
-    mockCard.dataset.col = "0";
-    mockCard.dataset.reachable = "true";
+    // Render locked sheet HTML
+    await sheet.render({ force: true });
+    await new Promise(r => setTimeout(r, 50));
+    const lockedSheetEl = sheet.element;
 
-    let warnTriggered = false;
+    const lockedTreeBtn = lockedSheetEl.querySelector('.spec-card .open-tree-btn');
+    assert("12) Talent tree button is hidden in locked mode", !lockedTreeBtn);
+
+    let openWarnTriggered = false;
     const origWarn = ui.notifications.warn;
     ui.notifications.warn = (msg) => {
-      if (msg.includes("gesperrt")) warnTriggered = true;
+      if (msg.includes("gesperrt")) openWarnTriggered = true;
       origWarn.call(ui.notifications, msg);
     };
 
-    // Temporarily simulate non-GM to test lock enforcement
+    // Temporarily simulate non-GM
     const origIsGM = game.user.isGM;
     Object.defineProperty(game.user, "isGM", { value: false, configurable: true });
 
-    await specSheet._onTalentCardClick({ preventDefault: () => {}, currentTarget: mockCard });
-    assert("12) Talent click rejected and warned in locked mode", warnTriggered);
+    // Calling action directly in locked mode should warn and block
+    await SWFFGActorSheet.DEFAULT_OPTIONS.actions.openSpecialization.call(sheet, { preventDefault: () => {} }, { dataset: { itemId: specDoc.id } });
+    assert("13) openSpecialization rejected and warned in locked mode", openWarnTriggered);
+
+    // =========================================================================
+    // FIX 5: Dice Rolling in Locked Mode (Direct Roll / Pool Loading)
+    // =========================================================================
+    assert("14) Actor sheet is in locked mode (editMode: false)", sheet.editMode === false);
+
+    if (lockedSheetEl) {
+      const charNode = lockedSheetEl.querySelector('.rollable-char[data-characteristic="agility"]');
+      assert("15) Agility roll node found in locked sheet", !!charNode);
+
+      if (charNode) {
+        charNode.click();
+        const diceRoller = game.starwarsFFG?.diceRoller;
+        assert("16) Dice pool loaded for Agility (ability: 3)", diceRoller?.dicePool?.ability === 3, `got ability: ${diceRoller?.dicePool?.ability}`);
+      }
+
+      const skillNode = lockedSheetEl.querySelector('.rollable-skill[data-name="Athletics"]');
+      assert("17) Athletics roll button found in locked sheet", !!skillNode);
+      if (skillNode) {
+        skillNode.click();
+        const diceRoller = game.starwarsFFG?.diceRoller;
+        assert("18) Dice pool loaded for Athletics in locked mode (ability: 1, proficiency: 1)", diceRoller?.dicePool?.ability === 1 && diceRoller?.dicePool?.proficiency === 1, `ability: ${diceRoller?.dicePool?.ability}, prof: ${diceRoller?.dicePool?.proficiency}`);
+      }
+    }
+
+    // Toggle to edit mode and verify tree button appears
+    sheet.editMode = true;
+    await sheet.render({ force: true });
+    await new Promise(r => setTimeout(r, 50));
+    const editSheetEl = sheet.element;
+    const editTreeBtn = editSheetEl.querySelector('.spec-card .open-tree-btn');
+    assert("19) Talent tree button is visible in edit mode", !!editTreeBtn);
 
     // Restore isGM and notification
     Object.defineProperty(game.user, "isGM", { value: origIsGM, configurable: true });
     ui.notifications.warn = origWarn;
     await specSheet.close();
-
-    // =========================================================================
-    // FIX 5: Dice Rolling in Locked Mode (Direct Roll / Pool Loading)
-    // =========================================================================
-    await sheet.render({ force: true });
-    await new Promise(r => setTimeout(r, 50));
-    assert("13) Actor sheet rendered in locked mode (editMode: false)", sheet.editMode === false);
-
-    const sheetEl = sheet.element;
-    if (sheetEl) {
-      const charNode = sheetEl.querySelector('.rollable-char[data-characteristic="agility"]');
-      assert("14) Agility roll node found in sheet", !!charNode);
-
-      if (charNode) {
-        charNode.click();
-        const diceRoller = game.starwarsFFG?.diceRoller;
-        assert("15) Dice pool loaded for Agility (ability: 3)", diceRoller?.dicePool?.ability === 3, `got ability: ${diceRoller?.dicePool?.ability}`);
-      }
-
-      const skillNode = sheetEl.querySelector('.rollable-skill[data-name="Athletics"]');
-      assert("16) Athletics roll button found in sheet", !!skillNode);
-      if (skillNode) {
-        skillNode.click();
-        const diceRoller = game.starwarsFFG?.diceRoller;
-        assert("17) Dice pool loaded for Athletics (ability: 1, proficiency: 1)", diceRoller?.dicePool?.ability === 1 && diceRoller?.dicePool?.proficiency === 1, `ability: ${diceRoller?.dicePool?.ability}, prof: ${diceRoller?.dicePool?.proficiency}`);
-      }
-    }
     await sheet.close();
 
   } finally {

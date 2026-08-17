@@ -45,6 +45,10 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
   }
 
   static async #onOpenSpecialization(event, target) {
+    if (!this.editMode && !game.user.isGM) {
+      ui.notifications.warn("Der Charakter ist gesperrt. Bitte aktiviere den Bearbeitungsmodus, um Talentbäume zu öffnen.");
+      return;
+    }
     const itemId = target.dataset.itemId;
     const item = itemId ? this.document.items.get(itemId) : this.document.items.find(i => i.type === "specialization");
     if (item) {
@@ -742,10 +746,6 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 
   async _onRollSkill(event) {
     event.preventDefault();
-    if (!this.editMode) {
-      ui.notifications?.warn("Bitte zuerst den Bearbeitungsmodus aktivieren, um zu würfeln.");
-      return;
-    }
     const element = event.currentTarget;
     const rawSkill = element.dataset.name || element.dataset.skill || "";
     const skillName = normalizeSkillName(rawSkill);

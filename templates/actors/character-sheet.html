@@ -261,10 +261,10 @@
               <span class="spec-card-subtitle">Karriere-Skills: {{spec.system.careerSkills}}</span>
             </div>
             <div class="spec-card-actions">
+              {{#if ../editMode}}
               <button type="button" class="open-tree-btn" data-action="openSpecialization" data-item-id="{{spec.id}}" title="Talentbaum im Fenster öffnen">
                 <i class="fas fa-external-link-alt"></i> Talentbaum
               </button>
-              {{#if ../editMode}}
               <a class="spec-card-delete remove-spec-header" data-item-id="{{spec.id}}" title="Spezialisierung entfernen"><i class="fas fa-trash"></i></a>
               {{/if}}
             </div>
@@ -278,10 +278,10 @@
               <span class="spec-card-subtitle">Macht-Baum</span>
             </div>
             <div class="spec-card-actions">
+              {{#if ../editMode}}
               <button type="button" class="open-tree-btn" data-action="openSpecialization" data-item-id="{{spec.id}}" title="Macht-Baum im Fenster öffnen">
                 <i class="fas fa-external-link-alt"></i> Öffnen
               </button>
-              {{#if ../editMode}}
               <a class="spec-card-delete remove-spec-header" data-item-id="{{spec.id}}" title="Macht-Baum entfernen"><i class="fas fa-trash"></i></a>
               {{/if}}
             </div>
@@ -295,10 +295,10 @@
               <span class="spec-card-subtitle">Signature Ability</span>
             </div>
             <div class="spec-card-actions">
+              {{#if ../editMode}}
               <button type="button" class="open-tree-btn" data-action="openSpecialization" data-item-id="{{spec.id}}" title="Signature Ability im Fenster öffnen">
                 <i class="fas fa-external-link-alt"></i> Öffnen
               </button>
-              {{#if ../editMode}}
               <a class="spec-card-delete remove-spec-header" data-item-id="{{spec.id}}" title="Signature Ability entfernen"><i class="fas fa-trash"></i></a>
               {{/if}}
             </div>
