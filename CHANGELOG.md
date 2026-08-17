@@ -100,3 +100,32 @@ All notable changes, architectural implementations, and bug fixes for the Star W
 - `tests/headless-ui-overhaul-check.js`: 17 in-Foundry assertions verifying 4-tab registration, edit-mode toggling, and builder action dispatch.
 - `tests/headless-deep-verification.js`: 24 in-Foundry assertions validating 4-tree multiclassing layouts, DOM-level scroll height measurements under 450px constrained viewports, and item action routing.
 
+---
+
+## [0.1.1] - 2026-08-17 - Pre-Live-Test Polish & Mode Segregation
+
+### 🐛 Bug Fixes & Refinements
+
+#### 1. Strict Game-Mode vs. Edit-Mode Segregation
+- **Game-Mode (🔒 Gesperrt - Default):**
+  - Dice roll buttons (Characteristics, 35 Skills, Weapon Attacks) are active and clickable for normal gameplay.
+  - All purchase buttons (`+`/`-`) and talent tree open buttons (`openSpecialization`) are hidden and protected against accidental clicks.
+- **Edit-Mode (🔓 Bearbeiten):**
+  - Steigerungs-Buttons (`+`/`-` für Fertigkeiten und Attribute) sowie die *„Talentbaum“*-Buttons werden eingeblendet und aktiviert.
+  - Dice roll triggers receive `.disabled-roll` and are ignored to keep the focus strictly on editing.
+
+#### 2. Character Builder Wizard Fixes
+- **Step 6 Specialization Card:** Fixed context specialization snapshot lookup in `CharacterBuilder._prepareContext` so the interactive tree card is consistently displayed.
+- **Scroll Preservation:** Implemented `_preRender` and `_onRender` scroll-saving hooks preventing scroll resets when selecting skills in Step 5 or spending XP in Step 6.
+- **Skill Buying Casing:** Fixed case-sensitivity mismatch in `buySkillRank` ledger keys (`nameLower`) so purchased skill ranks visibly increment in real-time.
+
+#### 3. Equipment Drag & Drop
+- Fixed `_onDropItem` parameter passing in `module/actor-sheet.js` resolving `TypeError: item.toObject is not a function`.
+
+---
+
+### 🧪 Test Suites Delivered
+- `tests/headless-drop-equipment-check.js`: 7 in-Foundry assertions verifying compendium item drag-and-drop.
+- `tests/headless-regressions-fix-check.js`: 21 in-Foundry assertions validating builder tree lookup, scroll hooks, skill buying, locked talent tree protection, and mode-dependent dice rolling.
+
+
