@@ -78,8 +78,34 @@ export class CharacterBuilder extends HandlebarsApplicationMixin(ApplicationV2) 
     }
   }
 
+  _preRender(context, options) {
+    super._preRender(context, options);
+    if (this.element) {
+      const stepEl = this.element.querySelector(".builder-step");
+      if (stepEl) this._savedStepScroll = stepEl.scrollTop;
+      const skillsGrid = this.element.querySelector(".skills-grid");
+      if (skillsGrid) this._savedSkillsGridScroll = skillsGrid.scrollTop;
+      const selectList = this.element.querySelector(".selection-list");
+      if (selectList) this._savedSelectListScroll = selectList.scrollTop;
+    }
+  }
+
   _onRender(context, options) {
     super._onRender(context, options);
+    if (this.element) {
+      if (this._savedStepScroll !== undefined) {
+        const stepEl = this.element.querySelector(".builder-step");
+        if (stepEl) stepEl.scrollTop = this._savedStepScroll;
+      }
+      if (this._savedSkillsGridScroll !== undefined) {
+        const skillsGrid = this.element.querySelector(".skills-grid");
+        if (skillsGrid) skillsGrid.scrollTop = this._savedSkillsGridScroll;
+      }
+      if (this._savedSelectListScroll !== undefined) {
+        const selectList = this.element.querySelector(".selection-list");
+        if (selectList) selectList.scrollTop = this._savedSelectListScroll;
+      }
+    }
   }
 
   determineCurrentStep(actor) {
@@ -208,17 +234,18 @@ export class CharacterBuilder extends HandlebarsApplicationMixin(ApplicationV2) 
         };
       }).sort((a,b) => a.name.localeCompare(b.name));
 
-      // 3. Talent Tree Grid
+      // 3. Talent Tree Grid & Specialization Object
       const specName = this.actor.system.creation?.specializationSnapshot?.name;
-      if (specName) {
-        const specItem = this.actor.items.find(i => i.type === "specialization" && i.name === specName);
-        if (specItem) {
-          const talentPack = game.packs.get("starwars-ffg-scratch.talents");
-          const talentsIndex = talentPack ? await talentPack.getIndex({ fields: ["system.description", "system.activation", "system.ranked", "system.key"] }) : [];
-          
-          let rows = specItem.system.talentRows;
-          context.talentRows = TalentTreeUtils.buildGrid(specName, rows, talentsIndex, this.actor);
-        }
+      const specItem = (specName ? this.actor.items.find(i => i.type === "specialization" && i.name.toLowerCase() === specName.toLowerCase()) : null)
+        || this.actor.items.find(i => i.type === "specialization");
+      if (specItem) {
+        context.specialization = specItem.toObject();
+        context.specialization.id = specItem.id;
+        const talentPack = game.packs.get("starwars-ffg-scratch.talents");
+        const talentsIndex = talentPack ? await talentPack.getIndex({ fields: ["system.description", "system.activation", "system.ranked", "system.key"] }) : [];
+        
+        let rows = specItem.system.talentRows;
+        context.talentRows = TalentTreeUtils.buildGrid(specItem.name, rows, talentsIndex, this.actor);
       }
     }
     

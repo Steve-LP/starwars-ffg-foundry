@@ -381,8 +381,10 @@ export class SWFFGActor extends Actor {
         }]);
       }
       // Update ledger upgrade in DB. Suppress log.
+      const newUpgrades = foundry.utils.deepClone(this.system.creation?.ledger?.upgrades?.skills || {});
+      newUpgrades[ledgerKey] = currentUpgrades + 1;
       await this.update({
-        [`system.creation.ledger.upgrades.skills.${skillName}`]: currentUpgrades + 1
+        "system.creation.ledger.upgrades.skills": newUpgrades
       });
       return { success: true, message: `Rang ${nextRank} in ${skillName} erworben.`, data: { nextRank } };
     } else {

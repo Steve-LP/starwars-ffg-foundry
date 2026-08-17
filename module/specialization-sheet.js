@@ -108,6 +108,14 @@ export class SWFFGSpecializationSheet extends HandlebarsApplicationMixin(ItemShe
       return;
     }
 
+    // Lock check: if creation is complete and sheet is locked, require editMode or GM
+    const isCreation = actor.system.creation?.isCreationMode !== false;
+    const isLocked = !isCreation && !actor.sheet?.editMode && !game.user.isGM;
+    if (isLocked) {
+      ui.notifications.warn("Der Charakter ist gesperrt. Bitte aktiviere den Bearbeitungsmodus im Charakterbogen, um Talente zu kaufen oder zu erstatten.");
+      return;
+    }
+
     const key = card.dataset.key;
     const cost = parseInt(card.dataset.cost || 0);
     const name = card.dataset.name;

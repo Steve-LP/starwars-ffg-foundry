@@ -490,11 +490,9 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       this.element.classList.remove("edit-mode-active");
     }
 
-    // Roll click handlers — nur im Bearbeitungsmodus aktiv
-    if (this.editMode) {
-      html.find(".rollable-skill").click(this._onRollSkill.bind(this));
-      html.find(".rollable-char").click(this._onRollCharacteristic.bind(this));
-    }
+    // Roll click handlers — immer aktiv (im Spiel- und Bearbeitungsmodus)
+    html.find(".rollable-skill").click(this._onRollSkill.bind(this));
+    html.find(".rollable-char").click(this._onRollCharacteristic.bind(this));
 
     // Item controls
     html.find(".item-edit").click(this._onItemEdit.bind(this));
@@ -810,10 +808,6 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
 
   async _onRollCharacteristic(event) {
     event.preventDefault();
-    if (!this.editMode) {
-      ui.notifications?.warn("Bitte zuerst den Bearbeitungsmodus aktivieren, um zu würfeln.");
-      return;
-    }
     const element = event.currentTarget;
     const charName = element.dataset.characteristic;
     const charValue = this.actor.system.characteristics[charName]?.value || 0;
