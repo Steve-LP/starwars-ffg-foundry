@@ -1414,7 +1414,9 @@
   color: #00b4d8; /* Cyan for purchased items */
 }
 
-.remove-bio {
+.remove-bio,
+.remove-spec-header,
+.spec-card-delete {
   color: #ef4444;
   margin-left: 8px;
   cursor: pointer;
@@ -1424,7 +1426,9 @@
   align-items: center;
 }
 
-.remove-bio:hover {
+.remove-bio:hover,
+.remove-spec-header:hover,
+.spec-card-delete:hover {
   color: #f87171;
   text-shadow: 0 0 5px rgba(239, 68, 68, 0.5);
 }

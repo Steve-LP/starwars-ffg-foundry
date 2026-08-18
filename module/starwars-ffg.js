@@ -4,7 +4,7 @@ import { SWFFGActorSheet } from "./actor-sheet.js";
 import { SWFFGItemSheet } from "./item-sheet.js";
 import { SWFFGSpecializationSheet } from "./specialization-sheet.js";
 import { oggdudeParser } from "./oggdude-importer.js";
-import { CharacterData, NPCData, MinionData, WeaponData, ArmorData, GearData, TalentData, ForcePowerData, SpecializationData, SkillData, SpeciesData, CareerData, AttachmentData } from "./data-models.js";
+import { CharacterData, NPCData, MinionData, RivalData, NemesisData, WeaponData, ArmorData, GearData, TalentData, ForcePowerData, SpecializationData, SkillData, SpeciesData, CareerData, AttachmentData } from "./data-models.js";
 import { SWFFGDiceRoller } from "./dice-roller.js";
 import { CharacterBuilder } from "./applications/character-builder.js";
 import { XpBatchDialog } from "./applications/xp-batch-dialog.js";
@@ -16,7 +16,9 @@ Hooks.once("init", async function () {
   CONFIG.Actor.dataModels = {
     character: CharacterData,
     npc: NPCData,
-    minion: MinionData
+    minion: MinionData,
+    rival: RivalData,
+    nemesis: NemesisData
   };
   CONFIG.Item.dataModels = {
     weapon: WeaponData,
@@ -37,7 +39,7 @@ Hooks.once("init", async function () {
 
   // Register sheet classes
   foundry.applications.apps.DocumentSheetConfig.registerSheet(Actor, "starwars-ffg", SWFFGActorSheet, {
-    types: ["character", "npc", "minion"],
+    types: ["character", "npc", "minion", "rival", "nemesis"],
     makeDefault: true
   });
 
@@ -149,6 +151,15 @@ Hooks.on("createActor", (actor, options, userId) => {
   // Auto-open the Character Builder
   const builder = new CharacterBuilder({ actor });
   builder.render({ force: true });
+});
+
+Hooks.on("deleteActor", (actor) => {
+  // Automatically close any open CharacterBuilder for this deleted actor
+  for (const app of Object.values(ui.windows || {})) {
+    if (app instanceof CharacterBuilder && app.actor?.id === actor.id) {
+      app.close();
+    }
+  }
 });
 
 /**

@@ -45,10 +45,6 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
   }
 
   static async #onOpenSpecialization(event, target) {
-    if (!this.editMode && !game.user.isGM) {
-      ui.notifications.warn("Der Charakter ist gesperrt. Bitte aktiviere den Bearbeitungsmodus, um Talentbäume zu öffnen.");
-      return;
-    }
     const itemId = target.dataset.itemId;
     const item = itemId ? this.document.items.get(itemId) : this.document.items.find(i => i.type === "specialization");
     if (item) {

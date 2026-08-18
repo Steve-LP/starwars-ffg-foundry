@@ -23,21 +23,10 @@ export class TalentTreeUtils {
         let isPurchased = actor ? actor.items.some(t => 
           t.type === "talent" && 
           t.system?.key === talentKey && 
-          t.system?.specialization === specNameLower && 
-          t.system?.row === rIdx && 
-          t.system?.col === colIdx
+          (t.system?.specialization || "").toLowerCase() === specNameLower && 
+          Number(t.system?.row) === rIdx && 
+          Number(t.system?.col) === colIdx
         ) : false;
-
-        if (!isPurchased && actor) {
-          const totalOwned = actor.items.filter(t => t.type === "talent" && t.system?.key === talentKey).length;
-          const mappedToOthers = actor.items.filter(t => 
-            t.type === "talent" && 
-            t.system?.key === talentKey && 
-            t.system?.specialization === specNameLower && 
-            (t.system?.row !== rIdx || t.system?.col !== colIdx)
-          ).length;
-          isPurchased = (totalOwned - mappedToOthers) >= 1;
-        }
 
         return {
           key: talentKey,
@@ -134,21 +123,10 @@ export class TalentTreeUtils {
         let isPurchased = actor.items.some(t => 
           t.type === "talent" && 
           t.system?.key === talentKey && 
-          t.system?.specialization === specNameLower && 
-          t.system?.row === rIdx && 
-          t.system?.col === colIdx
+          (t.system?.specialization || "").toLowerCase() === specNameLower && 
+          Number(t.system?.row) === rIdx && 
+          Number(t.system?.col) === colIdx
         );
-        
-        if (!isPurchased) {
-          const totalOwned = actor.items.filter(t => t.type === "talent" && t.system?.key === talentKey).length;
-          const mappedToOthers = actor.items.filter(t => 
-            t.type === "talent" && 
-            t.system?.key === talentKey && 
-            t.system?.specialization === specNameLower && 
-            (t.system?.row !== rIdx || t.system?.col !== colIdx)
-          ).length;
-          isPurchased = (totalOwned - mappedToOthers) >= 1;
-        }
 
         if (rIdx === targetRow && colIdx === targetCol) {
           isPurchased = false;

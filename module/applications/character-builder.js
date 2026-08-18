@@ -9,7 +9,8 @@ export class CharacterBuilder extends HandlebarsApplicationMixin(ApplicationV2) 
     CAREER: 3,
     SPECIALIZATION: 4,
     FREE_SKILLS: 5,
-    XP_SPENDING: 6
+    NARRATIVE: 6,
+    XP_SPENDING: 7
   };
 
   constructor(options = {}) {
@@ -19,7 +20,7 @@ export class CharacterBuilder extends HandlebarsApplicationMixin(ApplicationV2) 
     
     // Internal state
     this.currentStep = this.determineCurrentStep(this.actor);
-    this.activeTab = "attributes"; // UI state: "attributes" | "skills" | "talents"
+    this.activeTab = "attributes"; // UI state: "attributes" | "skills" | "talents" | "specs"
     this.isPending = false;
     
     this.cachedSpecies = [];
@@ -55,6 +56,7 @@ export class CharacterBuilder extends HandlebarsApplicationMixin(ApplicationV2) 
       decreaseSkill: CharacterBuilder.#onDecreaseSkill,
       openTalentTree: CharacterBuilder.#onOpenTalentTree,
       talentCardClick: CharacterBuilder.#onTalentCardClick,
+      buySpec: CharacterBuilder.#onBuySpec,
       switchTab: CharacterBuilder.#onSwitchTab
     }
   };
@@ -206,6 +208,49 @@ export class CharacterBuilder extends HandlebarsApplicationMixin(ApplicationV2) 
           checked: (this.actor.system.creation?.freeSpecializationSkills || []).includes(s.name)
         }));
     }
+    else if (this.currentStep === CharacterBuilder.STEPS.NARRATIVE) {
+      const careerName = (this.actor.system.biography?.career || "").toLowerCase();
+      const aorCareers = ["ace", "commander", "diplomat", "engineer", "soldier", "spy"];
+      const fadCareers = ["consular", "guardian", "mystic", "seeker", "sentinel", "warrior"];
+
+      let autoType = "obligation";
+      if (aorCareers.includes(careerName)) autoType = "duty";
+      else if (fadCareers.includes(careerName)) autoType = "morality";
+
+      const narrative = this.actor.system.narrative || {};
+      const activeType = (narrative.activeType && narrative.activeType !== "auto") ? narrative.activeType : autoType;
+
+      context.narrative = {
+        activeType: activeType,
+        isObligation: activeType === "obligation",
+        isDuty: activeType === "duty",
+        isMorality: activeType === "morality",
+        obligation: narrative.obligation || { type: "Debt", magnitude: 10, details: "" },
+        duty: narrative.duty || { type: "Combat Readiness", magnitude: 10, details: "" },
+        morality: narrative.morality || { score: 50, strength: "Bravery", weakness: "Anger", conflict: 0 },
+        obligationTypes: [
+          "Addiction", "Betrayal", "Blackmail", "Bounty", "Criminal", "Debt", 
+          "Duty Bound", "Family", "Favor", "For Honor", "Oath", "Obsession", 
+          "Responsibility", "Score to Settle"
+        ],
+        dutyTypes: [
+          "Combat Readiness", "Counter-Intelligence", "Intelligence", "Internal Security", 
+          "Personnel", "Political Support", "Resource Acquisition", "Sabotage", 
+          "Space Superiority", "Support", "Tech Procurement"
+        ],
+        moralityTraits: [
+          { strength: "Bravery", weakness: "Anger", label: "Bravery / Anger" },
+          { strength: "Compassion", weakness: "Hatred", label: "Compassion / Hatred" },
+          { strength: "Curiosity", weakness: "Obsession", label: "Curiosity / Obsession" },
+          { strength: "Discipline", weakness: "Obstinacy", label: "Discipline / Obstinacy" },
+          { strength: "Enthusiasm", weakness: "Recklessness", label: "Enthusiasm / Recklessness" },
+          { strength: "Independence", weakness: "Coldness", label: "Independence / Coldness" },
+          { strength: "Justice", weakness: "Cruelty", label: "Justice / Cruelty" },
+          { strength: "Love", weakness: "Jealousy", label: "Love / Jealousy" },
+          { strength: "Pride", weakness: "Arrogance", label: "Pride / Arrogance" }
+        ]
+      };
+    }
     else if (this.currentStep === CharacterBuilder.STEPS.XP_SPENDING) {
       // 1. Characteristics
       context.characteristics = {
@@ -247,6 +292,33 @@ export class CharacterBuilder extends HandlebarsApplicationMixin(ApplicationV2) 
         let rows = specItem.system.talentRows;
         context.talentRows = TalentTreeUtils.buildGrid(specItem.name, rows, talentsIndex, this.actor);
       }
+
+      // 4. Additional Specializations Tab
+      if (this.cachedSpecializations.length === 0) {
+        this.cachedSpecializations = await this.#fetchItemsByType("specialization");
+      }
+      const ownedSpecNames = this.actor.items.filter(i => i.type === "specialization").map(s => s.name.toLowerCase());
+      context.ownedSpecializations = this.actor.items.filter(i => i.type === "specialization").map(s => ({
+        id: s.id,
+        name: s.name,
+        careerSkills: s.system?.careerSkills || ""
+      }));
+      context.availableSpecializations = this.cachedSpecializations.filter(s => {
+        return !ownedSpecNames.includes(s.name.toLowerCase());
+      }).map(s => {
+        const specObj = s.toObject ? s.toObject() : s;
+        const cost = this.actor.calculateSpecializationCost(specObj);
+        const canAfford = (this.actor.totalAvailableXp >= cost);
+        return {
+          uuid: s.uuid,
+          name: s.name,
+          career: s.system?.career || "",
+          careerSkills: s.system?.careerSkills || "",
+          isUniversal: s.system?.isUniversal || s.system?.classification === "universal",
+          cost: cost,
+          canAfford: canAfford
+        };
+      }).sort((a, b) => a.name.localeCompare(b.name));
     }
     
     return context;
@@ -270,6 +342,11 @@ export class CharacterBuilder extends HandlebarsApplicationMixin(ApplicationV2) 
 
   static async #onNextStep(event, target) {
     const instance = this;
+    if (!game.actors?.has(instance.actor?.id)) {
+      ui.notifications.warn("Dieser Charakter existiert nicht mehr im System.");
+      instance.close();
+      return;
+    }
     if (instance.isPending) return;
     instance.isPending = true;
     instance.render();
@@ -354,6 +431,35 @@ export class CharacterBuilder extends HandlebarsApplicationMixin(ApplicationV2) 
         }
       }
       else if (instance.currentStep === CharacterBuilder.STEPS.FREE_SKILLS) {
+        const freeCareer = instance.actor.system.creation?.freeCareerSkills || [];
+        const freeSpec = instance.actor.system.creation?.freeSpecializationSkills || [];
+        if (freeCareer.length < 4 || freeSpec.length < 2) {
+          throw new Error(`Bitte wähle 4 Karriere- und 2 Spezialisierungs-Fertigkeiten (aktuell: ${freeCareer.length}/4 Karriere, ${freeSpec.length}/2 Spezialisierung).`);
+        }
+        await instance._setStep(CharacterBuilder.STEPS.NARRATIVE);
+      }
+      else if (instance.currentStep === CharacterBuilder.STEPS.NARRATIVE) {
+        const formEl = instance.element;
+        const activeType = formEl.querySelector("select[name='narrativeType']")?.value || "obligation";
+        const updates = {
+          "system.narrative.activeType": activeType
+        };
+        if (activeType === "obligation") {
+          updates["system.narrative.obligation.type"] = formEl.querySelector("select[name='obligationType']")?.value || "Debt";
+          updates["system.narrative.obligation.magnitude"] = Number(formEl.querySelector("input[name='obligationMagnitude']")?.value) || 10;
+          updates["system.narrative.obligation.details"] = formEl.querySelector("textarea[name='obligationDetails']")?.value || "";
+        } else if (activeType === "duty") {
+          updates["system.narrative.duty.type"] = formEl.querySelector("select[name='dutyType']")?.value || "Combat Readiness";
+          updates["system.narrative.duty.magnitude"] = Number(formEl.querySelector("input[name='dutyMagnitude']")?.value) || 10;
+          updates["system.narrative.duty.details"] = formEl.querySelector("textarea[name='dutyDetails']")?.value || "";
+        } else if (activeType === "morality") {
+          updates["system.narrative.morality.score"] = Number(formEl.querySelector("input[name='moralityScore']")?.value) || 50;
+          const strengthWeakness = formEl.querySelector("select[name='moralityTrait']")?.value || "Bravery|Anger";
+          const [str, wkn] = strengthWeakness.split("|");
+          updates["system.narrative.morality.strength"] = str || "Bravery";
+          updates["system.narrative.morality.weakness"] = wkn || "Anger";
+        }
+        await instance.actor.update(updates);
         await instance._setStep(CharacterBuilder.STEPS.XP_SPENDING);
       }
     } catch (err) {
@@ -374,6 +480,7 @@ export class CharacterBuilder extends HandlebarsApplicationMixin(ApplicationV2) 
       CharacterBuilder.STEPS.CAREER,
       CharacterBuilder.STEPS.SPECIALIZATION,
       CharacterBuilder.STEPS.FREE_SKILLS,
+      CharacterBuilder.STEPS.NARRATIVE,
       CharacterBuilder.STEPS.XP_SPENDING
     ];
     if (structuralSteps.includes(instance.currentStep)) {
@@ -417,13 +524,33 @@ export class CharacterBuilder extends HandlebarsApplicationMixin(ApplicationV2) 
           await instance._setStep(CharacterBuilder.STEPS.SPECIALIZATION);
         }
       }
-      else if (instance.currentStep === CharacterBuilder.STEPS.XP_SPENDING) {
+      else if (instance.currentStep === CharacterBuilder.STEPS.NARRATIVE) {
         await instance._setStep(CharacterBuilder.STEPS.FREE_SKILLS);
+      }
+      else if (instance.currentStep === CharacterBuilder.STEPS.XP_SPENDING) {
+        await instance._setStep(CharacterBuilder.STEPS.NARRATIVE);
       }
     } catch (err) {
       ui.notifications.error(err.message);
     } finally {
       instance.isPending = false;
+      instance.render();
+    }
+  }
+
+  static async #onBuySpec(event, target) {
+    const instance = this;
+    const uuid = target.dataset.uuid;
+    const specDoc = instance.cachedSpecializations.find(s => s.uuid === uuid);
+    if (!specDoc) {
+      ui.notifications.warn("Spezialisierungs-Dokument nicht gefunden.");
+      return;
+    }
+    const result = await instance.actor.buyAdditionalSpecialization(specDoc.toObject());
+    if (!result.success) {
+      ui.notifications.warn(result.message);
+    } else {
+      ui.notifications.info(result.message);
       instance.render();
     }
   }

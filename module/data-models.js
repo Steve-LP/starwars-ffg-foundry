@@ -60,6 +60,25 @@ export class CharacterData extends BaseActorData {
         morality: new fields.StringField({ initial: "" }),
         specialAbilities: new fields.HTMLField({ initial: "" })
       }),
+      narrative: new fields.SchemaField({
+        activeType: new fields.StringField({ initial: "auto", choices: ["auto", "obligation", "duty", "morality", "none"] }),
+        obligation: new fields.SchemaField({
+          type: new fields.StringField({ initial: "Debt" }),
+          magnitude: new fields.NumberField({ initial: 10, min: 0 }),
+          details: new fields.StringField({ initial: "" })
+        }),
+        duty: new fields.SchemaField({
+          type: new fields.StringField({ initial: "Combat Readiness" }),
+          magnitude: new fields.NumberField({ initial: 10, min: 0 }),
+          details: new fields.StringField({ initial: "" })
+        }),
+        morality: new fields.SchemaField({
+          score: new fields.NumberField({ initial: 50, min: 0, max: 100 }),
+          strength: new fields.StringField({ initial: "Bravery" }),
+          weakness: new fields.StringField({ initial: "Anger" }),
+          conflict: new fields.NumberField({ initial: 0, min: 0 })
+        })
+      }),
       creation: new fields.SchemaField({
         isCreationMode: new fields.BooleanField({ initial: true }),
         sandboxMode: new fields.BooleanField({ initial: false }),
@@ -140,6 +159,32 @@ export class MinionData extends BaseActorData {
       quantity: new fields.SchemaField({
         value: new fields.NumberField({ initial: 1, min: 1 }),
         max: new fields.NumberField({ initial: 1, min: 1 })
+      })
+    };
+  }
+}
+
+export class RivalData extends BaseActorData {
+  static defineSchema() {
+    const fields = foundry.data.fields;
+    const base = super.defineSchema();
+    return {
+      ...base,
+      biography: new fields.SchemaField({
+        description: new fields.HTMLField({ initial: "" })
+      })
+    };
+  }
+}
+
+export class NemesisData extends BaseActorData {
+  static defineSchema() {
+    const fields = foundry.data.fields;
+    const base = super.defineSchema();
+    return {
+      ...base,
+      biography: new fields.SchemaField({
+        description: new fields.HTMLField({ initial: "" })
       })
     };
   }

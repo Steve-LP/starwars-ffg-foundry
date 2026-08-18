@@ -138,10 +138,93 @@
   </section>
   {{/if}}
 
-  {{!-- Step 6: XP Spending (Tabbed: Characteristics, Skill Ranks, Talents) --}}
+  {{!-- Step 6: Narrative (Obligation / Duty / Morality) --}}
   {{#if (eq step 6)}}
+  <section class="builder-step narrative-step">
+    <h2>Schritt 6: Hintergrund-Mechanik (Obligation / Duty / Morality)</h2>
+    <p>Wähle die für deine Kampagne oder Karriere passende narrative Spielmechanik:</p>
+
+    <div class="form-group" style="margin-bottom: 15px;">
+      <label for="narrative-type-select"><strong>Aktive Mechanik:</strong></label>
+      <select id="narrative-type-select" name="narrativeType" {{#if isPending}}disabled{{/if}}>
+        <option value="obligation" {{#if narrative.isObligation}}selected{{/if}}>Obligation (Verpflichtung — Edge of the Empire)</option>
+        <option value="duty" {{#if narrative.isDuty}}selected{{/if}}>Duty (Pflicht — Age of Rebellion)</option>
+        <option value="morality" {{#if narrative.isMorality}}selected{{/if}}>Morality (Moralität & Konflikt — Force and Destiny)</option>
+        <option value="none" {{#if (eq narrative.activeType 'none')}}selected{{/if}}>Keine / Freies Spiel</option>
+      </select>
+    </div>
+
+    {{#if narrative.isObligation}}
+    <div class="narrative-box obligation-box">
+      <h3><i class="fas fa-handshake"></i> Verpflichtung (Obligation)</h3>
+      <div class="form-group">
+        <label>Art der Verpflichtung:</label>
+        <select name="obligationType" {{#if isPending}}disabled{{/if}}>
+          {{#each narrative.obligationTypes}}
+          <option value="{{this}}" {{#if (eq this ../narrative.obligation.type)}}selected{{/if}}>{{this}}</option>
+          {{/each}}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Startwert (Magnitude):</label>
+        <input type="number" name="obligationMagnitude" value="{{narrative.obligation.magnitude}}" min="0" max="100" {{#if isPending}}disabled{{/if}} style="width: 80px; text-align: center;" />
+        <span class="hint" style="font-size: 11px; opacity: 0.7; margin-left: 8px;">Standard: 10 (abhängig von Gruppengröße)</span>
+      </div>
+      <div class="form-group">
+        <label>Hintergrund & Details:</label>
+        <textarea name="obligationDetails" rows="3" placeholder="Beschreibe Gläubiger, Kopfgeldjäger oder Schwüre..." {{#if isPending}}disabled{{/if}}>{{narrative.obligation.details}}</textarea>
+      </div>
+    </div>
+    {{/if}}
+
+    {{#if narrative.isDuty}}
+    <div class="narrative-box duty-box">
+      <h3><i class="fas fa-medal"></i> Pflicht (Duty)</h3>
+      <div class="form-group">
+        <label>Art der Pflicht:</label>
+        <select name="dutyType" {{#if isPending}}disabled{{/if}}>
+          {{#each narrative.dutyTypes}}
+          <option value="{{this}}" {{#if (eq this ../narrative.duty.type)}}selected{{/if}}>{{this}}</option>
+          {{/each}}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Startwert (Magnitude):</label>
+        <input type="number" name="dutyMagnitude" value="{{narrative.duty.magnitude}}" min="0" max="100" {{#if isPending}}disabled{{/if}} style="width: 80px; text-align: center;" />
+        <span class="hint" style="font-size: 11px; opacity: 0.7; margin-left: 8px;">Standard: 10 (Gruppen-Beitrag)</span>
+      </div>
+      <div class="form-group">
+        <label>Hintergrund & Details:</label>
+        <textarea name="dutyDetails" rows="3" placeholder="Beschreibe deine Rolle und Aufgaben in der Rebellion..." {{#if isPending}}disabled{{/if}}>{{narrative.duty.details}}</textarea>
+      </div>
+    </div>
+    {{/if}}
+
+    {{#if narrative.isMorality}}
+    <div class="narrative-box morality-box">
+      <h3><i class="fas fa-yin-yang"></i> Moralität (Morality)</h3>
+      <div class="form-group">
+        <label>Start-Moralwert:</label>
+        <input type="number" name="moralityScore" value="{{narrative.morality.score}}" min="0" max="100" {{#if isPending}}disabled{{/if}} style="width: 80px; text-align: center;" />
+        <span class="hint" style="font-size: 11px; opacity: 0.7; margin-left: 8px;">Standard: 50 (Hell $\ge 70$, Dunkel $\le 29$)</span>
+      </div>
+      <div class="form-group">
+        <label>Emotionale Stärke / Schwäche:</label>
+        <select name="moralityTrait" {{#if isPending}}disabled{{/if}}>
+          {{#each narrative.moralityTraits}}
+          <option value="{{this.strength}}|{{this.weakness}}" {{#if (eq this.strength ../narrative.morality.strength)}}selected{{/if}}>{{this.label}}</option>
+          {{/each}}
+        </select>
+      </div>
+    </div>
+    {{/if}}
+  </section>
+  {{/if}}
+
+  {{!-- Step 7: XP Spending (Tabbed: Characteristics, Skill Ranks, Talents, Specializations) --}}
+  {{#if (eq step 7)}}
   <section class="builder-step xp-spending-step">
-    <h2>Schritt 6: XP investieren</h2>
+    <h2>Schritt 7: XP investieren</h2>
     
     {{!-- Navigation Tabs --}}
     <nav class="builder-tabs">
@@ -153,6 +236,9 @@
       </button>
       <button type="button" class="tab-btn {{#if (eq activeTab 'talents')}}active{{/if}}" data-action="switchTab" data-tab="talents" {{#if isPending}}disabled{{/if}}>
         <i class="fas fa-sitemap"></i> Talente
+      </button>
+      <button type="button" class="tab-btn {{#if (eq activeTab 'specs')}}active{{/if}}" data-action="switchTab" data-tab="specs" {{#if isPending}}disabled{{/if}}>
+        <i class="fas fa-plus-circle"></i> Spezialisierungen
       </button>
     </nav>
 
@@ -209,22 +295,47 @@
     {{#if (eq activeTab 'talents')}}
     <div class="tab-content">
       <p>Talente werden direkt im interaktiven Talentbaum deiner Spezialisierung erworben.</p>
-      {{#if specialization}}
-      <div class="talent-tree-open-box">
+      {{#each ownedSpecializations as |ownedSpec|}}
+      <div class="talent-tree-open-box" style="margin-bottom: 10px;">
         <div class="spec-info-row">
           <i class="fas fa-sitemap spec-icon"></i>
           <div>
-            <strong>{{specialization.name}}</strong>
-            <div class="spec-subtext">Spezialisierungs-Talentbaum</div>
+            <strong>{{ownedSpec.name}}</strong>
+            <div class="spec-subtext">Karriere-Skills: {{ownedSpec.careerSkills}}</div>
           </div>
         </div>
-        <button type="button" class="open-tree-btn" data-action="openTalentTree">
+        <button type="button" class="open-tree-btn" data-action="openTalentTree" data-item-id="{{ownedSpec.id}}">
           <i class="fas fa-external-link-alt"></i> Talentbaum öffnen
         </button>
       </div>
-      {{else}}
+      {{/each}}
+      {{#unless ownedSpecializations.length}}
       <p class="warning-text" style="color: #ef4444;"><i class="fas fa-exclamation-triangle"></i> Bitte wähle zuerst in Schritt 4 eine Spezialisierung aus.</p>
-      {{/if}}
+      {{/unless}}
+    </div>
+    {{/if}}
+
+    {{!-- Tab Content: Additional Specializations --}}
+    {{#if (eq activeTab 'specs')}}
+    <div class="tab-content">
+      <p>Erwirb zusätzliche Spezialisierungen mit deinen verbleibenden XP. In-Karriere- & Universelle Spezialisierungen kosten <strong>10 × N XP</strong>, Out-of-Career Spezialisierungen zusätzlich <strong>+10 XP</strong>.</p>
+      <div class="available-specs-list" style="display: flex; flex-direction: column; gap: 8px; max-height: 380px; overflow-y: auto; padding-right: 4px;">
+        {{#each availableSpecializations as |spec|}}
+        <div class="spec-buy-row" style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 5px; padding: 8px 12px;">
+          <div class="spec-buy-info">
+            <strong style="color: #fbbf24; font-size: 14px;">{{spec.name}}</strong>
+            {{#if spec.isUniversal}}<span class="badge" style="background: #8b5cf6; color: #fff; font-size: 10px; padding: 2px 6px; border-radius: 3px; margin-left: 6px;">Universal</span>{{/if}}
+            <div style="font-size: 11px; opacity: 0.7;">{{#if spec.career}}Karriere: {{spec.career}} — {{/if}}Skills: {{spec.careerSkills}}</div>
+          </div>
+          <div class="spec-buy-action" style="display: flex; align-items: center; gap: 8px;">
+            <span class="cost-tag" style="font-weight: bold; color: #10b981; font-size: 13px;">{{spec.cost}} XP</span>
+            <button type="button" class="button-primary buy-spec-btn" data-action="buySpec" data-uuid="{{spec.uuid}}" {{#unless spec.canAfford}}disabled{{/unless}} {{#if ../isPending}}disabled{{/if}} style="padding: 4px 10px; font-size: 12px;">
+              <i class="fas fa-plus"></i> Kaufen
+            </button>
+          </div>
+        </div>
+        {{/each}}
+      </div>
     </div>
     {{/if}}
 
@@ -234,7 +345,7 @@
   {{!-- Footer Controls --}}
   <footer class="builder-footer">
     <div class="left-controls">
-      {{#if (eq step 6)}}
+      {{#if (eq step 7)}}
       <button type="button" data-action="resetPurchases" class="danger" {{#if isPending}}disabled{{/if}}>
         <i class="fas fa-undo"></i> XP-Käufe zurücksetzen
       </button>
@@ -247,13 +358,13 @@
     </div>
     
     <div class="right-controls">
-      {{#if (lt step 6)}}
+      {{#if (lt step 7)}}
       <button type="button" data-action="nextStep" class="primary" {{#if isPending}}disabled{{/if}}>
         Weiter <i class="fas fa-arrow-right"></i>
       </button>
       {{/if}}
 
-      {{#if (eq step 6)}}
+      {{#if (eq step 7)}}
       <button type="button" data-action="finish" class="primary" {{#if isPending}}disabled{{/if}}>
         <i class="fas fa-check"></i> Abschließen
       </button>

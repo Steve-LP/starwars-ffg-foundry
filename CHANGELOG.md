@@ -4,6 +4,35 @@ All notable changes, architectural implementations, and bug fixes for the Star W
 
 ---
 
+## [0.2.0] - 2026-08-19: Character Builder Completion & Fix-Batch
+
+### 🚀 Features & Enhancements
+- **Additional Specializations (B1)**:
+  - Added dynamic XP calculation via `calculateSpecializationCost(specItemData)` (In-Career / Universal: `10 * N` XP, Out-of-Career: `(10 * N) + 10` XP).
+  - Implemented `buyAdditionalSpecialization()` on `SWFFGActor` with dynamic career skill provisioning.
+  - Added dedicated **"Spezialisierungen"** purchase tab in Character Builder Step 7.
+- **Narrative Mechanics (B2)**:
+  - Added structured `narrative` DataModel on `CharacterData` for **Obligation**, **Duty**, and **Morality**.
+  - Added Character Builder Step 6 with automatic game-line pre-selection (EotE $\rightarrow$ Obligation, AoR $\rightarrow$ Duty, FaD $\rightarrow$ Morality).
+  - Added structured editor in Character Sheet Biography tab.
+  - Added GM methods `adjustObligation()`, `adjustDuty()`, `adjustMorality()` with strict permission checks and audit logging in `system.xp.log`.
+- **Actor Document Types (A6)**:
+  - Registered `rival` and `nemesis` actor data models in `system.json` and `data-models.js`.
+
+### 🐛 Bug Fixes & Improvements
+- **Stackable Talents Isolation (A1)**:
+  - Removed cross-spec key fallback in `TalentTreeUtils.buildGrid()` and `validateRefund()`. Talent card purchases are now 100% strictly matched on `(specialization, row, col)`.
+- **Talent Tree Viewer in Play Mode (A3)**:
+  - Enabled "Talentbaum öffnen" in locked play mode across Actor Sheet and Character Builder without unlocking sheet.
+- **Knowledge Skill Canonicalization (A4)**:
+  - Standardized all 7 knowledge skills in `skill-normalization.js` and compendiums to `Knowledge: <Domain>`.
+- **Delete Button Styling (A5)**:
+  - Standardized `.remove-bio`, `.remove-spec-header`, and `.spec-card-delete` with uniform warning red (`#ef4444`).
+- **Orphan Window Auto-Cleanup**:
+  - Added `deleteActor` hook and safety checks in Character Builder to prevent orphaned dialogs upon actor deletion.
+
+---
+
 ## [2026-08-16] - Equipment System, Compendium Ingestion & Skill Roll Fixes
 
 ### 🚀 Features & Enhancements

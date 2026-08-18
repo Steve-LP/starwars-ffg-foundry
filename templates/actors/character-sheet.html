@@ -261,10 +261,10 @@
               <span class="spec-card-subtitle">Karriere-Skills: {{spec.system.careerSkills}}</span>
             </div>
             <div class="spec-card-actions">
-              {{#if ../editMode}}
               <button type="button" class="open-tree-btn" data-action="openSpecialization" data-item-id="{{spec.id}}" title="Talentbaum im Fenster öffnen">
                 <i class="fas fa-external-link-alt"></i> Talentbaum
               </button>
+              {{#if ../editMode}}
               <a class="spec-card-delete remove-spec-header" data-item-id="{{spec.id}}" title="Spezialisierung entfernen"><i class="fas fa-trash"></i></a>
               {{/if}}
             </div>
@@ -278,10 +278,10 @@
               <span class="spec-card-subtitle">Macht-Baum</span>
             </div>
             <div class="spec-card-actions">
-              {{#if ../editMode}}
               <button type="button" class="open-tree-btn" data-action="openSpecialization" data-item-id="{{spec.id}}" title="Macht-Baum im Fenster öffnen">
                 <i class="fas fa-external-link-alt"></i> Öffnen
               </button>
+              {{#if ../editMode}}
               <a class="spec-card-delete remove-spec-header" data-item-id="{{spec.id}}" title="Macht-Baum entfernen"><i class="fas fa-trash"></i></a>
               {{/if}}
             </div>
@@ -295,10 +295,10 @@
               <span class="spec-card-subtitle">Signature Ability</span>
             </div>
             <div class="spec-card-actions">
-              {{#if ../editMode}}
               <button type="button" class="open-tree-btn" data-action="openSpecialization" data-item-id="{{spec.id}}" title="Signature Ability im Fenster öffnen">
                 <i class="fas fa-external-link-alt"></i> Öffnen
               </button>
+              {{#if ../editMode}}
               <a class="spec-card-delete remove-spec-header" data-item-id="{{spec.id}}" title="Signature Ability entfernen"><i class="fas fa-trash"></i></a>
               {{/if}}
             </div>
@@ -480,32 +480,41 @@
     <div class="tab biography {{tabs.biography.cssClass}}" data-group="primary" data-tab="biography">
       <div class="bio-grid">
         <div class="bio-block">
-          <h3>Obligation</h3>
-          <textarea name="system.biography.obligation">{{actor.system.biography.obligation}}</textarea>
+          <h3><i class="fas fa-handshake"></i> Obligation</h3>
+          <div style="display: flex; gap: 8px; margin-bottom: 6px;">
+            <input type="text" name="system.narrative.obligation.type" value="{{actor.system.narrative.obligation.type}}" placeholder="Typ (z.B. Debt, Betrayal)" style="flex: 2;" {{#if lockFields}}disabled{{/if}} />
+            <input type="number" name="system.narrative.obligation.magnitude" value="{{actor.system.narrative.obligation.magnitude}}" placeholder="Wert" style="flex: 1; text-align: center;" {{#if lockFields}}disabled{{/if}} />
+          </div>
+          <textarea name="system.narrative.obligation.details" placeholder="Details & Gläubiger..." {{#if lockFields}}disabled{{/if}}>{{actor.system.narrative.obligation.details}}</textarea>
         </div>
         <div class="bio-block">
-          <h3>Duty</h3>
-          {{#if isCreationMode}}
-          <div class="creation-duty-controls row" style="margin-bottom: 8px; font-size: 13px; gap: 10px; align-items: center;">
-            <div style="display: flex; align-items: center; gap: 4px;">
-              <label style="font-weight: 600;">Gruppen-Basis-Duty XP:</label>
-              <input type="number" name="system.creation.baseGroupDutyXp" value="{{actor.system.creation.baseGroupDutyXp}}" style="width: 50px; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid rgba(0,180,216,0.3); border-radius: 4px; text-align: center;" />
+          <h3><i class="fas fa-medal"></i> Duty</h3>
+          <div style="display: flex; gap: 8px; margin-bottom: 6px;">
+            <input type="text" name="system.narrative.duty.type" value="{{actor.system.narrative.duty.type}}" placeholder="Typ (z.B. Combat, Support)" style="flex: 2;" {{#if lockFields}}disabled{{/if}} />
+            <input type="number" name="system.narrative.duty.magnitude" value="{{actor.system.narrative.duty.magnitude}}" placeholder="Wert" style="flex: 1; text-align: center;" {{#if lockFields}}disabled{{/if}} />
+          </div>
+          <textarea name="system.narrative.duty.details" placeholder="Details & Aufgaben in der Rebellion..." {{#if lockFields}}disabled{{/if}}>{{actor.system.narrative.duty.details}}</textarea>
+        </div>
+        <div class="bio-block">
+          <h3><i class="fas fa-yin-yang"></i> Morality</h3>
+          <div style="display: flex; gap: 8px; margin-bottom: 6px;">
+            <div style="flex: 1; text-align: center;">
+              <label style="font-size: 10px; display: block; opacity: 0.7;">Score (0-100)</label>
+              <input type="number" name="system.narrative.morality.score" value="{{actor.system.narrative.morality.score}}" style="text-align: center;" {{#if lockFields}}disabled{{/if}} />
             </div>
-            <div style="display: flex; align-items: center; gap: 4px;">
-              <input type="checkbox" name="system.creation.doubleDuty" {{#if actor.system.creation.doubleDuty}}checked{{/if}} style="width: 14px; height: 14px; margin: 0;" />
-              <label style="font-weight: 600; cursor: pointer;">Double Duty (+10 XP)</label>
+            <div style="flex: 1; text-align: center;">
+              <label style="font-size: 10px; display: block; opacity: 0.7;">Konflikt</label>
+              <input type="number" name="system.narrative.morality.conflict" value="{{actor.system.narrative.morality.conflict}}" style="text-align: center;" {{#if lockFields}}disabled{{/if}} />
             </div>
           </div>
-          {{/if}}
-          <textarea name="system.biography.duty">{{actor.system.biography.duty}}</textarea>
-        </div>
-        <div class="bio-block">
-          <h3>Morality</h3>
-          <textarea name="system.biography.morality">{{actor.system.biography.morality}}</textarea>
+          <div style="display: flex; gap: 6px; margin-bottom: 4px;">
+            <input type="text" name="system.narrative.morality.strength" value="{{actor.system.narrative.morality.strength}}" placeholder="Stärke" style="flex: 1; font-size: 11px;" {{#if lockFields}}disabled{{/if}} />
+            <input type="text" name="system.narrative.morality.weakness" value="{{actor.system.narrative.morality.weakness}}" placeholder="Schwäche" style="flex: 1; font-size: 11px;" {{#if lockFields}}disabled{{/if}} />
+          </div>
         </div>
         <div class="bio-block full-width-block" style="grid-column: span 3; margin-top: 15px;">
           <h3>Spezies-Eigenschaften & Fähigkeiten</h3>
-          <textarea name="system.biography.specialAbilities" style="height: 120px;">{{actor.system.biography.specialAbilities}}</textarea>
+          <textarea name="system.biography.specialAbilities" style="height: 120px;" {{#if lockFields}}disabled{{/if}}>{{actor.system.biography.specialAbilities}}</textarea>
         </div>
       </div>
     <!-- XP Log Tab -->

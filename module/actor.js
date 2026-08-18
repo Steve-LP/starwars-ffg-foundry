@@ -133,34 +133,38 @@ export class SWFFGActor extends Actor {
     return totalCost;
   }
 
+  calculateSpecializationCost(specItemData) {
+    if (this.type !== "character") return 0;
+    const classification = specItemData?.system?.classification || "career";
+    if (specItemData?.system?.customXpCost !== null && specItemData?.system?.customXpCost !== undefined && !isNaN(specItemData?.system?.customXpCost)) {
+      return Number(specItemData.system.customXpCost);
+    }
+    if (classification === "force-power") return 10;
+    if (classification === "signature-ability") return 30;
+
+    const specs = this.items.filter(item => item.type === "specialization");
+    const nextCount = specs.length + 1;
+    if (nextCount === 1) return 0; // Starting spec is 0 XP
+
+    let cost = nextCount * 10;
+    const isUniversal = specItemData?.system?.isUniversal === true || classification === "universal";
+    const careerSpecList = this.system.creation?.careerSnapshot?.specializations || [];
+    const specName = (specItemData?.name || "").toLowerCase();
+    const actorCareer = (this.system.biography?.career || this.system.creation?.careerSnapshot?.name || "").toLowerCase();
+    const isCareerSpec = careerSpecList.some(s => s.toLowerCase() === specName) || (actorCareer && (specItemData?.system?.career || "").toLowerCase() === actorCareer);
+
+    if (!isUniversal && !isCareerSpec) {
+      cost += 10;
+    }
+    return cost;
+  }
+
   canAffordSpecialization(specItemData) {
     if (this.type !== "character") return true;
     const isGM = game.user?.isGM || false;
     if (isGM) return true;
 
-    const classification = specItemData?.system?.classification || "career";
-    let cost = 0;
-
-    if (specItemData?.system?.customXpCost !== null && specItemData?.system?.customXpCost !== undefined) {
-      cost = specItemData.system.customXpCost;
-    } else if (classification === "force-power") {
-      cost = 10;
-    } else if (classification === "signature-ability") {
-      cost = 30;
-    } else {
-      const specs = this.items.filter(item => {
-        const cls = item.system?.classification || "career";
-        return ["career", "non-career", "universal"].includes(cls);
-      });
-      const nextIndex = specs.length;
-      if (nextIndex === 0) return true;
-
-      cost = (nextIndex + 1) * 10;
-      if (classification === "non-career") {
-        cost += 10;
-      }
-    }
-
+    const cost = this.calculateSpecializationCost(specItemData);
     return this.totalAvailableXp >= cost;
   }
 
@@ -1444,9 +1448,9 @@ export class SWFFGActor extends Actor {
       changedXpTotal = changed["system.xp.total"];
     }
 
-    if (changedXpAvailable !== undefined || changedXpTotal !== undefined) {
-      const currentAvailable = this._source.system.xp?.available ?? 0;
-      const currentTotal = this._source.system.xp?.total ?? 0;
+    if (changedXpAvailable !== undefined || changedXpTotal !== undefined || options.xpLogDescription) {
+      const currentAvailable = this._source.system?.xp?.available ?? 0;
+      const currentTotal = this._source.system?.xp?.total ?? 0;
       
       const newAvailable = changedXpAvailable !== undefined ? Number(changedXpAvailable) : currentAvailable;
       const newTotal = changedXpTotal !== undefined ? Number(changedXpTotal) : currentTotal;
@@ -1454,29 +1458,25 @@ export class SWFFGActor extends Actor {
       const diffAvailable = newAvailable - currentAvailable;
       const diffTotal = newTotal - currentTotal;
       
-      if (diffAvailable !== 0 || diffTotal !== 0) {
+      if (diffAvailable !== 0 || diffTotal !== 0 || options.xpLogDescription) {
         const isCreation = this.system.creation?.isCreationMode === true;
         const isLocking = (changed.system?.creation?.isCreationMode === false) || (changed["system.creation.isCreationMode"] === false);
-        if (!isCreation || isLocking) {
+        if (!isCreation || isLocking || options.xpLogDescription) {
           const timestamp = new Date().toLocaleString("de-DE");
           const userName = game.users.get(user)?.name || game.user?.name || "Unbekannt";
           
-          let desc = "";
-          let changeVal = 0;
+          let desc = options.xpLogDescription || "";
+          let changeVal = diffAvailable;
           
-          if (diffAvailable !== 0 && diffTotal !== 0 && diffAvailable === diffTotal) {
-            desc = "XP erhalten (Zuweisung durch GM/System)";
-            changeVal = diffAvailable;
-          } else if (diffAvailable !== 0) {
-            desc = diffAvailable > 0 ? "XP erstattet / korrigiert" : "XP ausgegeben / korrigiert";
-            changeVal = diffAvailable;
-          } else if (diffTotal !== 0) {
-            desc = "Maximales XP angepasst";
-            changeVal = diffTotal;
-          }
-          
-          if (options.xpLogDescription) {
-            desc = options.xpLogDescription;
+          if (!desc) {
+            if (diffAvailable !== 0 && diffTotal !== 0 && diffAvailable === diffTotal) {
+              desc = "XP erhalten (Zuweisung durch GM/System)";
+            } else if (diffAvailable !== 0) {
+              desc = diffAvailable > 0 ? "XP erstattet / korrigiert" : "XP ausgegeben / korrigiert";
+            } else if (diffTotal !== 0) {
+              desc = "Maximales XP angepasst";
+              changeVal = diffTotal;
+            }
           }
           
           const currentLog = Array.from(this.system.xp?.log || []);
@@ -1495,11 +1495,8 @@ export class SWFFGActor extends Actor {
           // Keep last 50 entries to avoid bloating
           if (currentLog.length > 50) currentLog.shift();
           
-          if (changed["system.xp.available"] !== undefined || changed["system.xp.total"] !== undefined) {
-            changed["system.xp.log"] = currentLog;
-          } else {
-            if (!changed.system) changed.system = {};
-            if (!changed.system.xp) changed.system.xp = {};
+          changed["system.xp.log"] = currentLog;
+          if (changed.system?.xp) {
             changed.system.xp.log = currentLog;
           }
         }
@@ -2062,6 +2059,195 @@ export class SWFFGActor extends Actor {
       "system.creation.ledger.freeSpecializationSkills": []
     });
     return { success: true, message: `Spezialisierung ${specData.name} angewendet.` };
+  }
+
+  async buyAdditionalSpecialization(specItemData, options = {}) {
+    if (this.type !== "character") return { success: false, message: "Nur für Charaktere verfügbar." };
+    const specName = specItemData.name;
+    const hasSpec = this.items.some(i => i.type === "specialization" && i.name.toLowerCase() === specName.toLowerCase());
+    if (hasSpec) {
+      return { success: false, message: `Spezialisierung "${specName}" ist bereits vorhanden!` };
+    }
+
+    const cost = this.calculateSpecializationCost(specItemData);
+    const availableXp = this.system.creation?.isCreationMode ? this.totalAvailableXp : (this.system.xp?.available || 0);
+
+    if (availableXp < cost && !game.user?.isGM) {
+      return { success: false, message: `Nicht genug XP vorhanden! (Kosten: ${cost} XP, Verfügbar: ${availableXp} XP)` };
+    }
+
+    // Embed specialization item
+    const createdItems = await this.createEmbeddedDocuments("Item", [specItemData]);
+
+    // Deduct XP
+    if (this.system.creation?.isCreationMode) {
+      const currentSpecsLedger = foundry.utils.deepClone(this.system.creation?.ledger?.upgrades?.specializations || []);
+      currentSpecsLedger.push(specName);
+      await this.update({
+        "system.creation.ledger.upgrades.specializations": currentSpecsLedger
+      }, { xpLogDescription: options.logDescription || `Kauf von Spezialisierung "${specName}" (-${cost} XP)` });
+    } else {
+      const newAvailable = Math.max(0, (this.system.xp?.available || 0) - cost);
+      await this.update({
+        "system.xp.available": newAvailable
+      }, { xpLogDescription: options.logDescription || `Kauf von Spezialisierung "${specName}" (-${cost} XP)` });
+    }
+
+    // Ensure all career skills from this new specialization exist on the actor
+    const skillListStr = specItemData.system?.careerSkills || "";
+    const newCareerSkills = skillListStr.split(",").map(s => s.trim().toLowerCase()).filter(s => s);
+    const currentSkills = this.items.filter(i => i.type === "skill");
+    const itemsToCreate = [];
+
+    for (const sName of newCareerSkills) {
+      const existing = currentSkills.find(s => s.name.toLowerCase() === sName);
+      if (!existing) {
+        const dSkill = DEFAULT_SKILLS.find(s => s.name.toLowerCase() === sName);
+        if (dSkill) {
+          itemsToCreate.push({
+            name: dSkill.name,
+            type: "skill",
+            system: {
+              value: 0,
+              freeRanks: 0,
+              career: true,
+              characteristic: dSkill.characteristic,
+              category: dSkill.category
+            }
+          });
+        }
+      }
+    }
+
+    if (itemsToCreate.length > 0) {
+      await this.createEmbeddedDocuments("Item", itemsToCreate);
+    }
+
+    await this.recalculateCareerSkills();
+    return { success: true, message: `Spezialisierung "${specName}" für ${cost} XP erworben.`, cost: cost, item: createdItems[0] };
+  }
+
+  async adjustObligation(type, magnitude, details, reason) {
+    if (this.type !== "character") {
+      return { success: false, message: "adjustObligation ist nur für Charaktere verfügbar." };
+    }
+    if (!game.user?.isGM) {
+      return { success: false, message: "adjustObligation darf nur vom GM aufgerufen werden." };
+    }
+    let actualDetails = details;
+    let actualReason = reason;
+    if (reason === undefined && typeof details === "string") {
+      actualReason = details;
+      actualDetails = undefined;
+    }
+    if (!actualReason || typeof actualReason !== "string" || actualReason.trim() === "") {
+      return { success: false, message: "Bitte einen Grund für die Obligation-Anpassung angeben." };
+    }
+
+    const liveActor = game.actors?.get(this.id) ?? this;
+    const oldMag = liveActor._source?.system?.narrative?.obligation?.magnitude ?? liveActor.system.narrative?.obligation?.magnitude ?? 0;
+    const oldType = liveActor._source?.system?.narrative?.obligation?.type ?? liveActor.system.narrative?.obligation?.type ?? "Debt";
+    const newType = type || oldType;
+    const newMag = Number.isInteger(Number(magnitude)) ? Math.max(0, Number(magnitude)) : oldMag;
+    const trimmedReason = actualReason.trim();
+
+    const updates = {
+      "system.narrative.obligation.type": newType,
+      "system.narrative.obligation.magnitude": newMag
+    };
+    if (actualDetails !== undefined && actualDetails !== null) {
+      updates["system.narrative.obligation.details"] = String(actualDetails);
+    }
+
+    await this.update(updates, {
+      xpLogDescription: `GM-Anpassung Obligation: ${oldMag} (${oldType}) → ${newMag} (${newType}) | Grund: "${trimmedReason}"`
+    });
+
+    console.info(`SWFFG | [adjustObligation] ${this.name}: ${oldMag} → ${newMag} (${newType}) | Grund: "${trimmedReason}"`);
+    return {
+      success: true,
+      message: `Obligation von ${this.name} aktualisiert (${oldMag} → ${newMag}).`,
+      data: { oldMag, newMag, newType, reason: trimmedReason }
+    };
+  }
+
+  async adjustDuty(type, magnitude, details, reason) {
+    if (this.type !== "character") {
+      return { success: false, message: "adjustDuty ist nur für Charaktere verfügbar." };
+    }
+    if (!game.user?.isGM) {
+      return { success: false, message: "adjustDuty darf nur vom GM aufgerufen werden." };
+    }
+    let actualDetails = details;
+    let actualReason = reason;
+    if (reason === undefined && typeof details === "string") {
+      actualReason = details;
+      actualDetails = undefined;
+    }
+    if (!actualReason || typeof actualReason !== "string" || actualReason.trim() === "") {
+      return { success: false, message: "Bitte einen Grund für die Duty-Anpassung angeben." };
+    }
+
+    const liveActor = game.actors?.get(this.id) ?? this;
+    const oldMag = liveActor._source?.system?.narrative?.duty?.magnitude ?? liveActor.system.narrative?.duty?.magnitude ?? 0;
+    const oldType = liveActor._source?.system?.narrative?.duty?.type ?? liveActor.system.narrative?.duty?.type ?? "Combat Readiness";
+    const newType = type || oldType;
+    const newMag = Number.isInteger(Number(magnitude)) ? Math.max(0, Number(magnitude)) : oldMag;
+    const trimmedReason = actualReason.trim();
+
+    const updates = {
+      "system.narrative.duty.type": newType,
+      "system.narrative.duty.magnitude": newMag
+    };
+    if (actualDetails !== undefined && actualDetails !== null) {
+      updates["system.narrative.duty.details"] = String(actualDetails);
+    }
+
+    await this.update(updates, {
+      xpLogDescription: `GM-Anpassung Duty: ${oldMag} (${oldType}) → ${newMag} (${newType}) | Grund: "${trimmedReason}"`
+    });
+
+    console.info(`SWFFG | [adjustDuty] ${this.name}: ${oldMag} → ${newMag} (${newType}) | Grund: "${trimmedReason}"`);
+    return {
+      success: true,
+      message: `Duty von ${this.name} aktualisiert (${oldMag} → ${newMag}).`,
+      data: { oldMag, newMag, newType, reason: trimmedReason }
+    };
+  }
+
+  async adjustMorality(score, conflict, reason) {
+    if (this.type !== "character") {
+      return { success: false, message: "adjustMorality ist nur für Charaktere verfügbar." };
+    }
+    if (!game.user?.isGM) {
+      return { success: false, message: "adjustMorality darf nur vom GM aufgerufen werden." };
+    }
+    if (!reason || typeof reason !== "string" || reason.trim() === "") {
+      return { success: false, message: "Bitte einen Grund für die Morality-Anpassung angeben." };
+    }
+
+    const liveActor = game.actors?.get(this.id) ?? this;
+    const oldScore = liveActor._source?.system?.narrative?.morality?.score ?? liveActor.system.narrative?.morality?.score ?? 50;
+    const oldConflict = liveActor._source?.system?.narrative?.morality?.conflict ?? liveActor.system.narrative?.morality?.conflict ?? 0;
+    const newScore = score !== undefined && !isNaN(score) ? Math.max(0, Math.min(100, Number(score))) : oldScore;
+    const newConflict = conflict !== undefined && !isNaN(conflict) ? Math.max(0, Number(conflict)) : oldConflict;
+    const trimmedReason = reason.trim();
+
+    const updates = {
+      "system.narrative.morality.score": newScore,
+      "system.narrative.morality.conflict": newConflict
+    };
+
+    await this.update(updates, {
+      xpLogDescription: `GM-Anpassung Morality: Score ${oldScore} → ${newScore}, Konflikt ${oldConflict} → ${newConflict} | Grund: "${trimmedReason}"`
+    });
+
+    console.info(`SWFFG | [adjustMorality] ${this.name}: Score ${oldScore} → ${newScore}, Konflikt ${oldConflict} → ${newConflict} | Grund: "${trimmedReason}"`);
+    return {
+      success: true,
+      message: `Morality von ${this.name} aktualisiert (Score: ${newScore}, Konflikt: ${newConflict}).`,
+      data: { oldScore, newScore, oldConflict, newConflict, reason: trimmedReason }
+    };
   }
 
   async removeSpecialization(itemId, isStartingSpec) {
