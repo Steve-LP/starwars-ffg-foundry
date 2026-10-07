@@ -60,11 +60,17 @@ Keep this file current: items agreed "for later" in chat belong here, not only i
   which no compendium spec has; the purchase dialog shows 30 via `calculateSpecializationCost()`.
   Surfaced by the new lock summary ("Abweichung zur Aufschlüsselung: -10 XP", character "claude 3").
   Fixed: uses `isCareerSpecialization()`; headless test (in-game) 12/12. Live builder re-test pending.
-- [ ] **Species skill choice is lost (e.g. Twi'lek gets neither Charm nor Deception)**
+- [x] **Species skill choice is lost (e.g. Twi'lek gets neither Charm nor Deception)**
   The builder writes the chosen skill into the species modifiers string, but the derived calculation skips
   all choice options found there and `ledger.speciesSkillChoice` is never set → no free rank at all.
   `CHOICE_SPECIES` covers only 4 species; 32 species list several skills — which of those are a choice vs.
   both ranks needs a rules check per species (data format cannot express it).
+  Fixed for the 4 `CHOICE_SPECIES` (Twi'lek, Devaronian, Weequay, Klatooinian): new logic method
+  `setSpeciesSkillChoice()`, builder uses it; headless test `tests/headless-species-skill-choice.js` (in-game 23/23).
+  Live builder re-test pending.
+- [ ] **Species choices not modeled yet** — rules check needed per species:
+  - Human: one rank in each of two different non-career skills (data has no skills at all).
+  - The other 28 species listing several skills: choice or both ranks?
 - [ ] **Display package (read-only, no automation)** — agreed 2026-10-08
   - "Merken" block on the character sheet overview: species abilities, conditional talents the system does
     not calculate itself, critical injuries. Dice tokens like `[SETBACK]` rendered as symbols.

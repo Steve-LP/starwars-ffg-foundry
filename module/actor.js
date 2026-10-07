@@ -1784,6 +1784,28 @@ export class SWFFGActor extends Actor {
     return { success: true, message: `Talent ${name} erstattet.` };
   }
 
+  /**
+   * Sets the bonus skill for species with a choice (e.g. Twi'lek: Charm or Deception).
+   * Only during creation and only one of the species' options (CHOICE_SPECIES).
+   * @param {string} skillName
+   * @returns {Promise<{success: boolean, message: string}>}
+   */
+  async setSpeciesSkillChoice(skillName) {
+    if (this.type !== "character") return { success: false, message: "Nur für Charaktere verfügbar." };
+    if (this.system.creation?.isCreationMode !== true) {
+      return { success: false, message: "Die Spezies-Fertigkeit kann nur während der Charaktererstellung gewählt werden." };
+    }
+    const species = this.system.biography?.species || "";
+    const options = CHOICE_SPECIES[normalizeSpeciesName(species)] || [];
+    const choice = options.find(o => o.toLowerCase() === String(skillName ?? "").trim().toLowerCase());
+    if (!choice) {
+      return { success: false, message: `"${skillName}" ist keine Wahlmöglichkeit für ${species || "diese Spezies"} (${options.join(", ") || "keine Wahl"}).` };
+    }
+    await this.update({ "system.creation.ledger.speciesSkillChoice": choice });
+    console.info(`SWFFG | [Species] ${this.name}: Bonus-Fertigkeit ${choice}`);
+    return { success: true, message: `Bonus-Fertigkeit ${choice} gewählt.` };
+  }
+
   async applySpecies(speciesData) {
     if (this.type !== "character") return;
     
@@ -1828,6 +1850,7 @@ export class SWFFGActor extends Actor {
       "system.creation.speciesSnapshot": speciesSnapshot,
       "system.creation.startingXp": xpTotal,
       "system.creation.baseCharacteristics": baseChars,
+      "system.creation.ledger.speciesSkillChoice": "",
       "system.xp.total": xpTotal,
       "system.xp.available": xpTotal,
       "system.stats.wounds.base": woundsBase + baseChars.brawn,

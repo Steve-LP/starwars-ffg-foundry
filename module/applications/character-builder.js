@@ -378,24 +378,10 @@ export class CharacterBuilder extends HandlebarsApplicationMixin(ApplicationV2) 
         if (!select || !select.value) throw new Error("Bitte eine Bonus-Fertigkeit wählen.");
 
         const speciesData = instance.pendingSpeciesDoc.toObject();
-        speciesData.system.modifiers = speciesData.system.modifiers || {};
-
-        let currentSkills = speciesData.system.modifiers.skills || "";
-        for (const choice of instance.pendingSpeciesChoices) {
-          const regex = new RegExp(`(^|,)\\s*${choice}:\\d+\\s*(?=$|,)`, "gi");
-          currentSkills = currentSkills.replace(regex, "");
-        }
-        currentSkills = currentSkills.replace(/^,/, "").replace(/,$/, "").trim();
-
-        if (currentSkills) {
-           speciesData.system.modifiers.skills = `${currentSkills}, ${select.value}:1`;
-        } else {
-           speciesData.system.modifiers.skills = `${select.value}:1`;
-        }
-
         const result = await instance.actor.applySpecies(speciesData);
-        if (!result?.success) {
-          ui.notifications.warn(result?.message || "Fehler beim Anwenden der Spezies.");
+        const choiceResult = result?.success ? await instance.actor.setSpeciesSkillChoice(select.value) : null;
+        if (!result?.success || !choiceResult?.success) {
+          ui.notifications.warn(choiceResult?.message || result?.message || "Fehler beim Anwenden der Spezies.");
         } else {
           await instance._setStep(CharacterBuilder.STEPS.CAREER);
           instance.pendingSpeciesDoc = null;
