@@ -38,6 +38,21 @@ Keep this file current: items agreed "for later" in chat belong here, not only i
 - [ ] **Adversaries have no skills** — neither the NeDB nor the LevelDB data contain skill ranks
   (system keys: characteristics, stats, biography only). Source data (Stoogoff) needs checking.
 
+- [x] **Builder hid 41 of 114 specializations; in-career specs cost +10** (found 2026-10-08 in builder test)
+  `SpecializationData` had no `key` field, so Foundry dropped the key that careers reference
+  (`peace` → Peacekeeper); 17 of 20 careers were affected (Clone Soldier showed none).
+  Spec cost compared names instead of keys, and `lockCreation()` drops the career snapshot,
+  so every extra spec counted as out-of-career in play.
+  Fixed, verified in-game (Guardian → Soresu Defender; after lock in-career 20 / other career 30):
+  `key` field + `biography.careerSpecializations` (kept after lock), headless test `tests/headless-specialization-keys.js`.
+  Characters locked before this fix have no `careerSpecializations` → recreate or migrate.
+- [ ] **XP log lumps and double-counts builder purchases** (XP balance itself is correct)
+  Characteristic/skill purchases in the builder get no own entry; their cost lands in the next logged
+  event ("Toughened (-5 XP)" logged as -85). `lockCreation()` then appends an itemized list of the same
+  purchases, so the log sums to -180 for 90 XP actually spent (character "claude 2", 2026-10-08).
+- [ ] **No universal specializations in the compendium** (Force Sensitive Exile/Emergent, Recruit) —
+  none has `isUniversal` or `classification: "universal"`.
+
 ## 2. Unverified (needs a live test in Foundry)
 
 - [ ] Item sheet parse error ("Parse error on line 199") — fixed in `548c86b`, open a compendium item to confirm
