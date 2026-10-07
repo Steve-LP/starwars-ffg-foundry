@@ -17,3 +17,6 @@ tools/src/
 
 # Backups
 *.bak
+
+# Release build output (attached to GitHub releases, not tracked)
+system.zip
