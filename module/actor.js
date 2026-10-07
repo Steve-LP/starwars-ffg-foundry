@@ -148,6 +148,19 @@ export class SWFFGActor extends Actor {
 
     let cost = nextCount * 10;
     const isUniversal = specItemData?.system?.isUniversal === true || classification === "universal";
+    if (!isUniversal && !this.isCareerSpecialization(specItemData)) {
+      cost += 10;
+    }
+    return cost;
+  }
+
+  /**
+   * Whether a specialization belongs to the actor's career (by key, name as fallback).
+   * Uses the career snapshot during creation and biography.careerSpecializations after lock.
+   * @param {object} specItemData  Specialization document or data ({ name, system })
+   * @returns {boolean}
+   */
+  isCareerSpecialization(specItemData) {
     const careerSpecKeys = [
       ...(this.system.creation?.careerSnapshot?.specializations || []),
       ...(this.system.biography?.careerSpecializations || [])
@@ -155,13 +168,8 @@ export class SWFFGActor extends Actor {
     const specKey = (specItemData?.system?.key || "").toLowerCase().trim();
     const specName = (specItemData?.name || "").toLowerCase().trim();
     const actorCareer = (this.system.biography?.career || this.system.creation?.careerSnapshot?.name || "").toLowerCase();
-    const isCareerSpec = (specKey && careerSpecKeys.includes(specKey)) || careerSpecKeys.includes(specName)
-      || (actorCareer && (specItemData?.system?.career || "").toLowerCase() === actorCareer);
-
-    if (!isUniversal && !isCareerSpec) {
-      cost += 10;
-    }
-    return cost;
+    return (!!specKey && careerSpecKeys.includes(specKey)) || careerSpecKeys.includes(specName)
+      || (!!actorCareer && (specItemData?.system?.career || "").toLowerCase() === actorCareer);
   }
 
   canAffordSpecialization(specItemData) {
@@ -292,7 +300,8 @@ export class SWFFGActor extends Actor {
         [`system.characteristics.${attributeName}.value`]: currentRawValue + 1,
         "system.xp.available": newAvailable
       }, {
-        xpLogDescription: `Attribut gesteigert: ${attributeName.toUpperCase()} von ${currentRawValue} auf ${currentRawValue + 1} (-${cost} XP)`
+        xpLogDescription: `Attribut gesteigert: ${attributeName.toUpperCase()} von ${currentRawValue} auf ${currentRawValue + 1} (-${cost} XP)`,
+        xpPurchase: true
       });
       return { success: true, message: `${attributeName.toUpperCase()} auf ${currentRawValue + 1} gesteigert für ${cost} XP.` };
     }
@@ -335,7 +344,8 @@ export class SWFFGActor extends Actor {
         [`system.characteristics.${attributeName}.value`]: currentRawValue - 1,
         "system.xp.available": newAvailable
       }, {
-        xpLogDescription: `Attribut gesenkt: ${attributeName.toUpperCase()} von ${currentRawValue} auf ${currentRawValue - 1} (+${refund} XP erstattet)`
+        xpLogDescription: `Attribut gesenkt: ${attributeName.toUpperCase()} von ${currentRawValue} auf ${currentRawValue - 1} (+${refund} XP erstattet)`,
+        xpPurchase: true
       });
       return { success: true, message: `${attributeName.toUpperCase()} auf ${currentRawValue - 1} gesenkt. ${refund} XP erstattet.` };
     }
@@ -402,7 +412,8 @@ export class SWFFGActor extends Actor {
       await this.update({
         "system.xp.available": newAvailable
       }, {
-        xpLogDescription: `Rang erworben: ${skillName} von ${currentRank} auf ${nextRank} (-${cost} XP)`
+        xpLogDescription: `Rang erworben: ${skillName} von ${currentRank} auf ${nextRank} (-${cost} XP)`,
+        xpPurchase: true
       });
 
       if (skillItem) {
@@ -459,7 +470,8 @@ export class SWFFGActor extends Actor {
       await this.update({
         "system.xp.available": newAvailable
       }, {
-        xpLogDescription: `Rang zurückgesetzt: ${skillName} von ${currentRank} auf ${currentRank - 1} (+${refund} XP erstattet)`
+        xpLogDescription: `Rang zurückgesetzt: ${skillName} von ${currentRank} auf ${currentRank - 1} (+${refund} XP erstattet)`,
+        xpPurchase: true
       });
 
       if (skillItem) {
@@ -689,28 +701,9 @@ export class SWFFGActor extends Actor {
 
     const timestamp = new Date().toLocaleString("de-DE");
     const userName = game.user?.name || game.users.get(game.userId)?.name || "Unbekannt";
-    const logEntries = [];
-
-    // Start tracking available XP starting from the total baseline
-    const startingXp = this.system.creation?.startingXp || 0;
-    let currentLogAvailable = startingXp + this.dutyXp + (this.system.xp?.earned || 0);
-    const totalXp = currentLogAvailable;
-
-    const addLogEntry = (desc, cost) => {
-      const prevAvailable = currentLogAvailable;
-      currentLogAvailable -= cost;
-      logEntries.push({
-        timestamp,
-        user: userName,
-        change: `-${cost}`,
-        positive: false,
-        description: desc,
-        prevAvailable: prevAvailable,
-        prevTotal: totalXp,
-        available: currentLogAvailable,
-        total: totalXp
-      });
-    };
+    // Creation purchases are not logged individually; they are summarized in one entry per category
+    const spentBy = { characteristics: 0, skills: 0, specializations: 0, talents: 0 };
+    const addLogEntry = (category, cost) => { spentBy[category] += cost; };
 
     const species = this.system.creation?.speciesSnapshot;
     const ledgerUpgrades = this.system.creation?.ledger?.upgrades?.characteristics || {};
@@ -739,7 +732,7 @@ export class SWFFGActor extends Actor {
         for (let v = baseVal + 1; v <= currentVal; v++) {
           cost += v * 10;
         }
-        addLogEntry(`Attribut gesteigert: ${char.toUpperCase()} von ${baseVal} auf ${currentVal} (-${cost} XP)`, cost);
+        addLogEntry("characteristics", cost);
       }
     }
 
@@ -753,7 +746,7 @@ export class SWFFGActor extends Actor {
           for (let r = derived.freeRanks + 1; r <= derived.value; r++) {
             cost += isCareer ? (r * 5) : ((r * 5) + 5);
           }
-          addLogEntry(`Rang erworben: ${item.name} von ${derived.freeRanks} auf ${derived.value} (-${cost} XP)`, cost);
+          addLogEntry("skills", cost);
         }
       }
     }
@@ -771,11 +764,12 @@ export class SWFFGActor extends Actor {
         cost = spec.system.customXpCost;
       } else {
         cost = (i + 1) * 10;
-        if (spec.system?.classification === "non-career") {
+        const isUniversal = spec.system?.isUniversal === true || spec.system?.classification === "universal";
+        if (!isUniversal && !this.isCareerSpecialization(spec)) {
           cost += 10;
         }
       }
-      addLogEntry(`Spezialisierung erworben: ${spec.name} (-${cost} XP)`, cost);
+      addLogEntry("specializations", cost);
     }
     const nonRegularSpecs = specs.filter(s => {
       const cls = s.system?.classification;
@@ -789,7 +783,7 @@ export class SWFFGActor extends Actor {
         const cls = spec.system.classification;
         cost = (cls === "signature-ability") ? 30 : 10;
       }
-      addLogEntry(`Spezialisierungsbaum erworben: ${spec.name} (-${cost} XP)`, cost);
+      addLogEntry("specializations", cost);
     }
 
     // 4. Talent net upgrades logging
@@ -805,26 +799,36 @@ export class SWFFGActor extends Actor {
         } else {
           cost = (item.system?.tier || 1) * 5;
         }
-        addLogEntry(`Talent erworben: ${item.name} (-${cost} XP)`, cost);
+        addLogEntry("talents", cost);
       }
     }
 
-    if (logEntries.length === 0) {
-      logEntries.push({
-        timestamp,
-        user: userName,
-        change: "0",
-        positive: false,
-        description: "Charaktererstellung abgeschlossen (Bogen gesperrt)",
-        prevAvailable: currentLogAvailable,
-        prevTotal: totalXp,
-        available: currentLogAvailable,
-        total: totalXp
-      });
+    const totalXp = this.system.xp?.total ?? 0;
+    const availableXp = this.system.xp?.available ?? 0;
+    const spentXp = totalXp - availableXp;
+    const breakdownSum = Object.values(spentBy).reduce((a, b) => a + b, 0);
+    const breakdown = [
+      ["Attribute", spentBy.characteristics], ["Fertigkeiten", spentBy.skills],
+      ["Spezialisierungen", spentBy.specializations], ["Talente", spentBy.talents]
+    ].filter(([, cost]) => cost > 0).map(([label, cost]) => `${label} ${cost}`).join(", ");
+    let description = `Charaktererstellung abgeschlossen: ${spentXp} XP ausgegeben${breakdown ? ` (${breakdown})` : ""}`;
+    if (breakdownSum !== spentXp) {
+      description += ` | Abweichung zur Aufschlüsselung: ${spentXp - breakdownSum} XP`;
+      console.warn(`SWFFG | [XpLog] ${this.name}: creation breakdown ${breakdownSum} XP != spent ${spentXp} XP`);
     }
 
     const finalLog = Array.from(this.system.xp?.log || []);
-    finalLog.push(...logEntries);
+    finalLog.push({
+      timestamp,
+      user: userName,
+      change: spentXp > 0 ? `-${spentXp}` : "0",
+      positive: false,
+      description,
+      prevAvailable: totalXp,
+      prevTotal: totalXp,
+      available: availableXp,
+      total: totalXp
+    });
     if (finalLog.length > 50) {
       finalLog.splice(0, finalLog.length - 50);
     }
@@ -886,7 +890,7 @@ export class SWFFGActor extends Actor {
           specializations: []
         }
       }
-    });
+    }, { xpLogHandled: true });
 
     ui.notifications?.info("Charaktererstellung abgeschlossen. Bogen gesperrt.");
     return { success: true, message: "Charaktererstellung abgeschlossen. Bogen gesperrt." };
@@ -1467,7 +1471,9 @@ export class SWFFGActor extends Actor {
       if (diffAvailable !== 0 || diffTotal !== 0 || options.xpLogDescription) {
         const isCreation = this.system.creation?.isCreationMode === true;
         const isLocking = (changed.system?.creation?.isCreationMode === false) || (changed["system.creation.isCreationMode"] === false);
-        if (!isCreation || isLocking || options.xpLogDescription) {
+        // Purchases during creation are summarized by lockCreation(); GM actions are still logged
+        const isCreationPurchase = isCreation && !isLocking && options.xpPurchase;
+        if (!options.xpLogHandled && !isCreationPurchase && (!isCreation || isLocking || options.xpLogDescription)) {
           const timestamp = new Date().toLocaleString("de-DE");
           const userName = game.users.get(user)?.name || game.user?.name || "Unbekannt";
           
@@ -1738,7 +1744,7 @@ export class SWFFGActor extends Actor {
     const newAvailable = availableXp - cost;
     await this.update(
       { "system.xp.available": newAvailable },
-      { xpLogDescription: options.logDescription || `Kauf von Talent "${talentData.name}" (-${cost} XP)` }
+      { xpLogDescription: options.logDescription || `Kauf von Talent "${talentData.name}" (-${cost} XP)`, xpPurchase: true }
     );
     await this.createEmbeddedDocuments("Item", [{
       name: talentData.name,
@@ -1772,7 +1778,7 @@ export class SWFFGActor extends Actor {
     const newAvailable = availableXp + cost;
     await this.update(
       { "system.xp.available": newAvailable },
-      { xpLogDescription: options.logDescription || `Erstattung von Talent "${name}" (+${cost} XP)` }
+      { xpLogDescription: options.logDescription || `Erstattung von Talent "${name}" (+${cost} XP)`, xpPurchase: true }
     );
     return { success: true, message: `Talent ${name} erstattet.` };
   }
@@ -2093,12 +2099,12 @@ export class SWFFGActor extends Actor {
       currentSpecsLedger.push(specName);
       await this.update({
         "system.creation.ledger.upgrades.specializations": currentSpecsLedger
-      }, { xpLogDescription: options.logDescription || `Kauf von Spezialisierung "${specName}" (-${cost} XP)` });
+      }, { xpLogDescription: options.logDescription || `Kauf von Spezialisierung "${specName}" (-${cost} XP)`, xpPurchase: true });
     } else {
       const newAvailable = Math.max(0, (this.system.xp?.available || 0) - cost);
       await this.update({
         "system.xp.available": newAvailable
-      }, { xpLogDescription: options.logDescription || `Kauf von Spezialisierung "${specName}" (-${cost} XP)` });
+      }, { xpLogDescription: options.logDescription || `Kauf von Spezialisierung "${specName}" (-${cost} XP)`, xpPurchase: true });
     }
 
     // Ensure all career skills from this new specialization exist on the actor
@@ -2394,7 +2400,8 @@ export class SWFFGActor extends Actor {
       await this.update({
         "system.xp.available": newAvailable
       }, {
-        xpLogDescription: desc
+        xpLogDescription: desc,
+        xpPurchase: true
       });
     }
   }

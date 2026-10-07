@@ -1042,7 +1042,7 @@ export class SWFFGActorSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
       // Perform atomic updates: add XP, delete documents, and recalculate career skills
       await this.actor.update(
         { "system.xp.available": newXp },
-        { xpLogDescription: `Löschen der Spezialisierung "${item.name}" (+${refundXp} XP erstattet)` }
+        { xpLogDescription: `Löschen der Spezialisierung "${item.name}" (+${refundXp} XP erstattet)`, xpPurchase: true }
       );
       await this.actor.deleteEmbeddedDocuments("Item", idsToDelete);
       
