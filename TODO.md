@@ -68,9 +68,15 @@ Keep this file current: items agreed "for later" in chat belong here, not only i
   Fixed for the 4 `CHOICE_SPECIES` (Twi'lek, Devaronian, Weequay, Klatooinian): new logic method
   `setSpeciesSkillChoice()`, builder uses it; headless test `tests/headless-species-skill-choice.js` (in-game 23/23).
   Live builder re-test pending.
+- [x] **12 species lost their starting Knowledge rank** (found 2026-10-08)
+  Species data still used pre-A4 names ("Education", "Lore", "Warfare", "Core Worlds", "Xenology"), which the
+  rank calculation did not find (Bardottan, Clone, Cosian, Drall, Elomin, Givin, Kel Dor, Mon Calamari,
+  Muun ×2, Skakoan, Tholothian). Fixed by normalizing species skill names when read;
+  test `tests/headless-species-skill-ranks.js` covers all 113 species (in-game: 128/128 skills).
 - [ ] **Species choices not modeled yet** — rules check needed per species:
   - Human: one rank in each of two different non-career skills (data has no skills at all).
   - The other 28 species listing several skills: choice or both ranks?
+  - Cerean: data `Vigilance:1,:1` — second skill name missing.
 - [ ] **Display package (read-only, no automation)** — agreed 2026-10-08
   - "Merken" block on the character sheet overview: species abilities, conditional talents the system does
     not calculate itself, critical injuries. Dice tokens like `[SETBACK]` rendered as symbols.

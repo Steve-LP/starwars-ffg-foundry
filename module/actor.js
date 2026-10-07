@@ -1,6 +1,7 @@
 import { rollFFGPool, sendRollToChat } from "./dice.js";
 import { DEFAULT_SKILLS, CHOICE_SPECIES, normalizeSpeciesName } from "./actor-sheet.js";
 import { TalentTreeUtils } from "./utils/talent-tree.js";
+import { normalizeSkillName } from "./utils/skill-normalization.js";
 
 /**
  * Custom Actor class for Star Wars FFG Ruleset
@@ -1005,7 +1006,8 @@ export class SWFFGActor extends Actor {
             const trimmed = part.trim();
             if (!trimmed) continue;
             const [sName, sValStr] = trimmed.split(":");
-            const sNameLower = sName.trim().toLowerCase();
+            // Species data may still use legacy names (e.g. "Education" -> "Knowledge: Education")
+            const sNameLower = normalizeSkillName(sName).toLowerCase();
             const sVal = sValStr ? parseInt(sValStr.trim()) : 1;
 
             // If this skill is one of the choice options, skip applying it from default skills
@@ -1866,7 +1868,8 @@ export class SWFFGActor extends Actor {
     if (skillMods) {
       const parts = skillMods.split(",");
       for (const part of parts) {
-        const [skillName] = part.split(":").map(p => p.trim());
+        const [rawName] = part.split(":").map(p => p.trim());
+        const skillName = normalizeSkillName(rawName);
         if (skillName && !skillsToEnsure.includes(skillName.toLowerCase())) {
           skillsToEnsure.push(skillName.toLowerCase());
         }
