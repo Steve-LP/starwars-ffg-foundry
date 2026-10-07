@@ -1,6 +1,7 @@
 /**
  * Repacks Foundry VTT NDJSON .db files into LevelDB (ClassicLevel) directories.
  * Used to fix pack data after Foundry V13 migration (from NeDB to ClassicLevel).
+ * Embedded documents (actor items, table results, effects) are written as separate keys.
  * 
  * Usage:
  *   node tools/repack-from-ndjson.mjs [packName]
@@ -44,6 +45,8 @@ async function repackSingle(packName, dbFileName) {
   }
 
   console.log(`\n📦 Repacking "${packName}" from ${dbFileName}...`);
+  const documentName = PACK_TYPES[packName];
+  if (!COLLECTIONS[documentName]) throw new Error(`Unsupported pack type "${documentName}" for ${packName}`);
 
   // Read NDJSON source
   const lines = fs.readFileSync(dbFilePath, 'utf-8')
@@ -72,36 +75,76 @@ async function repackSingle(packName, dbFileName) {
   fs.mkdirSync(leveldbDir, { recursive: true });
 
   // Write to ClassicLevel DB
+
   const db = new ClassicLevel(leveldbDir, { keyEncoding: 'utf8', valueEncoding: 'json' });
   await db.open();
 
   try {
     const batch = db.batch();
+    const embeddedCounts = {};
     for (const doc of documents) {
-      const key = `!${doc.type === 'Actor' ? 'actors' : 'items'}!${doc._id}`;
-      // For specializations, talents, etc. use '!items!' prefix
-      // For adversaries (Actors), use '!actors!' prefix
-      const actualKey = determineKey(doc);
-      batch.put(actualKey, doc);
+      for (const [key, value] of toLevelEntries(documentName, doc, embeddedCounts)) batch.put(key, value);
     }
     await batch.write();
-    console.log(`  ✅ Written ${documents.length} documents to LevelDB`);
+    const embedded = Object.entries(embeddedCounts).map(([k, n]) => `${n} ${k}`).join(', ');
+    console.log(`  ✅ Written ${documents.length} ${documentName} documents${embedded ? ` + ${embedded}` : ''} to LevelDB`);
   } finally {
     await db.close();
   }
 }
 
+/** Primary collection and embedded collections per document type (Foundry V14 LevelDB layout). */
+const COLLECTIONS = {
+  Actor: { collection: 'actors', embedded: ['items', 'effects'] },
+  Item: { collection: 'items', embedded: ['effects'] },
+  RollTable: { collection: 'tables', embedded: ['results'] },
+};
+
+/** Pack name -> document type, as declared in system.json. */
+const PACK_TYPES = Object.fromEntries(
+  JSON.parse(fs.readFileSync(path.resolve(__dirname, '..', 'system.json'), 'utf-8')).packs.map(p => [p.name, p.type])
+);
+
 /**
- * Determines the correct LevelDB key for a Foundry document.
- * Foundry V13 uses keys like:
- *   - Items: `!items!<id>`
- *   - Actors: `!actors!<id>`
+ * Splits a document into its LevelDB entries.
+ * Foundry V14 stores embedded documents as separate keys; the parent only keeps their IDs:
+ *   - `!actors!<actorId>`                     -> { ..., items: [itemId, ...] }
+ *   - `!actors.items!<actorId>.<itemId>`      -> embedded item
+ *   - `!tables.results!<tableId>.<resultId>`  -> table result
  */
-function determineKey(doc) {
-  if (doc.type === 'character' || doc.type === 'npc' || doc.type === 'minion') {
-    return `!actors!${doc._id}`;
+function toLevelEntries(documentName, doc, embeddedCounts) {
+  const { collection, embedded } = COLLECTIONS[documentName];
+  const parent = { ...doc };
+  const entries = [];
+
+  for (const field of embedded) {
+    const children = Array.isArray(doc[field]) ? doc[field] : [];
+    parent[field] = children.map(child => child._id);
+    for (const child of children) {
+      const data = documentName === 'RollTable' ? migrateLegacyTableResult(child) : child;
+      entries.push([`!${collection}.${field}!${doc._id}.${child._id}`, data]);
+    }
+    if (children.length) embeddedCounts[field] = (embeddedCounts[field] || 0) + children.length;
   }
-  return `!items!${doc._id}`;
+
+  entries.unshift([`!${collection}!${doc._id}`, parent]);
+  return entries;
+}
+
+/**
+ * Converts a pre-V10 table result (`type: 0`, `text`) to the V13+ schema (`type: "text"`, `description`).
+ */
+function migrateLegacyTableResult(result) {
+  const data = { ...result };
+  if (data.type === 0) data.type = 'text';
+  else if (typeof data.type === 'number') console.warn(`  ⚠ Table result ${data._id} has unsupported legacy type ${data.type}`);
+  if ('text' in data) {
+    if (data.type === 'text') data.description ??= data.text;
+    else data.name ??= data.text;
+    delete data.text;
+  }
+  data.name ??= '';
+  return data;
 }
 
 async function main() {
