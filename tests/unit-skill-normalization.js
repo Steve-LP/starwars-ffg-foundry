@@ -27,8 +27,8 @@ assertEqual("Ranged: Heavy", normalizeSkillName("Ranged: Heavy"), "Ranged - Heav
 assertEqual("Ranged: Light", normalizeSkillName("Ranged: Light"), "Ranged - Light");
 assertEqual("Piloting: Planetary", normalizeSkillName("Piloting: Planetary"), "Piloting - Planetary");
 assertEqual("Piloting: Space", normalizeSkillName("Piloting: Space"), "Piloting - Space");
-assertEqual("Knowledge: Core Worlds", normalizeSkillName("Knowledge: Core Worlds"), "Core Worlds");
-assertEqual("Knowledge: Xenology", normalizeSkillName("Knowledge: Xenology"), "Xenology");
+assertEqual("Knowledge: Core Worlds", normalizeSkillName("Knowledge: Core Worlds"), "Knowledge: Core Worlds");
+assertEqual("Knowledge: Xenology", normalizeSkillName("Knowledge: Xenology"), "Knowledge: Xenology");
 
 // 3. Hyphen variants
 assertEqual("Ranged-Heavy", normalizeSkillName("Ranged-Heavy"), "Ranged - Heavy");
@@ -41,7 +41,7 @@ assertEqual("RANGHVY", normalizeSkillName("RANGHVY"), "Ranged - Heavy");
 assertEqual("PILOTSP", normalizeSkillName("PILOTSP"), "Piloting - Space");
 assertEqual("PILOTPL", normalizeSkillName("PILOTPL"), "Piloting - Planetary");
 assertEqual("LTSABER", normalizeSkillName("LTSABER"), "Lightsaber");
-assertEqual("CORE", normalizeSkillName("CORE"), "Core Worlds");
+assertEqual("CORE", normalizeSkillName("CORE"), "Knowledge: Core Worlds");
 assertEqual("MED", normalizeSkillName("MED"), "Medicine");
 
 // 5. Associated Characteristics
