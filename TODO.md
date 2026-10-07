@@ -55,10 +55,11 @@ Keep this file current: items agreed "for later" in chat belong here, not only i
 - [ ] **Builder talent tab only shows the starting specialization's tree** (found 2026-10-08: Clone Pilot + Agitator)
   `character-builder.js` (context + `#onTalentCardClick`) always uses `specializationSnapshot`; additional
   specs bought in step 7 cannot be opened or bought from. Needs a spec selector in the talents tab.
-- [ ] **Out-of-career spec bought during creation is charged 20 instead of 30 XP**
+- [x] **Out-of-career spec bought during creation is charged 20 instead of 30 XP**
   `calculateSpentSpecializationXp()` (derived XP in creation) still checks `classification === "non-career"`,
   which no compendium spec has; the purchase dialog shows 30 via `calculateSpecializationCost()`.
   Surfaced by the new lock summary ("Abweichung zur Aufschlüsselung: -10 XP", character "claude 3").
+  Fixed: uses `isCareerSpecialization()`; headless test (in-game) 12/12. Live builder re-test pending.
 - [ ] **Species skill choice is lost (e.g. Twi'lek gets neither Charm nor Deception)**
   The builder writes the chosen skill into the species modifiers string, but the derived calculation skips
   all choice options found there and `ledger.speciesSkillChoice` is never set → no free rank at all.

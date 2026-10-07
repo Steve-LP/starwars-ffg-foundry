@@ -108,7 +108,8 @@ export class SWFFGActor extends Actor {
         totalCost += spec.system.customXpCost;
       } else {
         let cost = (i + 1) * 10;
-        if (spec.system?.classification === "non-career") {
+        const isUniversal = spec.system?.isUniversal === true || spec.system?.classification === "universal";
+        if (!isUniversal && !this.isCareerSpecialization(spec)) {
           cost += 10;
         }
         totalCost += cost;

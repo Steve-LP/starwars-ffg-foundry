@@ -2,6 +2,7 @@
  * Headless test (Foundry console / macro, as GM): XP log during character creation.
  *
  *  - Purchases during creation (attribute, skill rank, talent, additional specialization) add NO log entries.
+ *  - An out-of-career specialization bought during creation is deducted at the price shown (+10 XP).
  *  - GM actions during creation (sandbox toggle) are still logged.
  *  - lockCreation() adds exactly ONE summary entry; its amount equals the XP actually spent
  *    and the per-category breakdown adds up (no "Abweichung").
@@ -42,6 +43,14 @@
     const r3 = await actor.buyTalent({ name: "Grit", key: "grit", specialization: "warden", row: 0, col: 0 }, 5,
       { logDescription: 'Kauf von Talent "Grit" (-5 XP)' });
     const r4 = await actor.buyAdditionalSpecialization(spec("Peacekeeper").toObject());
+    // Out-of-career spec during creation: actual deduction must equal the price shown (3rd spec: 30 + 10)
+    const pilotPrice = actor.calculateSpecializationCost(spec("Pilot"));
+    const beforePilot = actor.system.xp.available;
+    await actor.buyAdditionalSpecialization(spec("Pilot").toObject());
+    const pilotCharged = beforePilot - actor.system.xp.available;
+    assert("2b) Out-of-career spec in creation: price shown is 40", pilotPrice === 40, `got ${pilotPrice}`);
+    assert("2c) Out-of-career spec in creation: XP deducted equals price shown", pilotCharged === pilotPrice,
+      `shown ${pilotPrice}, deducted ${pilotCharged}`);
     const spent = before - actor.system.xp.available;
     assert("2) Creation purchases succeeded", [r1, r2, r3, r4].every(r => r?.success !== false),
       JSON.stringify([r1, r2, r3, r4].map(r => r?.message)));
