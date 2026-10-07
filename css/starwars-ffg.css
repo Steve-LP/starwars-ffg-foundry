@@ -1,5 +1,21 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Rajdhani:wght@500;600;700;800&family=Share+Tech+Mono&display=swap');
 
+@font-face {
+  font-family: 'SWRPG-Symbol-Regular';
+  src: url('../fonts/swrpg_symbol-regular_v1-webfont.woff2') format('woff2'),
+       url('../fonts/swrpg_symbol-regular_v1-webfont.woff') format('woff');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Genesys';
+  src: url('../fonts/genesysglyphsanddice.woff2') format('woff2'),
+       url('../fonts/genesysglyphsanddice.woff') format('woff');
+  font-weight: normal;
+  font-style: normal;
+}
+
 /* Main Theme Variables */
 .starwars-ffg {
   --sw-bg-main: #0B0E14;

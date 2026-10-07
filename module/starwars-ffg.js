@@ -187,3 +187,147 @@ Hooks.on("renderActorDirectory", (app, html) => {
     html.appendChild(btn);
   }
 });
+
+/**
+ * Dice So Nice! 3D Narrative Dice Integration for Star Wars FFG
+ */
+Hooks.once("diceSoNiceReady", (dice3d) => {
+  console.log("SWFFG | Initializing Dice So Nice 3D Dice Presets");
+  
+  dice3d.addSystem({ id: "starwars-ffg-scratch", name: "Star Wars FFG" }, true);
+
+  // Ability Die (d8) - Green
+  dice3d.addDicePreset({
+    type: "da",
+    labels: ["", "s", "s", "s\ns", "a", "a", "s\na", "a\na"],
+    font: "SWRPG-Symbol-Regular",
+    colorset: "green",
+    system: "starwars-ffg-scratch"
+  }, "d8");
+
+  // Difficulty Die (d8) - Purple
+  dice3d.addDicePreset({
+    type: "dd",
+    labels: ["", "f", "f\nf", "t", "t", "t", "t\nt", "f\nt"],
+    font: "SWRPG-Symbol-Regular",
+    colorset: "purple",
+    system: "starwars-ffg-scratch"
+  }, "d8");
+
+  // Proficiency Die (d12) - Yellow
+  dice3d.addDicePreset({
+    type: "dp",
+    labels: ["", "s", "s", "s\ns", "s\ns", "a", "s\na", "s\na", "s\na", "a\na", "a\na", "x"],
+    font: "SWRPG-Symbol-Regular",
+    colorset: "yellow",
+    system: "starwars-ffg-scratch"
+  }, "d12");
+
+  // Challenge Die (d12) - Red
+  dice3d.addDicePreset({
+    type: "dc",
+    labels: ["", "f", "f", "f\nf", "f\nf", "t", "t", "f\nt", "f\nt", "t\nt", "t\nt", "y"],
+    font: "SWRPG-Symbol-Regular",
+    colorset: "red",
+    system: "starwars-ffg-scratch"
+  }, "d12");
+
+  // Force Die (d12) - White
+  dice3d.addDicePreset({
+    type: "df",
+    labels: ["\nz", "\nz", "\nz", "\nz", "\nz", "\nz", "z\nz", "\nZ", "\nZ", "Z\nZ", "Z\nZ", "Z\nZ"],
+    font: "SWRPG-Symbol-Regular",
+    colorset: "white",
+    system: "starwars-ffg-scratch"
+  }, "d12");
+
+  // Boost Die (d6) - Blue
+  dice3d.addDicePreset({
+    type: "db",
+    labels: ["", "", "s", "s  \n  a", "a  \n  a", "a"],
+    font: "SWRPG-Symbol-Regular",
+    colorset: "blue",
+    system: "starwars-ffg-scratch"
+  }, "d6");
+
+  // Setback Die (d6) - Black
+  dice3d.addDicePreset({
+    type: "ds",
+    labels: ["", "", "f", "f", "t", "t"],
+    font: "SWRPG-Symbol-Regular",
+    colorset: "black",
+    system: "starwars-ffg-scratch"
+  }, "d6");
+
+  // Colorsets
+  dice3d.addColorset({
+    name: "yellow",
+    description: "SWFFG Yellow",
+    category: "Colors",
+    foreground: "#000000",
+    background: "#e1aa12",
+    outline: "none",
+    texture: "none"
+  });
+
+  dice3d.addColorset({
+    name: "blue",
+    description: "SWFFG Blue",
+    category: "Colors",
+    foreground: "#000000",
+    background: "#5789aa",
+    outline: "none",
+    texture: "none"
+  });
+
+  dice3d.addColorset({
+    name: "red",
+    description: "SWFFG Red",
+    category: "Colors",
+    foreground: "#ffffff",
+    background: "#7c151e",
+    outline: "none",
+    texture: "none"
+  });
+
+  dice3d.addColorset({
+    name: "green",
+    description: "SWFFG Green",
+    category: "Colors",
+    foreground: "#000000",
+    background: "#127e12",
+    outline: "none",
+    texture: "none"
+  });
+
+  dice3d.addColorset({
+    name: "purple",
+    description: "SWFFG Purple",
+    category: "Colors",
+    foreground: "#ffffff",
+    background: "#6d1287",
+    outline: "none",
+    texture: "none"
+  });
+
+  dice3d.addColorset({
+    name: "black",
+    description: "SWFFG Black",
+    category: "Colors",
+    foreground: "#ffffff",
+    background: "#212121",
+    outline: "none",
+    texture: "none"
+  });
+
+  dice3d.addColorset({
+    name: "white",
+    description: "SWFFG White",
+    category: "Colors",
+    foreground: "#000000",
+    background: "#ffffff",
+    outline: "none",
+    texture: "none"
+  });
+});
+
