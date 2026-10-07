@@ -77,6 +77,11 @@ Keep this file current: items agreed "for later" in chat belong here, not only i
   - Human: one rank in each of two different non-career skills (data has no skills at all).
   - The other 28 species listing several skills: choice or both ranks?
   - Cerean: data `Vigilance:1,:1` — second skill name missing.
+- [x] **Species descriptions were bare rulebook references** (50 of 113, e.g. Twi'lek "Please see page 51")
+  Replaced by a facts block: homeworld/language/professions for 11 species from saved SRD pages
+  (`tools/data-srd/species-facts.json`; SRD site offline since 2026-10), source reference and a Wookieepedia link
+  (checked via API, `tools/data-srd/species-links.json`). Built by `tools/build-species-descriptions.mjs`,
+  test `tests/unit-species-descriptions.js`. In-game display check pending.
 - [ ] **Display package (read-only, no automation)** — agreed 2026-10-08
   - "Merken" block on the character sheet overview: species abilities, conditional talents the system does
     not calculate itself, critical injuries. Dice tokens like `[SETBACK]` rendered as symbols.

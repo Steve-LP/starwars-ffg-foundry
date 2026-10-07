@@ -1,0 +1,170 @@
+{
+  "Aqualish": {
+    "homeworld": "Ando",
+    "language": "Aqualish, Basic",
+    "professions": "various(anything requiring violence, criminality, prone to antisocial behavior)",
+    "wookieepedia": "https://starwars.fandom.com/wiki/Aqualish"
+  },
+  "Arcona": {
+    "homeworld": "Cona",
+    "language": "Basic, Arconese",
+    "professions": "Colonists, Explorers, Traders",
+    "wookieepedia": "https://starwars.fandom.com/wiki/Arcona"
+  },
+  "Besalisk": {
+    "homeworld": "Ojom",
+    "language": "Besalisk, Basic",
+    "professions": "Nomads, Enforcers, Security Personnel, various independent careers, including Cantina Owners, Starhip Captains, Lawyers, Doctors, Traders, Entrepreneurs",
+    "wookieepedia": "https://starwars.fandom.com/wiki/Besalisk"
+  },
+  "Bothan": {
+    "homeworld": "Bothawui",
+    "language": "Bothese, (Basic, Wrendui)",
+    "professions": "Traders, Scouts, Thieves, Politicos",
+    "wookieepedia": "https://starwars.fandom.com/wiki/Bothan"
+  },
+  "Chevin": {
+    "homeworld": "Vinsoth",
+    "language": "Chevin, Basic",
+    "professions": "any legal or illegal Capitalist Enterprise, Traders, Slavers, Smugglers, Mercenaries, Security, Explotation",
+    "wookieepedia": "https://starwars.fandom.com/wiki/Chevin"
+  },
+  "Chiss": {
+    "homeworld": "Csilla",
+    "language": "Cheunh, Basic, (Sy Bisti, Minnisiat, various)",
+    "professions": "various(anything requiring patience, intelligence, focus), Diplomacy",
+    "wookieepedia": "https://starwars.fandom.com/wiki/Chiss"
+  },
+  "Clawdite": {
+    "homeworld": "Zolan",
+    "language": "Zolanese, Basic",
+    "professions": "Smugglers, Bounty Hunters, Explorers, Technicians, specialized Colonists, self-reliant professions over which they have a high degree of control",
+    "wookieepedia": "https://starwars.fandom.com/wiki/Clawdite"
+  },
+  "Devaronian": {
+    "homeworld": "Devaron",
+    "language": "Basic, (Devaronese)",
+    "professions": "Hired Guns, Explorers, Colonists, and Bounty Hunters",
+    "wookieepedia": "https://starwars.fandom.com/wiki/Devaronian"
+  },
+  "Droid": {
+    "homeworld": "various",
+    "language": "various, (Basic, Binary)",
+    "professions": "various",
+    "wookieepedia": "https://starwars.fandom.com/wiki/Droid"
+  },
+  "Dug": {
+    "homeworld": "Malastare",
+    "language": "Dug, Basic, (Huttese, various)",
+    "professions": "Podracers, Swoop Racers, anything with fast moving vehicles or racing, Gamblers, Mechanics, Smugglers",
+    "wookieepedia": "https://starwars.fandom.com/wiki/Dug"
+  },
+  "Duros": {
+    "homeworld": "Duro",
+    "language": "Durese(Durosian), Basic",
+    "professions": "Pilots, Explorers",
+    "wookieepedia": "https://starwars.fandom.com/wiki/Duros"
+  },
+  "Falleen": {
+    "homeworld": "Falleen",
+    "language": "Falleen, Basic",
+    "professions": "Black Sun Syndicate Masters, Smugglers, Slavers, Politicians, Leaders, Traders Lower Classes: Artisans, Laborers, Slaves, Technicians",
+    "wookieepedia": ""
+  },
+  "Gand": {
+    "homeworld": "Gand",
+    "language": "Gand",
+    "professions": "Bounty Hunters, Private Investigators, Assassins, Skip Tracers, Security Advisers",
+    "wookieepedia": "https://starwars.fandom.com/wiki/Gand"
+  },
+  "Gotal": {
+    "homeworld": "Antar 4",
+    "language": "Antarian, Basic",
+    "professions": "Business, Diplomacy, Negotiation, Politics, Counselors, Psychiatrists, Investigators, Bounty Hunters, Mercenaries, Gamblers, Con Artists, Explorers, Prospectors, Scouts",
+    "wookieepedia": "https://starwars.fandom.com/wiki/Gotal"
+  },
+  "Gran": {
+    "homeworld": "Kinyen, Malastare",
+    "language": "Gran, Basic, (various)",
+    "professions": "Colonists, Explorers, Traders, Fighters, Criminals",
+    "wookieepedia": "https://starwars.fandom.com/wiki/Gran"
+  },
+  "Human": {
+    "homeworld": "various",
+    "language": "Basic, (various)",
+    "professions": "various",
+    "wookieepedia": "https://starwars.fandom.com/wiki/Human"
+  },
+  "Kalleran": {
+    "homeworld": "Kaller",
+    "language": "Kall, Basic",
+    "professions": "Independent Contractors, Starship Captains, various self-reliant professions",
+    "wookieepedia": "https://starwars.fandom.com/wiki/Kalleran"
+  },
+  "Klatooinian": {
+    "homeworld": "Klatooine",
+    "language": "Huttese, Basic, (various)",
+    "professions": "Mercenaries, Bodyguards, Mechanics, Scouts",
+    "wookieepedia": "https://starwars.fandom.com/wiki/Klatooinian"
+  },
+  "Mirialan": {
+    "homeworld": "Mirial",
+    "language": "Mirialan, Basic",
+    "professions": "determined by fate and circunstance, those of a religious nature(commonly associated with the Force), monastic",
+    "wookieepedia": "https://starwars.fandom.com/wiki/Mirialan"
+  },
+  "Mustafarian": {
+    "homeworld": "Mustafar",
+    "language": "Mustafarian, (Basic, Separatist lanmguages)",
+    "professions": "Business, Trade, Mining, Criminal Enterprise, various dangerous or monotonous professions they are more suited to survive",
+    "wookieepedia": "https://starwars.fandom.com/wiki/Mustafarian"
+  },
+  "Quarren": {
+    "homeworld": "Dac(Mon Cala)",
+    "language": "Quarrenese, Basic, Mon Calamarian",
+    "professions": "Mercenaries, Parates, Slavers, Smugglers, Spies, Accountants, Business Managers, Information Brokers, Politicians, Criminal Enterprise",
+    "wookieepedia": "https://starwars.fandom.com/wiki/Quarren"
+  },
+  "Rodian": {
+    "homeworld": "Rodia",
+    "language": "Rodese",
+    "professions": "Bounty Hunters, Hired Guns",
+    "wookieepedia": "https://starwars.fandom.com/wiki/Rodian"
+  },
+  "Togruta": {
+    "homeworld": "Shili",
+    "language": "Togruti ( trills), Basic",
+    "professions": "community-builders, leaders, colonists, various",
+    "wookieepedia": "https://starwars.fandom.com/wiki/Togruta"
+  },
+  "Toydarian": {
+    "homeworld": "Toydaria",
+    "language": "Toydaria, Huttese, Basic",
+    "professions": "Business, Trade, Finance, Networking, Swindling",
+    "wookieepedia": "https://starwars.fandom.com/wiki/Toydarian"
+  },
+  "Trandoshan": {
+    "homeworld": "Hsskor(Trandosha), Wasskah",
+    "language": "Dosh, (Basic)",
+    "professions": "various",
+    "wookieepedia": "https://starwars.fandom.com/wiki/Trandoshan"
+  },
+  "Twi'lek": {
+    "homeworld": "Ryloth, various",
+    "language": "Basic, Ryl, Lekku (Twi'leki)",
+    "professions": "Managerial, Political, Leadership, Business, Organized Crime, Dancing",
+    "wookieepedia": "https://starwars.fandom.com/wiki/Twi'lek"
+  },
+  "Weequay": {
+    "homeworld": "Sriluur",
+    "language": "Sriluurian, pheromones, Basic",
+    "professions": "Bodyguards, Fighters, Illegal Activity, Criminal Enterprise, Swindling",
+    "wookieepedia": "https://starwars.fandom.com/wiki/Weequay"
+  },
+  "Wookiee": {
+    "homeworld": "Kashyyyk",
+    "language": "Shyriiwook",
+    "professions": "various, typically reject Bounty Hunting",
+    "wookieepedia": "https://starwars.fandom.com/wiki/Wookiee"
+  }
+}
