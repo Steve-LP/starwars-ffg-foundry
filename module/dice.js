@@ -125,9 +125,8 @@ export function rollFFGPool(pool) {
   }
 
   // Calculate Net Results
-  const totalSuccess = rawTotals.success + rawTotals.triumph;
-  const totalFailure = rawTotals.failure + rawTotals.despair;
-  const netSuccess = totalSuccess - totalFailure;
+  // Triumph/Despair faces already carry their success/failure, so they are not added again
+  const netSuccess = rawTotals.success - rawTotals.failure;
 
   const netAdvantage = rawTotals.advantage - rawTotals.threat;
 
