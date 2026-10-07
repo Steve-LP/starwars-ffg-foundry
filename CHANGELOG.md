@@ -4,6 +4,18 @@ All notable changes, architectural implementations, and bug fixes for the Star W
 
 ---
 
+## [0.2.2] - 2026-10-08: Specialization Fixes
+
+### 🐛 Bug Fixes
+- **Character Builder hid specializations**: `SpecializationData` had no `key` field, so Foundry dropped the keys that careers use to reference their specializations. 41 of 114 specializations were missing in the builder (17 of 20 careers; e.g. Guardian showed 3 of 6, Clone Soldier none). Added the `key` field — all 113 career references now resolve.
+- **In-career specialization cost**: Additional specializations from the own career cost +10 XP (e.g. 30 instead of 20) because the cost compared names instead of keys and the career snapshot is dropped by `lockCreation()`. The career's specialization keys are now kept in `biography.careerSpecializations`.
+  - Characters locked before this version lack that list and are charged the out-of-career rate; recreate them or re-apply the career.
+
+### 🔧 Tests
+- New headless test `tests/headless-specialization-keys.js` against the real compendium data.
+
+---
+
 ## [0.2.1] - 2026-10-08: Dice & Compendium Fixes
 
 ### 🐛 Bug Fixes
