@@ -554,7 +554,11 @@
               </tbody>
             </table>
           {{else}}
+            {{#if actor.system.creation.isCreationMode}}
+            <p class="no-history">Käufe während der Charaktererstellung werden beim Abschließen in einem Eintrag zusammengefasst.</p>
+            {{else}}
             <p class="no-history">No XP transaction history recorded yet.</p>
+            {{/if}}
           {{/if}}
         </div>
       </div>
