@@ -4,6 +4,22 @@ All notable changes, architectural implementations, and bug fixes for the Star W
 
 ---
 
+## [0.2.1] - 2026-10-08: Dice & Compendium Fixes
+
+### 🐛 Bug Fixes
+- **Dice So Nice 3D dice**: The `diceSoNiceReady` hook crashed on the first preset because Dice So Nice resolves `CONFIG.Dice.terms[<denomination>]`, which was never registered. New `module/dice-so-nice.js` registers the 7 FFG dice as V14 dice terms with non-colliding denominations (`da` `di` `dp` `dr` `dw` `db` `ds`; Challenge/Force no longer clash with core Coin `dc` / FateDie `df`). Colorsets renamed to `swffg-*`; 3D rolls are now shown to all players.
+- **Triumph/Despair double count**: Net successes/failures counted Triumph and Despair twice (a Triumph yielded 2 successes). Now 1 each, as per the rules.
+- **Compendium embedded documents**: `tools/repack-from-ndjson.mjs` wrote embedded documents inline, which Foundry V14 ignores. It now writes them as separate LevelDB keys and migrates legacy table results.
+  - Adversaries: restored 4,072 embedded items (2,066 weapons, 2,006 talents) on 1,379 adversaries.
+  - Critical Injuries / Vehicle Critical Hits tables: now visible and rollable (21 / 15 results).
+- **Item sheet**: Removed a stray `{{/if}}` that broke rendering of item sheets (e.g. compendium armor).
+
+### 🔧 Build & Tests
+- Release packages are built with `tools/build-release.sh` (runtime files only) and attached to GitHub releases; `system.zip` is no longer tracked.
+- New headless tests: `unit-dice-so-nice.js`, `unit-dice-cancellation.js`, `unit-pack-embedded.js`.
+
+---
+
 ## [0.2.0] - 2026-08-19: Character Builder Completion & Fix-Batch
 
 ### 🚀 Features & Enhancements
