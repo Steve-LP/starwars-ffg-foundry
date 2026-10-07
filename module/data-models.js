@@ -54,6 +54,8 @@ export class CharacterData extends BaseActorData {
       biography: new fields.SchemaField({
         species: new fields.StringField({ initial: "" }),
         career: new fields.StringField({ initial: "" }),
+        // Specialization keys of the career; kept after lockCreation() for in-career spec costs
+        careerSpecializations: new fields.ArrayField(new fields.StringField(), { initial: [] }),
         specialization: new fields.StringField({ initial: "" }),
         obligation: new fields.StringField({ initial: "" }),
         duty: new fields.StringField({ initial: "" }),
@@ -308,6 +310,8 @@ export class SpecializationData extends foundry.abstract.TypeDataModel {
       description: new fields.HTMLField({ initial: "" }),
       careerSkills: new fields.StringField({ initial: "" }),
       classification: new fields.StringField({ initial: "career", choices: ["career", "non-career", "universal", "force-power", "signature-ability"] }),
+      // Referenced by CareerData.specializations (e.g. "peace" for Peacekeeper)
+      key: new fields.StringField({ initial: "" }),
       customXpCost: new fields.NumberField({ initial: null, nullable: true, min: 0 }),
       talentRows: new fields.ArrayField(new fields.ObjectField(), { initial: [] }),
       isUniversal: new fields.BooleanField({ initial: false }),

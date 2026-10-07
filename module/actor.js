@@ -148,10 +148,15 @@ export class SWFFGActor extends Actor {
 
     let cost = nextCount * 10;
     const isUniversal = specItemData?.system?.isUniversal === true || classification === "universal";
-    const careerSpecList = this.system.creation?.careerSnapshot?.specializations || [];
-    const specName = (specItemData?.name || "").toLowerCase();
+    const careerSpecKeys = [
+      ...(this.system.creation?.careerSnapshot?.specializations || []),
+      ...(this.system.biography?.careerSpecializations || [])
+    ].map(k => String(k).toLowerCase().trim());
+    const specKey = (specItemData?.system?.key || "").toLowerCase().trim();
+    const specName = (specItemData?.name || "").toLowerCase().trim();
     const actorCareer = (this.system.biography?.career || this.system.creation?.careerSnapshot?.name || "").toLowerCase();
-    const isCareerSpec = careerSpecList.some(s => s.toLowerCase() === specName) || (actorCareer && (specItemData?.system?.career || "").toLowerCase() === actorCareer);
+    const isCareerSpec = (specKey && careerSpecKeys.includes(specKey)) || careerSpecKeys.includes(specName)
+      || (actorCareer && (specItemData?.system?.career || "").toLowerCase() === actorCareer);
 
     if (!isUniversal && !isCareerSpec) {
       cost += 10;
@@ -626,6 +631,7 @@ export class SWFFGActor extends Actor {
       "system.creation.freeSpecializationSkills": [],
       "system.biography.species": "",
       "system.biography.career": "",
+      "system.biography.careerSpecializations": [],
       "system.biography.specialization": "",
       "system.biography.specialAbilities": "",
       "system.characteristics.brawn.value": 2,
@@ -1951,6 +1957,7 @@ export class SWFFGActor extends Actor {
 
     await this.update({
       "system.biography.career": careerData.name,
+      "system.biography.careerSpecializations": careerSnapshot.specializations,
       "system.creation.careerSnapshot": careerSnapshot,
       "system.creation.freeCareerSkills": [],
       "system.creation.ledger.freeCareerSkills": []
@@ -1981,6 +1988,7 @@ export class SWFFGActor extends Actor {
     // 2. Reset ledger skill upgrades for these career skills
     const updates = {
       "system.biography.career": "",
+      "system.biography.careerSpecializations": [],
       "system.creation.careerSnapshot": null,
       "system.creation.freeCareerSkills": [],
       "system.creation.ledger.freeCareerSkills": []
