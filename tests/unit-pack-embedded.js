@@ -25,7 +25,11 @@ for (const { name, collection, field } of PACKS) {
   const expectedChildren = source.reduce((n, d) => n + (d[field]?.length ?? 0), 0);
 
   const db = new ClassicLevel(`packs/${name}`, { valueEncoding: "json" });
-  await db.open();
+  try { await db.open(); }
+  catch (e) {
+    console.error(`SWFFG | [PackTest] Cannot open packs/${name} (${e.cause?.code ?? e.code}) — stop the Foundry server first.`);
+    process.exit(1);
+  }
   const parents = new Map(), children = new Map();
   for await (const [key, value] of db.iterator()) {
     if (key.startsWith(`!${collection}!`)) parents.set(value._id, value);
