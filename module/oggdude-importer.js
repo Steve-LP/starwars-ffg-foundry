@@ -232,40 +232,65 @@ export function parseOggdudeSpecies(xmlString) {
   }];
 }
 
+/** OggDude dice/symbol tokens (long and short form) -> display token */
+const OGGDUDE_SYMBOLS = {
+  SETBACK: "Setback", SE: "Setback", BOOST: "Boost", BO: "Boost",
+  DIFFICULTY: "Difficulty", DI: "Difficulty", CHALLENGE: "Challenge", CH: "Challenge",
+  ABILITY: "Ability", AB: "Ability", PROFICIENCY: "Proficiency", PR: "Proficiency",
+  FORCE: "Force", FO: "Force", SUCCESS: "Success", SU: "Success",
+  ADVANTAGE: "Advantage", AD: "Advantage", TRIUMPH: "Triumph", TR: "Triumph",
+  FAILURE: "Failure", FA: "Failure", THREAT: "Threat", TH: "Threat",
+  DESPAIR: "Despair", DE: "Despair", REMSETBACK: "Remove Setback"
+};
+
+/** Paired OggDude tags: uppercase opens, lowercase closes (e.g. [B]bold[b]) */
+const OGGDUDE_PAIRS = { H3: "h3", H4: "h4", B: "strong", I: "em" };
+
 /**
- * Formats Oggdude text tags to clean HTML
+ * Closes inline tags left open by the source data (e.g. "[I]" without "[i]"), drops stray closing
+ * tags and removes empty inline tags, so every block is well-formed.
+ */
+function balanceInlineTags(html) {
+  const open = [];
+  let out = html.replace(/<(\/?)(strong|em)>/g, (match, closing, tag) => {
+    if (!closing) { open.push(tag); return match; }
+    if (open.at(-1) === tag) { open.pop(); return match; }
+    return "";
+  });
+  while (open.length) out += `</${open.pop()}>`;
+  return out.replace(/<(strong|em)>\s*<\/\1>/g, "");
+}
+
+/**
+ * Formats Oggdude text tags to clean HTML.
+ * Tags are case-sensitive: [H4]/[B]/[I] open, [h4]/[b]/[i] close; [P] separates paragraphs.
  */
 export function formatOggdudeDescription(desc) {
   if (!desc) return "";
-  let formatted = desc;
-  
-  formatted = formatted.replace(/\[h3\]/gi, "</h3>").replace(/\[H3\]/gi, "<h3>");
-  formatted = formatted.replace(/\[h4\]/gi, "</h4>").replace(/\[H4\]/gi, "<h4>");
-  formatted = formatted.replace(/\[b\]/gi, "</strong>").replace(/\[B\]/gi, "<strong>");
-  formatted = formatted.replace(/\[i\]/gi, "</em>").replace(/\[I\]/gi, "<em>");
-  formatted = formatted.replace(/\[p\]/gi, "</p>").replace(/\[P\]/gi, "<p>");
-  formatted = formatted.replace(/\[bullet\]/gi, "</li>").replace(/\[Bullet\]/gi, "<li>");
-  
-  formatted = formatted.replace(/\[SETBACK\]/gi, "<strong>[Setback]</strong>");
-  formatted = formatted.replace(/\[BOOST\]/gi, "<strong>[Boost]</strong>");
-  formatted = formatted.replace(/\[DIFFICULTY\]/gi, "<strong>[Difficulty]</strong>");
-  formatted = formatted.replace(/\[DI\]/gi, "<strong>[Difficulty]</strong>");
-  formatted = formatted.replace(/\[CHALLENGE\]/gi, "<strong>[Challenge]</strong>");
-  formatted = formatted.replace(/\[ABILITY\]/gi, "<strong>[Ability]</strong>");
-  formatted = formatted.replace(/\[PROFICIENCY\]/gi, "<strong>[Proficiency]</strong>");
-  formatted = formatted.replace(/\[FORCE\]/gi, "<strong>[Force]</strong>");
-  formatted = formatted.replace(/\[SUCCESS\]/gi, "<strong>[Success]</strong>");
-  formatted = formatted.replace(/\[ADVANTAGE\]/gi, "<strong>[Advantage]</strong>");
-  formatted = formatted.replace(/\[TRIUMPH\]/gi, "<strong>[Triumph]</strong>");
-  formatted = formatted.replace(/\[FAILURE\]/gi, "<strong>[Failure]</strong>");
-  formatted = formatted.replace(/\[THREAT\]/gi, "<strong>[Threat]</strong>");
-  formatted = formatted.replace(/\[DESPAIR\]/gi, "<strong>[Despair]</strong>");
-  
-  formatted = formatted.replace(/\r?\n\r?\n/g, "<br><br>");
-  formatted = formatted.replace(/\r?\n/g, " ");
-  formatted = formatted.replace(/\s+/g, " ");
-  
-  return formatted.trim();
+  let formatted = desc.replace(/\r?\n\s*\r?\n/g, "[P]").replace(/\s+/g, " ");
+
+  for (const [tag, html] of Object.entries(OGGDUDE_PAIRS)) {
+    formatted = formatted.split(`[${tag}]`).join(`<${html}>`).split(`[${tag.toLowerCase()}]`).join(`</${html}>`);
+  }
+  formatted = formatted.split("[Bullet]").join("<li>").split("[bullet]").join("</li>");
+  formatted = formatted.replace(/\[BR\]/gi, "<br>");
+  formatted = formatted.replace(/\[([A-Z]+)\]/g, (match, code) =>
+    OGGDUDE_SYMBOLS[code] ? `<strong>[${OGGDUDE_SYMBOLS[code]}]</strong>` : match);
+
+  // Paragraphs: headings stay block-level, everything else is wrapped in <p>
+  const blocks = [];
+  for (const segment of formatted.split(/\[P\]/i)) {
+    let rest = segment.trim();
+    // Source data sometimes mixes levels ("[H4]Beloved[h3]"): close with the opening level
+    const heading = rest.match(/^<(h[34])>([\s\S]*?)<\/h[34]>/);
+    if (heading) {
+      blocks.push(`<${heading[1]}>${heading[2].trim()}</${heading[1]}>`);
+      rest = rest.slice(heading[0].length).trim();
+    }
+    rest = balanceInlineTags(rest).trim();
+    if (rest) blocks.push(/^<li>/.test(rest) ? `<ul>${rest}</ul>` : `<p>${rest}</p>`);
+  }
+  return blocks.join("");
 }
 
 /**
