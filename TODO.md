@@ -52,9 +52,12 @@ Keep this file current: items agreed "for later" in chat belong here, not only i
   purchases, so the log sums to -180 for 90 XP actually spent (character "claude 2", 2026-10-08).
   Fixed: creation purchases are not logged; `lockCreation()` writes one summary entry with the actual spend
   and a per-category breakdown (flags deviations). Verified in-game, test `tests/headless-xp-log-summary.js`.
-- [ ] **Builder talent tab only shows the starting specialization's tree** (found 2026-10-08: Clone Pilot + Agitator)
-  `character-builder.js` (context + `#onTalentCardClick`) always uses `specializationSnapshot`; additional
-  specs bought in step 7 cannot be opened or bought from. Needs a spec selector in the talents tab.
+- [x] **Builder talent tab only showed the starting specialization's tree** (found 2026-10-08: Clone Pilot + Agitator)
+  The tab already lists every owned spec with its own button, but `#onOpenTalentTree` ignored the button's
+  item id and always opened the starting spec. Fixed; test `tests/headless-additional-spec-talents.js`
+  (in-game 8/8, reproduces the bug on the old handler).
+- [ ] **Cleanup:** builder context `talentRows` and `#onTalentCardClick` are unused (the template opens the
+  specialization sheet instead) — remove when the builder is next touched.
 - [x] **Out-of-career spec bought during creation is charged 20 instead of 30 XP**
   `calculateSpentSpecializationXp()` (derived XP in creation) still checks `classification === "non-career"`,
   which no compendium spec has; the purchase dialog shows 30 via `calculateSpecializationCost()`.

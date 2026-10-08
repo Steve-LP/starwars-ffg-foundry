@@ -68,10 +68,11 @@ export class CharacterBuilder extends HandlebarsApplicationMixin(ApplicationV2) 
   };
 
   static async #onOpenTalentTree(event, target) {
+    // Each owned specialization has its own button carrying its item id; the starting spec is only a fallback
     const specName = this.actor.system.creation?.specializationSnapshot?.name;
-    const specItem = specName 
-      ? this.actor.items.find(i => i.type === "specialization" && i.name === specName)
-      : this.actor.items.find(i => i.type === "specialization");
+    const specItem = this.actor.items.get(target?.dataset?.itemId)
+      ?? this.actor.items.find(i => i.type === "specialization" && i.name === specName)
+      ?? this.actor.items.find(i => i.type === "specialization");
 
     if (specItem) {
       specItem.sheet.render(true);
